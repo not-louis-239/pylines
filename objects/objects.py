@@ -1,19 +1,23 @@
 import pygame as pg
-from core.custom_types import Surface
+from OpenGL.GL import *
+from OpenGL.GLU import *
+
+from core.custom_types import Surface, Coord3
+from core.constants import GROUND_SIZE
 
 class Entity:
-    def __init__(self, x, y, image: Surface) -> None:
-        self.pos = pg.Vector2(x, y)
-        self.image = image
-        self.rect = self.image.get_rect(center=(x, y))
+    """Mental basis for all in-game physical objects"""
+
+    def __init__(self, x, y, z) -> None:
+        self.pos = pg.Vector3(x, y, z)
 
     def update(self):
         pass
 
     def draw(self, wn: Surface):
-        wn.blit(self.image, self.rect)
+        pass
 
-class Plane:
+class Plane(Entity):
     def __init__(self):
         self.pos = pg.Vector3(0, 0, 0)
         self.vel = pg.Vector3(0, 0, 0)
@@ -26,3 +30,25 @@ class Plane:
         self.throttle = 0
         self.flaps = 0
         self.engine_on = True
+
+class Ground(Entity):
+    def __init__(self) -> None:
+        super().__init__(0, 0, 0) # Initialize pos for Ground at origin
+        self.vertices: list[Coord3] = [
+            (-GROUND_SIZE, 0, -GROUND_SIZE),
+            (-GROUND_SIZE, 0, GROUND_SIZE),
+            (GROUND_SIZE, 0, -GROUND_SIZE),
+            (GROUND_SIZE, 0, GROUND_SIZE)
+        ]
+
+    def draw(self): # The `wn` parameter might not be necessary for OpenGL rendering
+        glPushMatrix()
+        # Optional: Translate the ground if its position is not (0,0,0)
+        # glTranslatef(self.pos.x, self.pos.y, self.pos.z)
+
+        glBegin(GL_TRIANGLE_STRIP) # or GL_QUADS
+        glColor3f(0.5, 0.5, 0.5) # Example: set a grey color for the ground
+        for vertex in self.vertices:
+            glVertex3f(*vertex)
+        glEnd()
+        glPopMatrix()

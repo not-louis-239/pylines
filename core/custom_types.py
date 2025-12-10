@@ -1,4 +1,4 @@
-from typing import TypeAlias, Literal
+from typing import TypeAlias
 import pygame as pg
 
 # Visual types

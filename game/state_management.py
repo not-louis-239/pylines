@@ -1,7 +1,8 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
+
 from core.custom_types import ScancodeWrapper, Surface
 
+from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from game.game import Game
 

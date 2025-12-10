@@ -1,6 +1,7 @@
+from typing import Generator
 import pygame as pg
 from pygame.surface import Surface
-from core.constants import Colour
+from core.custom_types import Colour
 
 def draw_text(surface: Surface, pos: tuple[int, int], horiz_align: str, vert_align: str,
               text: str, colour: Colour, size: int, font_family: str | None = None):
@@ -29,3 +30,18 @@ def draw_text(surface: Surface, pos: tuple[int, int], horiz_align: str, vert_ali
         raise ValueError("Invalid vert_align")
 
     surface.blit(img, r)
+
+def frange(start: int | float, stop: int | float, step: int | float) -> Generator[float, None, None]:
+    """A version of range that accepts and yields floats."""
+    if step == 0:
+        raise ValueError("step cannot be zero")
+
+    current = start
+    if step > 0:
+        while current < stop:
+            yield current
+            current += step
+    else:
+        while current > stop:
+            yield current
+            current += step

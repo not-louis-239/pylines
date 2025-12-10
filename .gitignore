@@ -3,3 +3,4 @@ __pycache__
 todo.txt
 workflow
 GEMINI.md
+.geminiignore
