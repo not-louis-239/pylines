@@ -1,6 +1,7 @@
 import pygame as pg
-from OpenGL.GL import *
-from OpenGL.GLU import *
+from core.utils import Rotation
+from OpenGL.GL import *   # type: ignore
+from OpenGL.GLU import *  # type: ignore
 
 from core.custom_types import Surface, Coord3
 from core.constants import GROUND_SIZE
@@ -47,7 +48,7 @@ class Ground(Entity):
         # glTranslatef(self.pos.x, self.pos.y, self.pos.z)
 
         glBegin(GL_TRIANGLE_STRIP) # or GL_QUADS
-        glColor3f(0.5, 0.5, 0.5) # Example: set a grey color for the ground
+        glColor3f(0.1, 0.35, 0.1) # Example: set a grey color for the ground
         for vertex in self.vertices:
             glVertex3f(*vertex)
         glEnd()

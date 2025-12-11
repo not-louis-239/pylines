@@ -2,6 +2,13 @@ from typing import Generator
 import pygame as pg
 from pygame.surface import Surface
 from core.custom_types import Colour
+from dataclasses import dataclass
+
+@dataclass
+class Rotation:
+    pitch: int
+    yaw: int
+    roll: int
 
 def draw_text(surface: Surface, pos: tuple[int, int], horiz_align: str, vert_align: str,
               text: str, colour: Colour, size: int, font_family: str | None = None):

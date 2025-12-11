@@ -1,4 +1,6 @@
 import pygame as pg
+from OpenGL.GL import *   # type: ignore
+from OpenGL.GLU import *  # type: ignore
 
 from core.constants import FPS, TPS, WN_H, WN_W
 from game.game import Game
@@ -11,7 +13,7 @@ def main():
     pg.time.set_timer(TICK, int(1000/TPS))
 
     wn = pg.display.set_mode((WN_W, WN_H), pg.DOUBLEBUF | pg.OPENGL)
-    pg.display.set_caption("New Game")
+    pg.display.set_caption("Pylines")
 
     # Initialize OpenGL
     glViewport(0, 0, WN_W, WN_H)
