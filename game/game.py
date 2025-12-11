@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
-from core.asset_manager import load_images
+from core.asset_manager import Assets
 from game.state_management import TitleScreen
 from game.game_screen import GameScreen
 
@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 class Game:
     def __init__(self) -> None:
-        self.images = load_images()
+        self.assets = Assets()
         self.states: dict[str, State] = {
             "title": TitleScreen(self),
             "game": GameScreen(self),

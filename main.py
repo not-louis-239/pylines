@@ -1,8 +1,11 @@
 import pygame as pg
-from OpenGL.GL import *   # type: ignore
-from OpenGL.GLU import *  # type: ignore
+import OpenGL.GL as gl
+import OpenGL.GLU as glu
 
-from core.constants import FPS, TPS, WN_H, WN_W
+from core.constants import (
+    FPS, TPS, WN_H, WN_W,
+    INNER_RENDER_LIMIT, OUTER_RENDER_LIMIT
+)
 from game.game import Game
 
 def main():
@@ -16,13 +19,13 @@ def main():
     pg.display.set_caption("Pylines")
 
     # Initialize OpenGL
-    glViewport(0, 0, WN_W, WN_H)
-    glMatrixMode(GL_PROJECTION)
-    glLoadIdentity()
-    gluPerspective(45, (WN_W / WN_H), 0.1, 100.0) # Field of view, aspect ratio, near, far clipping plane
-    glMatrixMode(GL_MODELVIEW)
-    glLoadIdentity()
-    glEnable(GL_DEPTH_TEST) # Enable depth testing for 3D objects
+    gl.glViewport(0, 0, WN_W, WN_H)
+    gl.glMatrixMode(gl.GL_PROJECTION)
+    gl.glLoadIdentity()
+    glu.gluPerspective(45, WN_W/WN_H, INNER_RENDER_LIMIT, OUTER_RENDER_LIMIT) # Field of view, aspect ratio, near, far clipping plane
+    gl.glMatrixMode(gl.GL_MODELVIEW)
+    gl.glLoadIdentity()
+    gl.glEnable(gl.GL_DEPTH_TEST) # Enable depth testing for 3D objects
 
     game = Game()
 

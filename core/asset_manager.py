@@ -1,12 +1,70 @@
-import os
 import pygame as pg
+from pathlib import Path
+from core.custom_types import Sound
+from core.constants import BASE_DIR
 
-BASE_DIR = os.path.dirname(__file__)
+class AssetBank:
+    """Mental basis for all asset containers."""
 
-def asset_path(name: str) -> str:
-    return os.path.join(BASE_DIR, "assets", name)
+    def __init__(self) -> None:
+        """Base method to set assets."""
+        self.augment()
 
-def load_images() -> dict[str, pg.Surface]:
-    return {
-        # TODO: "bomb": pg.image.load(asset_path("bomb.png")).convert_alpha()
-    }
+    def augment(self) -> None:
+        """Base method to adjust assets."""
+        pass
+
+    def _load(self) -> None:
+        """Base method to load individual assets."""
+        raise NotImplementedError
+
+class Fonts(AssetBank):
+    def __init__(self) -> None:
+        self.monospaced: Path = self._load("Inconsolata-VariableFont_wdth,wght.ttf")
+        self.augment()
+
+    def _load(self, name: str) -> Path:
+        return BASE_DIR / "assets" / "fonts" / name
+
+class Images(AssetBank):
+    def __init__(self):
+        self.augment()
+
+    def augment(self):
+        pass
+
+    def _load(self, name: str):
+        return pg.image.load(BASE_DIR / "assets" / "images" / name).convert_alpha()
+
+class Sounds(AssetBank):
+    def __init__(self) -> None:
+        # UI
+        self.click: Sound = self._load("click.ogg")
+        # Engine
+        self.engine_idle_loop: Sound = self._load("engine_idle_loop.ogg")
+        self.engine_20p_loop: Sound = self._load("engine_20p_loop.ogg")
+        self.engine_40p_loop: Sound = self._load("engine_40p_loop.ogg")
+        self.engine_60p_loop: Sound = self._load("engine_60p_loop.ogg")
+        self.engine_80p_loop: Sound = self._load("engine_80p_loop.ogg")
+        self.engine_full_loop: Sound = self._load("engine_full_loop.ogg")
+        # Landing sounds
+        self.good_landing: Sound = self._load("good_landing.ogg")
+        self.hard_landing: Sound = self._load("hard_landing.ogg")
+        self.crash: Sound = self._load("crash.ogg")
+        # Warnings
+        self.overspeed: Sound = self._load("overspeed.ogg")
+        self.stall_warning: Sound = self._load("stall_warning.ogg")
+
+        self.augment()
+
+    def augment(self):
+        pass
+
+    def _load(self, name: str) -> pg.mixer.Sound:
+        return pg.mixer.Sound(BASE_DIR / "assets" / "sounds" / name)
+
+class Assets:
+    def __init__(self) -> None:
+        self.images: Images = Images()
+        self.fonts: Fonts = Fonts()
+        self.sounds: Sounds = Sounds()

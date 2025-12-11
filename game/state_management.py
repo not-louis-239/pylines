@@ -9,6 +9,9 @@ if TYPE_CHECKING:
 class State:
     def __init__(self, game: Game) -> None:
         self.game = game
+        self.images = game.assets.images
+        self.fonts = game.assets.fonts
+        self.sounds = game.assets.sounds
 
     def update(self) -> None:
         pass
