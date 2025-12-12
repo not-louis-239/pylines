@@ -13,7 +13,7 @@ class PlaneModel:
     stall_angle: float   # in degrees
     wing_area: float     # m²
     mass: float          # kg
-    max_throttle: float    # Newtons
+    max_throttle: float  # Newtons
     aspect_ratio: float
     efficiency: float
 
@@ -24,29 +24,34 @@ WN_W = 1350
 WN_H = 850
 
 # Ground size
-GROUND_SIZE = 100000
+GROUND_SIZE = 100_000
+
+PRACTISE_LIMIT = GROUND_SIZE * 0.95  # The user is "unauthorised" to go further
 
 # Rendering
 INNER_RENDER_LIMIT = 0.05
 OUTER_RENDER_LIMIT = 100000
-CAMERA_OFFSET_Y: float = 0.1  # Offset camera or else ground will not render
+CAMERA_OFFSET_Y: float = 0.1  # Offset camera or else ground will not render, in metres
 
 # Physics
 PLANE_MODEL: PlaneModel = PlaneModel(
     name="Cessna 172",
     cl_max=1.2,
     cd_min=0.03,
-    cd_slope=0.04,
+    cd_slope=0.003,
     stall_angle=15,
     wing_area=16.2,
     mass=850,
-    max_throttle=1500,
+    max_throttle=1200,
     aspect_ratio=7.5,
     efficiency=0.8
 )
 
 AIR_DENSITY = 1.225  # kg/m³
-GRAVITY = 9.8  # m/s²
+GRAVITY = 9.8        # m/s²
 
 # File loading
 BASE_DIR: Path = Path(__file__).resolve().parent.parent
+
+# Mathematical
+EPSILON = 0.001  # Treat anything smaller than this as zero

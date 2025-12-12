@@ -19,10 +19,12 @@ class GameScreen(State):
     def __init__(self, game: Game) -> None:
         super().__init__(game)
         self.plane = Plane()
-        self.ground = Ground(game.assets.images.test_grass) # Pass the loaded image to Ground
+        self.ground = Ground(game.assets.images.test_grass)  # Pass the loaded image to Ground
         self.sky = Sky()
         self.time_of_day: str = "sunset"
         self.show_stall_warning: bool = False
+
+        self.stall_channel = pg.mixer.Channel(3)
 
         # Font for text rendering
         self.font = pg.font.Font(game.assets.fonts.monospaced, 36)
@@ -30,36 +32,13 @@ class GameScreen(State):
     def update(self, dt: int):
         self.plane.update(dt)
 
-        self.show_stall_warning = self.plane.rot.x < -self.plane.model.stall_angle
+        self.show_stall_warning = self.plane.aoa > self.plane.model.stall_angle
 
-    def take_input(self, keys: ScancodeWrapper, dt: int) -> None:
-        rot_speed = 50 * dt/1000
-        throttle_speed = 0.5 * dt/1000
-
-        # Throttle
-        if keys[pg.K_w]:
-            self.plane.throttle_frac += throttle_speed
-        if keys[pg.K_s]:
-            self.plane.throttle_frac -= throttle_speed
-
-        # Clamp throttle
-        self.plane.throttle_frac = clamp(self.plane.throttle_frac, 0, 1)
-
-        # Pitch
-        if keys[pg.K_UP]:
-            self.plane.rot.x -= rot_speed * (1+(self.plane.rot.x/90))
-        if keys[pg.K_DOWN]:
-            self.plane.rot.x += rot_speed * (1-(self.plane.rot.x/90))
-        # Turning (Roll)
-        if keys[pg.K_LEFT]:
-            self.plane.rot.z -= rot_speed
-        if keys[pg.K_RIGHT]:
-            self.plane.rot.z += rot_speed
-
-        # Clamp
-        self.plane.rot.y %=360
-        self.plane.rot.z %= 360
-        self.plane.rot.x = clamp(self.plane.rot.x, -90, 90)
+        if self.show_stall_warning:
+            if not self.stall_channel.get_busy():
+                self.stall_channel.play(self.sounds.stall_warning, loops=-1)
+        else:
+            self.stall_channel.stop()
 
     def draw_text(self, x: RealNumber, y: RealNumber, text: str,
                   colour: AColour = (255, 255, 255, 255), bg_colour: AColour | None = None):  # FIXME: no workie!
@@ -104,6 +83,35 @@ class GameScreen(State):
         gl.glPopMatrix()
         gl.glMatrixMode(gl.GL_MODELVIEW)
 
+    def take_input(self, keys: ScancodeWrapper, dt: int) -> None:
+        rot_speed = 20 * dt/1000
+        throttle_speed = 0.5 * dt/1000
+
+        # Throttle
+        if keys[pg.K_w]:
+            self.plane.throttle_frac += throttle_speed
+        if keys[pg.K_s]:
+            self.plane.throttle_frac -= throttle_speed
+
+        # Clamp throttle
+        self.plane.throttle_frac = clamp(self.plane.throttle_frac, 0, 1)
+
+        # Pitch
+        if keys[pg.K_UP]:
+            self.plane.rot.x -= rot_speed * (1+(self.plane.rot.x/90))
+        if keys[pg.K_DOWN]:
+            self.plane.rot.x += rot_speed * (1-(self.plane.rot.x/90))
+        # Turning (Roll)
+        if keys[pg.K_LEFT]:
+            self.plane.rot.z -= rot_speed
+        if keys[pg.K_RIGHT]:
+            self.plane.rot.z += rot_speed
+
+        # Clamp
+        self.plane.rot.y %= 360
+        self.plane.rot.z %= 360
+        self.plane.rot.x = clamp(self.plane.rot.x, -90, 90)
+
     def draw(self, wn: Surface):
         colour_scheme = SKY_COLOUR_SCHEMES[self.time_of_day]
 
@@ -133,21 +141,22 @@ class GameScreen(State):
 
         # Position and Rotation
         altitude_in_ft = self.plane.pos.y * 3.28084  # Convert to ft
+        airspeed = self.plane.vel.length()
+        ground_speed = pg.Vector2(self.plane.vel.x, self.plane.vel.z).length()
 
-        altitude_text = f"Altitude: {altitude_in_ft:,.0f} ft"
+        self.draw_text(C.WN_W//2-100, C.WN_H*0.20, f"Pitch: {-self.plane.rot.x:,.0f}°")
+        self.draw_text(C.WN_W//2-100, C.WN_H*0.25, f"Dir: {self.plane.rot.y:,.0f}°")
+        self.draw_text(C.WN_W//2-100, C.WN_H*0.30, f"Roll: {(self.plane.rot.z+180)%360-180:,.0f}°")
 
-        pitch_text = f"Pitch: {-self.plane.rot.x:,.0f}°"
-        dir_text = f"Dir: {self.plane.rot.y:,.0f}°"
-        roll_text = f"Roll: {(self.plane.rot.z+180)%360-180:,.0f}°"
-
-        loc_text = f"Loc: ({self.plane.pos.x:,.0f}, {self.plane.pos.z:,.0f})"
-
-        self.draw_text(C.WN_W//2-100, C.WN_H*0.20, pitch_text)
-        self.draw_text(C.WN_W//2-100, C.WN_H*0.25, dir_text)
-        self.draw_text(C.WN_W//2-100, C.WN_H*0.30, roll_text)
-
-        self.draw_text(C.WN_W//2-100, C.WN_H*0.75, loc_text)
-        self.draw_text(C.WN_W//2-100, C.WN_H*0.8, altitude_text)
+        if airspeed > ground_speed:
+            self.draw_text(
+                C.WN_W//2-100, C.WN_H*0.6,
+                f"Airspeed: {airspeed*1.94:,.2f} kn"
+            )
+        self.draw_text(C.WN_W//2-100, C.WN_H*0.65, f"Ground Speed: {ground_speed*1.94:,.2f} kn")
+        self.draw_text(C.WN_W//2-100, C.WN_H*0.7, f"Loc: ({self.plane.pos.x:,.0f}m, {self.plane.pos.z:,.0f}m)")
+        self.draw_text(C.WN_W//2-100, C.WN_H*0.75, f"Altitude: {altitude_in_ft:,.0f} ft")
+        self.draw_text(C.WN_W//2-100, C.WN_H*0.8, f"{self.plane.vel.y * 3.28084 * 60:+,.0f} ft/min")
 
         # Throttle
         if self.plane.throttle_frac >= 1:
