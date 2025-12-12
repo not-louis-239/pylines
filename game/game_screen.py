@@ -1,10 +1,10 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
-import math
+from typing import TYPE_CHECKING, cast
 
 import pygame as pg
 from core.colours import SKY_COLOUR_SCHEMES
 import core.constants as C
+from core.utils import clamp
 from game.state_management import State
 from objects.objects import Plane, Ground, Sky
 import OpenGL.GL as gl
@@ -18,52 +18,43 @@ class GameScreen(State):
     def __init__(self, game: Game) -> None:
         super().__init__(game)
         self.plane = Plane()
-        self.ground = Ground()
+        self.ground = Ground(game.assets.images.test_grass) # Pass the loaded image to Ground
         self.sky = Sky()
         self.time_of_day = "night"
 
-        # Camera settings for testing
-        self.camera_pos = pg.Vector3(0, 5, 10)
-        self.camera_rot = pg.Vector3(0, 0, 0)  # Pitch, Yaw, Roll
-
         # Font for text rendering
-        self.font = pg.font.Font(self.fonts.monospaced, 36)
+        self.font = pg.font.Font(game.assets.fonts.monospaced, 36)
+
+    def update(self, dt: int):
+        self.plane.update(dt)
 
     def take_input(self, keys: ScancodeWrapper, dt: int) -> None:
-        speed = 0.01 * dt
         rot_speed = 0.05 * dt
+        throttle_speed = 0.0005 * dt
 
-        # Movement
-        if keys[pg.K_w]: # Forward
-            self.camera_pos.x -= speed * math.sin(math.radians(self.camera_rot.y))
-            self.camera_pos.z -= speed * math.cos(math.radians(self.camera_rot.y))
-        if keys[pg.K_s]: # Backward
-            self.camera_pos.x += speed * math.sin(math.radians(self.camera_rot.y))
-            self.camera_pos.z += speed * math.cos(math.radians(self.camera_rot.y))
-        if keys[pg.K_a]: # Strafe Left
-            self.camera_pos.x -= speed * math.cos(math.radians(self.camera_rot.y))
-            self.camera_pos.z += speed * math.sin(math.radians(self.camera_rot.y))
-        if keys[pg.K_d]: # Strafe Right
-            self.camera_pos.x += speed * math.cos(math.radians(self.camera_rot.y))
-            self.camera_pos.z -= speed * math.sin(math.radians(self.camera_rot.y))
-        if keys[pg.K_r]: # Up
-            self.camera_pos.y += speed
-        if keys[pg.K_f]: # Down
-            self.camera_pos.y -= speed
+        # --- Flight Controls ---
+        # Throttle
+        if keys[pg.K_w]:
+            self.plane.throttle_frac += throttle_speed
+        if keys[pg.K_s]:
+            self.plane.throttle_frac -= throttle_speed
+
+        # Clamp throttle
+        self.plane.throttle_frac = clamp(self.plane.throttle_frac, 0, 1)
 
         # Rotation
         if keys[pg.K_UP]:
-            self.camera_rot.x -= rot_speed
+            self.plane.rot.x -= rot_speed # Pitch
         if keys[pg.K_DOWN]:
-            self.camera_rot.x += rot_speed
+            self.plane.rot.x += rot_speed
         if keys[pg.K_LEFT]:
-            self.camera_rot.y -= rot_speed
+            self.plane.rot.y -= rot_speed # Yaw
         if keys[pg.K_RIGHT]:
-            self.camera_rot.y += rot_speed
+            self.plane.rot.y += rot_speed
         if keys[pg.K_q]:
-            self.camera_rot.z -= rot_speed
+            self.plane.rot.z += rot_speed # Roll
         if keys[pg.K_e]:
-            self.camera_rot.z += rot_speed
+            self.plane.rot.z -= rot_speed
 
     def draw_text(self, x: int, y: int, text: str):
         text_surface = self.font.render(text, True, (255, 255, 255, 255))
@@ -107,7 +98,7 @@ class GameScreen(State):
     def draw(self, wn: Surface):
         colour_scheme = SKY_COLOUR_SCHEMES[self.time_of_day]
 
-        gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)  # type: ignore
+        gl.glClear(cast(int, gl.GL_COLOR_BUFFER_BIT) | cast(int, gl.GL_DEPTH_BUFFER_BIT))
 
         # Draw sky gradient background
         self.sky.draw(colour_scheme)
@@ -115,18 +106,27 @@ class GameScreen(State):
         gl.glMatrixMode(gl.GL_MODELVIEW)
         gl.glLoadIdentity()
 
-        # Apply camera transformations
-        gl.glRotatef(self.camera_rot.x, 1, 0, 0) # Pitch
-        gl.glRotatef(self.camera_rot.y, 0, 1, 0) # Yaw
-        gl.glRotatef(self.camera_rot.z, 0, 0, 1) # Roll
-        gl.glTranslatef(-self.camera_pos.x, -self.camera_pos.y, -self.camera_pos.z)
+        # Apply camera transformations based on plane's state
+        gl.glRotatef(self.plane.rot.x, 1, 0, 0) # Pitch
+        gl.glRotatef(self.plane.rot.y, 0, 1, 0) # Yaw
+        gl.glRotatef(self.plane.rot.z, 0, 0, 1) # Roll
+        gl.glTranslatef(-self.plane.pos.x, -(self.plane.pos.y+C.CAMERA_OFFSET_Y), -self.plane.pos.z)
 
         self.ground.draw()
 
-        # Draw text overlay
-        gl.glColor3f(1, 1, 1)
-        pos_text = f"Pos: ({self.camera_pos.x:.2f}, {self.camera_pos.y:.2f}, {self.camera_pos.z:.2f})"
-        rot_text = f"Rot: ({self.camera_rot.x:.2f}, {self.camera_rot.y:.2f}, {self.camera_rot.z:.2f})"
+        # HUD
+        gl.glColor3f(1, 1, 1) # Set color for text
+
+        # Position and Rotation
+        pos_text = f"Pos: ({self.plane.pos.x:.2f}, {self.plane.pos.y:.2f}, {self.plane.pos.z:.2f})"
+        rot_text = f"Rot: ({self.plane.rot.x:.2f}, {self.plane.rot.y:.2f}, {self.plane.rot.z:.2f})"
         self.draw_text(10, 10, pos_text)
         self.draw_text(10, 50, rot_text)
+
+        # Throttle
+        if self.plane.throttle_frac >= 1:
+            throttle_text = "Full"
+        else:
+            throttle_text = f"{self.plane.throttle_frac:.0%}"
+        self.draw_text(10, C.WN_H - 40, f"Throttle: {throttle_text}")
 

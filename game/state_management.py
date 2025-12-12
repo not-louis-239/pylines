@@ -13,7 +13,7 @@ class State:
         self.fonts = game.assets.fonts
         self.sounds = game.assets.sounds
 
-    def update(self) -> None:
+    def update(self, dt: int) -> None:
         pass
 
     def take_input(self, keys: ScancodeWrapper, dt: int) -> None:

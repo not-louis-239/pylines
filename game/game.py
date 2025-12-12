@@ -18,8 +18,8 @@ class Game:
         }
         self.state = "game"
 
-    def update(self) -> None:
-        self.states[self.state].update()
+    def update(self, dt) -> None:
+        self.states[self.state].update(dt)
 
     def take_input(self, keys: ScancodeWrapper, dt: int) -> None:
         self.states[self.state].take_input(keys, dt)

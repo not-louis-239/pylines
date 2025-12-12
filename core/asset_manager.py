@@ -28,6 +28,7 @@ class Fonts(AssetBank):
 
 class Images(AssetBank):
     def __init__(self):
+        self.test_grass = self._load("test_grass.png") # Load the grass texture
         self.augment()
 
     def augment(self):

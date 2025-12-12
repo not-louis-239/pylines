@@ -1,7 +1,7 @@
 from typing import Generator
 import pygame as pg
 from pygame.surface import Surface
-from core.custom_types import Colour
+from core.custom_types import Colour, RealNumber
 from dataclasses import dataclass
 
 @dataclass
@@ -52,3 +52,6 @@ def frange(start: int | float, stop: int | float, step: int | float) -> Generato
         while current > stop:
             yield current
             current += step
+
+def clamp(value: RealNumber, lower: RealNumber, upper: RealNumber):
+    return max(lower, min(value, upper))

@@ -37,7 +37,7 @@ def main():
                 running = False
 
             if event.type == TICK:
-                game.update()
+                game.update(1000/TPS)
 
         dt = clock.tick(FPS)
         keys = pg.key.get_pressed()
