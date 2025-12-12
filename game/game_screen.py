@@ -142,18 +142,12 @@ class GameScreen(State):
         # Position and Rotation
         altitude_in_ft = self.plane.pos.y * 3.28084  # Convert to ft
         airspeed = self.plane.vel.length()
-        ground_speed = pg.Vector2(self.plane.vel.x, self.plane.vel.z).length()
 
         self.draw_text(C.WN_W//2-100, C.WN_H*0.20, f"Pitch: {-self.plane.rot.x:,.0f}°")
         self.draw_text(C.WN_W//2-100, C.WN_H*0.25, f"Dir: {self.plane.rot.y:,.0f}°")
         self.draw_text(C.WN_W//2-100, C.WN_H*0.30, f"Roll: {(self.plane.rot.z+180)%360-180:,.0f}°")
 
-        if airspeed > ground_speed:
-            self.draw_text(
-                C.WN_W//2-100, C.WN_H*0.6,
-                f"Airspeed: {airspeed*1.94:,.2f} kn"
-            )
-        self.draw_text(C.WN_W//2-100, C.WN_H*0.65, f"Ground Speed: {ground_speed*1.94:,.2f} kn")
+        self.draw_text(C.WN_W//2-100, C.WN_H*0.65, f"Speed: {airspeed*1.94:,.2f} kn")
         self.draw_text(C.WN_W//2-100, C.WN_H*0.7, f"Loc: ({self.plane.pos.x:,.0f}m, {self.plane.pos.z:,.0f}m)")
         self.draw_text(C.WN_W//2-100, C.WN_H*0.75, f"Altitude: {altitude_in_ft:,.0f} ft")
         self.draw_text(C.WN_W//2-100, C.WN_H*0.8, f"{self.plane.vel.y * 3.28084 * 60:+,.0f} ft/min")

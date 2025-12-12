@@ -1,7 +1,6 @@
 import pygame as pg
 import OpenGL.GL as gl
 import OpenGL.GLU as glu
-import math
 from math import sin, cos, asin, degrees, radians as rad
 
 from core.custom_types import Surface, Coord3
@@ -10,10 +9,6 @@ from core.constants import (
     GROUND_SIZE, WN_W, WN_H,
     PlaneModel, PLANE_MODEL, AIR_DENSITY, GRAVITY, PRACTISE_LIMIT, EPSILON
 )
-
-# Physics Constants
-DRAG = 0.001
-THRUST_FORCE = 0.0005
 
 class Entity:
     """Mental basis for all in-game physical objects"""
@@ -96,7 +91,13 @@ class Plane(Entity):
             lift = lift_dir * lift_mag
 
         # Calculate drag
-        cd = self.model.cd_min + self.model.cd_slope*abs(self.aoa)
+        cd = self.model.cd_min + self.model.cd_slope*abs(self.aoa)  # Baseline
+        if self.aoa > self.model.stall_angle:  # Extra drag while stalling
+            cd += self.aoa-self.model.stall_angle*0.08  # Extra drag while on ground
+        if self.pos.y == 0:
+            cd *= 1.25
+        cd = min(cd, 1)
+
         drag_mag = 0.5 * AIR_DENSITY * airspeed**2 * self.model.wing_area * cd
 
         if airspeed < EPSILON:
