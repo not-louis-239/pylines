@@ -20,7 +20,8 @@ class GameScreen(State):
         self.plane = Plane()
         self.ground = Ground(game.assets.images.test_grass) # Pass the loaded image to Ground
         self.sky = Sky()
-        self.time_of_day = "night"
+        self.time_of_day: str = "night"
+        self.show_stall_warning: bool = False
 
         # Font for text rendering
         self.font = pg.font.Font(game.assets.fonts.monospaced, 36)
@@ -28,11 +29,12 @@ class GameScreen(State):
     def update(self, dt: int):
         self.plane.update(dt)
 
-    def take_input(self, keys: ScancodeWrapper, dt: int) -> None:
-        rot_speed = 0.05 * dt
-        throttle_speed = 0.0005 * dt
+        self.show_stall_warning = 90 > self.plane.rot.x > self.plane.model.stall_angle
 
-        # --- Flight Controls ---
+    def take_input(self, keys: ScancodeWrapper, dt: int) -> None:
+        rot_speed = 50 * dt/1000
+        throttle_speed = 0.5 * dt/1000
+
         # Throttle
         if keys[pg.K_w]:
             self.plane.throttle_frac += throttle_speed
@@ -48,13 +50,14 @@ class GameScreen(State):
         if keys[pg.K_DOWN]:
             self.plane.rot.x += rot_speed
         if keys[pg.K_LEFT]:
-            self.plane.rot.y -= rot_speed # Yaw
-        if keys[pg.K_RIGHT]:
-            self.plane.rot.y += rot_speed
-        if keys[pg.K_q]:
             self.plane.rot.z += rot_speed # Roll
-        if keys[pg.K_e]:
+        if keys[pg.K_RIGHT]:
             self.plane.rot.z -= rot_speed
+
+        # Clamp
+        self.plane.rot.y %=360
+        self.plane.rot.z %= 360
+        self.plane.rot.x = clamp(self.plane.rot.x, -90, 90)
 
     def draw_text(self, x: int, y: int, text: str):
         text_surface = self.font.render(text, True, (255, 255, 255, 255))
@@ -122,6 +125,10 @@ class GameScreen(State):
         rot_text = f"Rot: ({self.plane.rot.x:.2f}, {self.plane.rot.y:.2f}, {self.plane.rot.z:.2f})"
         self.draw_text(10, 10, pos_text)
         self.draw_text(10, 50, rot_text)
+
+        if self.show_stall_warning:
+            gl.glColor3f(1, 0.8, 0.8) # Set color for text
+            self.draw_text(C.WN_W//2, C.WN_H-50, "[STALL]")
 
         # Throttle
         if self.plane.throttle_frac >= 1:

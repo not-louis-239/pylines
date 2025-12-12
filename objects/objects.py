@@ -41,6 +41,8 @@ class Plane(Entity):
     def update(self, dt: int):
         pass  # TODO: Make my own implementation
 
+        self.rot.y += self.rot.z * 0.05 * dt/1000
+
         # # --- Orientation vectors ---
         # pitch, yaw, roll = self.rot
 
