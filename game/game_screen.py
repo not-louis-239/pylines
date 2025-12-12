@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, cast
 
 import pygame as pg
 from core.colours import SKY_COLOUR_SCHEMES
-from core.custom_types import RealNumber
+from core.custom_types import RealNumber, AColour
 import core.constants as C
 from core.utils import clamp
 from game.state_management import State
@@ -47,9 +47,9 @@ class GameScreen(State):
 
         # Pitch
         if keys[pg.K_UP]:
-            self.plane.rot.x -= rot_speed
+            self.plane.rot.x -= rot_speed * (1+(self.plane.rot.x/90))
         if keys[pg.K_DOWN]:
-            self.plane.rot.x += rot_speed
+            self.plane.rot.x += rot_speed * (1-(self.plane.rot.x/90))
         # Turning (Roll)
         if keys[pg.K_LEFT]:
             self.plane.rot.z -= rot_speed
@@ -61,8 +61,12 @@ class GameScreen(State):
         self.plane.rot.z %= 360
         self.plane.rot.x = clamp(self.plane.rot.x, -90, 90)
 
-    def draw_text(self, x: RealNumber, y: RealNumber, text: str):
-        text_surface = self.font.render(text, True, (255, 255, 255, 255))
+    def draw_text(self, x: RealNumber, y: RealNumber, text: str,
+                  colour: AColour = (255, 255, 255, 255), bg_colour: AColour | None = None):  # FIXME: no workie!
+        if bg_colour is None:
+            text_surface = self.font.render(text, True, colour)
+        else:
+            text_surface = self.font.render(text, True, colour, bg_colour)
         text_surface = pg.transform.flip(text_surface, False, True) # Flip vertically
         text_data = pg.image.tostring(text_surface, "RGBA", True)
 
@@ -132,9 +136,9 @@ class GameScreen(State):
 
         altitude_text = f"Altitude: {altitude_in_ft:,.0f} ft"
 
-        pitch_text = f"Pitch: {-self.plane.rot.y:,.0f}°"
-        dir_text = f"Dir: {self.plane.rot.x:,.0f}°"
-        roll_text = f"Roll: {-self.plane.rot.z:,.0f}°"
+        pitch_text = f"Pitch: {-self.plane.rot.x:,.0f}°"
+        dir_text = f"Dir: {self.plane.rot.y:,.0f}°"
+        roll_text = f"Roll: {(self.plane.rot.z+180)%360-180:,.0f}°"
 
         loc_text = f"Loc: ({self.plane.pos.x:,.0f}, {self.plane.pos.z:,.0f})"
 
@@ -155,7 +159,7 @@ class GameScreen(State):
         self.draw_text(30, C.WN_H - 100, f"Throttle: {throttle_text}")
 
         if self.show_stall_warning:
-            gl.glColor3f(1, 0.6, 0.6) # Set color for text
+            gl.glColor3f(1, 0, 0) # Set color for text
             self.draw_text(C.WN_W//2-20, C.WN_H-100, "[STALL]")
 
         # Re-enable depth testing for the next frame

@@ -41,7 +41,7 @@ class Plane(Entity):
 
     def update(self, dt: int):
         # Sideways movement - convert roll to yaw
-        self.rot.y += sin(rad(self.rot.z)) * 20 * dt/1000
+        self.rot.y += sin(rad(self.rot.z)) * 30 * dt/1000 * self.throttle_frac
 
         # Pitch, yaw, roll
         pitch, yaw, roll = self.rot
