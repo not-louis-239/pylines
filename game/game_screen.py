@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING, cast
 
 import pygame as pg
 from core.colours import SKY_COLOUR_SCHEMES
+from core.custom_types import RealNumber
 import core.constants as C
 from core.utils import clamp
 from game.state_management import State
@@ -20,7 +21,7 @@ class GameScreen(State):
         self.plane = Plane()
         self.ground = Ground(game.assets.images.test_grass) # Pass the loaded image to Ground
         self.sky = Sky()
-        self.time_of_day: str = "night"
+        self.time_of_day: str = "sunset"
         self.show_stall_warning: bool = False
 
         # Font for text rendering
@@ -29,7 +30,7 @@ class GameScreen(State):
     def update(self, dt: int):
         self.plane.update(dt)
 
-        self.show_stall_warning = 90 > self.plane.rot.x > self.plane.model.stall_angle
+        self.show_stall_warning = self.plane.rot.x < -self.plane.model.stall_angle
 
     def take_input(self, keys: ScancodeWrapper, dt: int) -> None:
         rot_speed = 50 * dt/1000
@@ -44,22 +45,23 @@ class GameScreen(State):
         # Clamp throttle
         self.plane.throttle_frac = clamp(self.plane.throttle_frac, 0, 1)
 
-        # Rotation
+        # Pitch
         if keys[pg.K_UP]:
-            self.plane.rot.x -= rot_speed # Pitch
+            self.plane.rot.x -= rot_speed
         if keys[pg.K_DOWN]:
             self.plane.rot.x += rot_speed
+        # Turning (Roll)
         if keys[pg.K_LEFT]:
-            self.plane.rot.z += rot_speed # Roll
-        if keys[pg.K_RIGHT]:
             self.plane.rot.z -= rot_speed
+        if keys[pg.K_RIGHT]:
+            self.plane.rot.z += rot_speed
 
         # Clamp
         self.plane.rot.y %=360
         self.plane.rot.z %= 360
         self.plane.rot.x = clamp(self.plane.rot.x, -90, 90)
 
-    def draw_text(self, x: int, y: int, text: str):
+    def draw_text(self, x: RealNumber, y: RealNumber, text: str):
         text_surface = self.font.render(text, True, (255, 255, 255, 255))
         text_surface = pg.transform.flip(text_surface, False, True) # Flip vertically
         text_data = pg.image.tostring(text_surface, "RGBA", True)
@@ -110,30 +112,52 @@ class GameScreen(State):
         gl.glLoadIdentity()
 
         # Apply camera transformations based on plane's state
-        gl.glRotatef(self.plane.rot.x, 1, 0, 0) # Pitch
-        gl.glRotatef(self.plane.rot.y, 0, 1, 0) # Yaw
-        gl.glRotatef(self.plane.rot.z, 0, 0, 1) # Roll
+        # The order of operations is Yaw, then Pitch, then Roll.
+        # OpenGL applies matrix transformations in reverse order of the calls.
+        gl.glRotatef(self.plane.rot.z, 0, 0, 1) # 3. Roll
+        gl.glRotatef(self.plane.rot.x, 1, 0, 0) # 2. Pitch
+        gl.glRotatef(self.plane.rot.y, 0, 1, 0) # 1. Yaw
         gl.glTranslatef(-self.plane.pos.x, -(self.plane.pos.y+C.CAMERA_OFFSET_Y), -self.plane.pos.z)
 
         self.ground.draw()
 
-        # HUD
+        # --- HUD ---
+        # Disable depth testing to draw HUD on top of 3D scene
+        gl.glDisable(gl.GL_DEPTH_TEST)
+
         gl.glColor3f(1, 1, 1) # Set color for text
 
         # Position and Rotation
-        pos_text = f"Pos: ({self.plane.pos.x:.2f}, {self.plane.pos.y:.2f}, {self.plane.pos.z:.2f})"
-        rot_text = f"Rot: ({self.plane.rot.x:.2f}, {self.plane.rot.y:.2f}, {self.plane.rot.z:.2f})"
-        self.draw_text(10, 10, pos_text)
-        self.draw_text(10, 50, rot_text)
+        altitude_in_ft = self.plane.pos.y * 3.28084  # Convert to ft
 
-        if self.show_stall_warning:
-            gl.glColor3f(1, 0.8, 0.8) # Set color for text
-            self.draw_text(C.WN_W//2, C.WN_H-50, "[STALL]")
+        altitude_text = f"Altitude: {altitude_in_ft:,.0f} ft"
+
+        pitch_text = f"Pitch: {-self.plane.rot.y:,.0f}°"
+        dir_text = f"Dir: {self.plane.rot.x:,.0f}°"
+        roll_text = f"Roll: {-self.plane.rot.z:,.0f}°"
+
+        loc_text = f"Loc: ({self.plane.pos.x:,.0f}, {self.plane.pos.z:,.0f})"
+
+        self.draw_text(C.WN_W//2-100, C.WN_H*0.20, pitch_text)
+        self.draw_text(C.WN_W//2-100, C.WN_H*0.25, dir_text)
+        self.draw_text(C.WN_W//2-100, C.WN_H*0.30, roll_text)
+
+        self.draw_text(C.WN_W//2-100, C.WN_H*0.75, loc_text)
+        self.draw_text(C.WN_W//2-100, C.WN_H*0.8, altitude_text)
 
         # Throttle
         if self.plane.throttle_frac >= 1:
             throttle_text = "Full"
-        else:
+        elif self.plane.throttle_frac > 0:
             throttle_text = f"{self.plane.throttle_frac:.0%}"
-        self.draw_text(10, C.WN_H - 40, f"Throttle: {throttle_text}")
+        else:
+            throttle_text = "None"
+        self.draw_text(30, C.WN_H - 100, f"Throttle: {throttle_text}")
+
+        if self.show_stall_warning:
+            gl.glColor3f(1, 0.6, 0.6) # Set color for text
+            self.draw_text(C.WN_W//2-20, C.WN_H-100, "[STALL]")
+
+        # Re-enable depth testing for the next frame
+        gl.glEnable(gl.GL_DEPTH_TEST)
 

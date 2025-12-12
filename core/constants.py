@@ -13,7 +13,7 @@ class PlaneModel:
     stall_angle: float   # in degrees
     wing_area: float     # m²
     mass: float          # kg
-    max_thrust: float    # Newtons
+    max_throttle: float    # Newtons
     aspect_ratio: float
     efficiency: float
 
@@ -27,7 +27,7 @@ WN_H = 850
 GROUND_SIZE = 100000
 
 # Rendering
-INNER_RENDER_LIMIT = 0.1
+INNER_RENDER_LIMIT = 0.05
 OUTER_RENDER_LIMIT = 100000
 CAMERA_OFFSET_Y: float = 0.1  # Offset camera or else ground will not render
 
@@ -40,7 +40,7 @@ PLANE_MODEL: PlaneModel = PlaneModel(
     stall_angle=15,
     wing_area=16.2,
     mass=850,
-    max_thrust=1500,
+    max_throttle=1500,
     aspect_ratio=7.5,
     efficiency=0.8
 )

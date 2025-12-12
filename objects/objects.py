@@ -2,6 +2,7 @@ import pygame as pg
 import OpenGL.GL as gl
 import OpenGL.GLU as glu
 import math
+from math import sin, cos, radians as rad
 
 from core.custom_types import Surface, Coord3
 from core.constants import (
@@ -39,70 +40,27 @@ class Plane(Entity):
         self.flaps: float = 0
 
     def update(self, dt: int):
-        pass  # TODO: Make my own implementation
+        # Sideways movement - convert roll to yaw
+        self.rot.y += sin(rad(self.rot.z)) * 20 * dt/1000
 
-        self.rot.y += self.rot.z * 0.05 * dt/1000
+        # Pitch, yaw, roll
+        pitch, yaw, roll = self.rot
 
-        # # --- Orientation vectors ---
-        # pitch, yaw, roll = self.rot
+        # Forward vector (where the nose points)
+        forward = pg.Vector3(
+            sin(rad(yaw)) * cos(rad(pitch)),
+            sin(rad(-pitch)),  # pitch is negated since +pitch = nose down
+            -cos(rad(yaw)) * cos(rad(pitch)),
+        ).normalize()
 
-        # forward_x = -math.sin(math.radians(yaw)) * math.cos(math.radians(pitch))
-        # forward_y =  math.sin(math.radians(pitch))
-        # forward_z = -math.cos(math.radians(yaw)) * math.cos(math.radians(pitch))
-        # forward = pg.Vector3(forward_x, forward_y, forward_z)
-        # if forward.length() > 0:
-        #     forward = forward.normalize()
+        self.pos += forward/1000 * self.throttle_frac*self.model.max_throttle
 
-        # # --- Velocity direction ---
-        # speed = self.vel.length()
-        # if speed > 0.01:
-        #     vel_dir = self.vel.normalize()
-        # else:
-        #     vel_dir = forward
+        gravity = pg.Vector3(0, -GRAVITY, 0)
 
-        # # --- Angle of Attack (AoA) ---
-        # dot = forward.dot(vel_dir)
-        # dot = max(-1.0, min(1.0, dot))   # HARD clamp
-        # aoa = math.degrees(math.acos(dot))
-
-        # # Guard against junk AoA when speed is tiny
-        # if speed < 1.0:
-        #     aoa = 0
-
-        # # --- Lift Coefficient ---
-        # if aoa <= STALL_ANGLE:
-        #     CL = CL_MAX * (aoa / STALL_ANGLE)
-        # else:
-        #     CL = max(0.0, CL_MAX * (1 - 0.1 * (aoa - STALL_ANGLE)))
-
-        # # --- Dynamic Pressure ---
-        # q = 0.5 * AIR_DENSITY * speed * speed
-
-        # # --- Correct lift direction (perpendicular to airflow) ---
-        # up = pg.Vector3(0, 1, 0)
-        # # cross twice to get the perpendicular-to-velocity, mostly-up lift vector
-        # lift_dir = vel_dir.cross(up).cross(vel_dir)
-        # if lift_dir.length() > 0:
-        #     lift_dir = lift_dir.normalize()
-        # else:
-        #     lift_dir = up  # fallback if velocity is vertical
-
-        # lift = lift_dir * (CL * q * WING_AREA)
-
-        # # --- Forces ---
-        # thrust = forward * self.throttle * THRUST_FORCE
-        # gravity = pg.Vector3(0, -GRAVITY, 0)
-        # drag = -self.vel * DRAG
-
-        # # --- Combine & integrate ---
-        # self.acc = thrust + gravity + drag + lift
-        # self.vel += self.acc * dt
-        # self.pos += self.vel * dt
-
-        # if self.pos.y < 0:
-        #     self.pos.y = 0
-        # if self.vel.y < 0:
-        #     self.vel.y = 0
+        if self.pos.y < 0:
+            self.pos.y = 0
+        if self.vel.y < 0:
+            self.vel.y = 0
 
 class Ground(Entity):
     def __init__(self, image_surface: Surface) -> None:
@@ -138,6 +96,10 @@ class Ground(Entity):
     def draw(self): # The `wn` parameter might not be necessary for OpenGL rendering
         gl.glPushMatrix()
 
+        # Enable polygon offset to prevent Z-fighting with other objects on the ground
+        gl.glEnable(gl.GL_POLYGON_OFFSET_FILL)
+        gl.glPolygonOffset(-1.0, -1.0)
+
         gl.glEnable(gl.GL_TEXTURE_2D)
         gl.glBindTexture(gl.GL_TEXTURE_2D, self.texture_id)
         gl.glColor3f(1.0, 1.0, 1.0) # Ensure no color tint from glColor3f
@@ -145,14 +107,18 @@ class Ground(Entity):
         gl.glBegin(gl.GL_TRIANGLE_STRIP)
         # Assign texture coordinates (U, V) to each vertex
         # The 10.0 here makes the texture repeat 10 times across the ground plane
+        texture_repeat_count = 5000.0 # Make texture repeat many times over large ground
         gl.glTexCoord2f(0.0, 0.0); gl.glVertex3f(self.vertices[0][0], self.vertices[0][1], self.vertices[0][2])
-        gl.glTexCoord2f(0.0, 10.0); gl.glVertex3f(self.vertices[1][0], self.vertices[1][1], self.vertices[1][2])
-        gl.glTexCoord2f(10.0, 0.0); gl.glVertex3f(self.vertices[2][0], self.vertices[2][1], self.vertices[2][2])
-        gl.glTexCoord2f(10.0, 10.0); gl.glVertex3f(self.vertices[3][0], self.vertices[3][1], self.vertices[3][2])
+        gl.glTexCoord2f(0.0, texture_repeat_count); gl.glVertex3f(self.vertices[1][0], self.vertices[1][1], self.vertices[1][2])
+        gl.glTexCoord2f(texture_repeat_count, 0.0); gl.glVertex3f(self.vertices[2][0], self.vertices[2][1], self.vertices[2][2])
+        gl.glTexCoord2f(texture_repeat_count, texture_repeat_count); gl.glVertex3f(self.vertices[3][0], self.vertices[3][1], self.vertices[3][2])
         gl.glEnd()
 
         gl.glDisable(gl.GL_TEXTURE_2D)
         gl.glBindTexture(gl.GL_TEXTURE_2D, 0) # Unbind texture
+
+        # Disable polygon offset after drawing the ground
+        gl.glDisable(gl.GL_POLYGON_OFFSET_FILL)
 
         gl.glPopMatrix()
 
