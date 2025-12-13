@@ -37,7 +37,7 @@ class Images(AssetBank):
         self.augment()
 
     def augment(self):
-        self.speed_dial = scale(self.speed_dial, (100, 100))
+        self.speed_dial = scale(self.speed_dial, (250, 250))
         self.compass = scale(self.compass, (250, 250))
 
     def _load(self, name: str):
@@ -65,7 +65,7 @@ class Sounds(AssetBank):
         self.augment()
 
     def augment(self):
-        pass
+        self.good_landing.set_volume(5)
 
     def _load(self, name: str) -> pg.mixer.Sound:
         return pg.mixer.Sound(BASE_DIR / "assets" / "sounds" / name)

@@ -1,11 +1,13 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, cast
+import math
 
 import pygame as pg
+
 from core.colours import SKY_COLOUR_SCHEMES
-from core.custom_types import RealNumber, AColour
+from core.custom_types import RealNumber, AColour, Colour
 import core.constants as C
-from core.utils import clamp
+from core.utils import clamp, draw_needle, draw_text
 from game.state_management import State
 from objects.objects import Plane, Ground, Sky
 import OpenGL.GL as gl
@@ -138,6 +140,7 @@ class GameScreen(State):
         self.plane.rot.x = clamp(self.plane.rot.x, -90, 90)
 
     def draw_hud(self):
+        pitch, yaw, roll = self.plane.rot
         hud_surface = self.hud_surface
         hud_surface.fill((0, 0, 0, 0))  # clear with transparency
 
@@ -148,9 +151,69 @@ class GameScreen(State):
         y = C.WN_H - cockpit_h          # bottom-aligned
         hud_surface.blit(cockpit, (x, y))
 
-        # Blit compass
-        rect = self.images.compass.get_rect(center=(C.WN_W//2-100, C.WN_H*0.9))
-        hud_surface.blit(self.images.compass, rect)
+        # Compass (heading + ground track)
+        centre = (C.WN_W//2-300, C.WN_H*0.85)
+        compass_rot = pg.transform.rotate(self.images.compass, yaw)
+        rect = compass_rot.get_rect(center=centre)
+        hud_surface.blit(compass_rot, rect)
+
+        draw_text(hud_surface, (C.WN_W//2-300, C.WN_H*0.85 + 20), 'centre', 'centre', "Heading", (192, 0, 0), 18, self.fonts.monospaced)
+        draw_text(hud_surface, (C.WN_W//2-300, C.WN_H*0.85 + 40), 'centre', 'centre', "Ground Track", (192, 160, 0), 18, self.fonts.monospaced)
+        vel_flat = pg.Vector2(self.plane.vel.x, self.plane.vel.z)
+        ground_track_deg = math.degrees(
+            math.atan2(vel_flat.x, -vel_flat.y)
+        ) % 360 if vel_flat.length() >= C.EPSILON else 0
+
+        # Ground track (the actual velocity vector of the plane)
+        draw_needle(hud_surface, centre, 90 - (ground_track_deg-yaw), 100, (255, 190, 0))
+        # Heading (where the nose points)
+        draw_needle(hud_surface, centre, 90, 100)
+
+        # ASI (Air Speed Indicator)
+        centre = (C.WN_W//2+300, C.WN_H*0.85)
+        rect = self.images.speed_dial.get_rect(center=centre)
+        hud_surface.blit(self.images.speed_dial, rect)
+
+        speed_knots = self.plane.vel.length() * 1.94384  # Convert to knots
+        angle = 90 - min(336, 270 * speed_knots/160)
+        draw_text(hud_surface, (C.WN_W//2+300, C.WN_H*0.85 - 20), 'centre', 'centre', f"{int(self.plane.vel.length() * 1.94384):03d}", (192, 192, 192), 25, self.font)
+        draw_needle(hud_surface, centre, angle, 100)
+
+        # Altimeter
+        pg.draw.rect(hud_surface, (255, 255, 255), (C.WN_W//2-135, C.WN_H*0.7+10, 270, 100))
+        pg.draw.rect(hud_surface, (0, 0, 0), (C.WN_W//2-133, C.WN_H*0.7+12, 266, 96))
+        draw_text(hud_surface, (C.WN_W//2+100, (C.WN_H*3)//4), 'right', 'centre', f"{self.plane.pos.y * 3.28084:,.0f} ft", (255, 255, 255), 30, self.font)
+
+        # VSI
+        vs_ft_per_min = self.plane.vel.y * 196.85  # Convert
+        text_colour: Colour = (179, 228, 255) if vs_ft_per_min > 0 else (255, 255, 255) if vs_ft_per_min == 0 else (255, 206, 173)
+        draw_text(hud_surface, (C.WN_W//2+90, C.WN_H*0.7+80), 'right', 'centre', f"{vs_ft_per_min:+,.0f} / min", text_colour, 30, self.fonts.monospaced)
+
+        # Location
+        centre = (C.WN_W//2, C.WN_H*0.87)
+        size = 270, 50
+        rect = pg.Rect(0, 0, *size)
+        rect.center = centre  # type: ignore
+        pg.draw.rect(hud_surface, (255, 255, 255), rect)
+        size = 266, 46
+        rect.size = size
+        rect.center = centre  # type: ignore
+        pg.draw.rect(hud_surface, (0, 0, 0), rect)
+        draw_text(hud_surface, centre, 'centre', 'centre', f"({self.plane.pos.x:,.0f}m, {self.plane.pos.z:,.0f}m)", (255, 255, 255), 28, self.fonts.monospaced)
+
+        # Throttle bar
+        draw_text(hud_surface, (C.WN_W*0.86, C.WN_H*0.97), 'centre', 'centre', "Throttle", (25, 20, 18), 30, self.fonts.monospaced)
+        pg.draw.line(hud_surface, (51, 43, 37), (C.WN_W*0.86, C.WN_H*0.94), (C.WN_W*0.86, C.WN_H*0.75), 3)
+        size = 40, 20
+        rect = pg.Rect(0, 0, *size)
+        rect.center = (C.WN_W*0.86, C.WN_H*0.94 - C.WN_H*0.19*(self.plane.throttle_frac))  # type: ignore
+        pg.draw.rect(hud_surface, (255, 255, 255), rect)
+
+        # Stall warning
+        draw_text(hud_surface, (C.WN_W//2-160, C.WN_H*0.92), 'centre', 'centre', "STALL", (25, 20, 18), 20, self.fonts.monospaced)
+        warning_col = (255, 0, 0) if self.show_stall_warning else (0, 0, 0)
+        pg.draw.circle(hud_surface, (51, 43, 37), (C.WN_W//2-160, C.WN_H*0.96), 12)
+        pg.draw.circle(hud_surface, (warning_col), (C.WN_W//2-160, C.WN_H*0.96), 10)
 
         # Upload HUD surface to OpenGL
         hud_data = pg.image.tostring(hud_surface, "RGBA", True)

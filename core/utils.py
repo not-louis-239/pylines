@@ -1,7 +1,9 @@
 from typing import Generator
+import math
+from pathlib import Path
 import pygame as pg
 from pygame.surface import Surface
-from core.custom_types import Colour, RealNumber
+from core.custom_types import Colour, RealNumber, Coord2
 from dataclasses import dataclass
 
 @dataclass
@@ -10,10 +12,16 @@ class Rotation:
     yaw: int
     roll: int
 
-def draw_text(surface: Surface, pos: tuple[int, int], horiz_align: str, vert_align: str,
-              text: str, colour: Colour, size: int, font_family: str | None = None):
-    font = pg.font.SysFont(font_family, size) if font_family else pg.font.SysFont(None, size)
-    img = font.render(text, True, colour)
+def draw_text(surface: Surface, pos: tuple[float, float], horiz_align: str, vert_align: str,
+              text: str, colour: Colour, size: int, font: pg.font.Font | Path | str | None = None):
+    if isinstance(font, pg.font.Font):
+        font_obj = font
+    elif isinstance(font, (str, Path)):
+        font_obj = pg.font.Font(str(font), size)
+    else:
+        font_obj = pg.font.Font(None, size)
+
+    img = font_obj.render(text, True, colour)
     r = img.get_rect()
 
     # Horizontal
@@ -37,6 +45,16 @@ def draw_text(surface: Surface, pos: tuple[int, int], horiz_align: str, vert_ali
         raise ValueError("Invalid vert_align")
 
     surface.blit(img, r)
+
+def draw_needle(surf: Surface, centre: Coord2, angle_deg: RealNumber, length: RealNumber, colour: Colour = (255, 0, 0), width: int = 3):
+    angle_rad = math.radians(angle_deg)
+
+    end = (
+        centre[0] + math.cos(angle_rad) * length,
+        centre[1] - math.sin(angle_rad) * length  # minus because screen Y is down
+    )
+
+    pg.draw.line(surf, colour, centre, end, width)
 
 def frange(start: int | float, stop: int | float, step: int | float) -> Generator[float, None, None]:
     """A version of range that accepts and yields floats."""

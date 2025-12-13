@@ -8,6 +8,7 @@ AColour: TypeAlias = tuple[int, int, int, int]
 
 # Mathematical types
 RealNumber: TypeAlias = int | float
+Coord2: TypeAlias = tuple[RealNumber, RealNumber]
 Coord3: TypeAlias = tuple[RealNumber, RealNumber, RealNumber]
 
 # Event types
