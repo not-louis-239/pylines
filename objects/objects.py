@@ -3,6 +3,7 @@ import OpenGL.GL as gl
 import OpenGL.GLU as glu
 from math import sin, cos, asin, degrees, radians as rad
 
+from core.asset_manager import Sounds
 from core.custom_types import Surface, Coord3
 from core.utils import clamp
 from core.constants import (
@@ -23,7 +24,7 @@ class Entity:
         pass
 
 class Plane(Entity):
-    def __init__(self):
+    def __init__(self, sounds: Sounds):
         super().__init__(0, 0, 0)
         self.model: PlaneModel = PLANE_MODEL
 
@@ -34,7 +35,24 @@ class Plane(Entity):
         self.throttle_frac: float = 0
         self.flaps: float = 0
 
+        self.sounds = sounds
         self.aoa = 0
+
+        self.on_ground = True
+
+    def check_landing(self):
+        # Check landing for quality
+        pitch, yaw, roll = self.rot
+
+        landing_good = self.vel.y > -1.7 and abs(roll) < 5 and -pitch > -12
+        landing_passable = self.vel.y > -4 and abs(roll) < 30 and -pitch > -20
+
+        if landing_good:
+            self.sounds.good_landing.play()
+        elif landing_passable:
+            self.sounds.hard_landing.play()
+        else:
+            self.sounds.crash.play()
 
     def update(self, dt: int):
         # Sideways movement - convert roll to yaw
@@ -93,8 +111,8 @@ class Plane(Entity):
         # Calculate drag
         cd = self.model.cd_min + self.model.cd_slope*abs(self.aoa)  # Baseline
         if self.aoa > self.model.stall_angle:  # Extra drag while stalling
-            cd += self.aoa-self.model.stall_angle*0.08  # Extra drag while on ground
-        if self.pos.y == 0:
+            cd += (self.aoa-self.model.stall_angle)*0.04
+        if self.pos.y == 0:  # Extra drag while on ground
             cd *= 1.25
         cd = min(cd, 1)
 
@@ -122,10 +140,17 @@ class Plane(Entity):
         self.pos.z = clamp(self.pos.z, -PRACTISE_LIMIT, PRACTISE_LIMIT)
 
         # Ground collision
-        if self.pos.y < 0:
+        if self.pos.y <= 0:
             self.pos.y = 0
+
+            if not self.on_ground:  # Only check transition from air -> ground
+                self.check_landing()
+
+            self.on_ground = True
             if self.vel.y < 0:
                 self.vel.y = 0
+        else:
+            self.on_ground = False
 
 class Ground(Entity):
     def __init__(self, image_surface: Surface) -> None:

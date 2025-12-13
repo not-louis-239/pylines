@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 class GameScreen(State):
     def __init__(self, game: Game) -> None:
         super().__init__(game)
-        self.plane = Plane()
+        self.plane = Plane(game.assets.sounds)
         self.ground = Ground(game.assets.images.test_grass)  # Pass the loaded image to Ground
         self.sky = Sky()
         self.time_of_day: str = "sunset"
@@ -28,6 +28,31 @@ class GameScreen(State):
 
         # Font for text rendering
         self.font = pg.font.Font(game.assets.fonts.monospaced, 36)
+
+        # Graphics
+        self.hud_tex = gl.glGenTextures(1)
+        gl.glBindTexture(gl.GL_TEXTURE_2D, self.hud_tex)
+
+        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR)
+        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR)
+        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_S, gl.GL_CLAMP_TO_EDGE)
+        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_T, gl.GL_CLAMP_TO_EDGE)
+
+        # Allocate empty texture
+        gl.glTexImage2D(
+            gl.GL_TEXTURE_2D,
+            0,
+            gl.GL_RGBA,
+            C.WN_W,
+            C.WN_H,
+            0,
+            gl.GL_RGBA,
+            gl.GL_UNSIGNED_BYTE,
+            None
+        )
+
+        gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
+        self.hud_surface = pg.Surface((C.WN_W, C.WN_H), pg.SRCALPHA)
 
     def update(self, dt: int):
         self.plane.update(dt)
@@ -112,6 +137,73 @@ class GameScreen(State):
         self.plane.rot.z %= 360
         self.plane.rot.x = clamp(self.plane.rot.x, -90, 90)
 
+    def draw_hud(self):
+        hud_surface = self.hud_surface
+        hud_surface.fill((0, 0, 0, 0))  # clear with transparency
+
+        # Draw cockpit
+        cockpit = self.images.cockpit
+        cockpit_w, cockpit_h = cockpit.get_size()
+        x = (C.WN_W - cockpit_w) // 2   # centre horizontally (optional)
+        y = C.WN_H - cockpit_h          # bottom-aligned
+        hud_surface.blit(cockpit, (x, y))
+
+        # Blit compass
+        rect = self.images.compass.get_rect(center=(C.WN_W//2-100, C.WN_H*0.9))
+        hud_surface.blit(self.images.compass, rect)
+
+        # Upload HUD surface to OpenGL
+        hud_data = pg.image.tostring(hud_surface, "RGBA", True)
+
+        gl.glEnable(gl.GL_BLEND)
+        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
+        gl.glBindTexture(gl.GL_TEXTURE_2D, self.hud_tex)
+        gl.glTexSubImage2D(
+            gl.GL_TEXTURE_2D,
+            0,
+            0, 0,
+            C.WN_W,
+            C.WN_H,
+            gl.GL_RGBA,
+            gl.GL_UNSIGNED_BYTE,
+            hud_data
+        )
+        gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
+
+        gl.glDisable(gl.GL_DEPTH_TEST)
+
+        # Render HUD on top of 3D world
+        gl.glEnable(gl.GL_TEXTURE_2D)
+
+        gl.glBindTexture(gl.GL_TEXTURE_2D, self.hud_tex)
+        gl.glColor4f(1, 1, 1, 1)
+
+        gl.glMatrixMode(gl.GL_PROJECTION)
+        gl.glPushMatrix()
+        gl.glLoadIdentity()
+        gl.glOrtho(0, C.WN_W, C.WN_H, 0, -1, 1)
+
+        gl.glMatrixMode(gl.GL_MODELVIEW)
+        gl.glPushMatrix()
+        gl.glLoadIdentity()
+
+        gl.glBegin(gl.GL_QUADS)
+
+        gl.glTexCoord2f(0, 1); gl.glVertex2f(0, 0)
+        gl.glTexCoord2f(1, 1); gl.glVertex2f(C.WN_W, 0)
+        gl.glTexCoord2f(1, 0); gl.glVertex2f(C.WN_W, C.WN_H)
+        gl.glTexCoord2f(0, 0); gl.glVertex2f(0, C.WN_H)
+        gl.glEnd()
+
+        gl.glPopMatrix()
+        gl.glMatrixMode(gl.GL_PROJECTION)
+        gl.glPopMatrix()
+        gl.glMatrixMode(gl.GL_MODELVIEW)
+
+        gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
+        gl.glEnable(gl.GL_DEPTH_TEST)
+        gl.glDisable(gl.GL_TEXTURE_2D)
+
     def draw(self, wn: Surface):
         colour_scheme = SKY_COLOUR_SCHEMES[self.time_of_day]
 
@@ -132,39 +224,4 @@ class GameScreen(State):
         gl.glTranslatef(-self.plane.pos.x, -(self.plane.pos.y+C.CAMERA_OFFSET_Y), -self.plane.pos.z)
 
         self.ground.draw()
-
-        # --- HUD ---
-        # Disable depth testing to draw HUD on top of 3D scene
-        gl.glDisable(gl.GL_DEPTH_TEST)
-
-        gl.glColor3f(1, 1, 1) # Set color for text
-
-        # Position and Rotation
-        altitude_in_ft = self.plane.pos.y * 3.28084  # Convert to ft
-        airspeed = self.plane.vel.length()
-
-        self.draw_text(C.WN_W//2-100, C.WN_H*0.20, f"Pitch: {-self.plane.rot.x:,.0f}°")
-        self.draw_text(C.WN_W//2-100, C.WN_H*0.25, f"Dir: {self.plane.rot.y:,.0f}°")
-        self.draw_text(C.WN_W//2-100, C.WN_H*0.30, f"Roll: {(self.plane.rot.z+180)%360-180:,.0f}°")
-
-        self.draw_text(C.WN_W//2-100, C.WN_H*0.65, f"Speed: {airspeed*1.94:,.2f} kn")
-        self.draw_text(C.WN_W//2-100, C.WN_H*0.7, f"Loc: ({self.plane.pos.x:,.0f}m, {self.plane.pos.z:,.0f}m)")
-        self.draw_text(C.WN_W//2-100, C.WN_H*0.75, f"Altitude: {altitude_in_ft:,.0f} ft")
-        self.draw_text(C.WN_W//2-100, C.WN_H*0.8, f"{self.plane.vel.y * 3.28084 * 60:+,.0f} ft/min")
-
-        # Throttle
-        if self.plane.throttle_frac >= 1:
-            throttle_text = "Full"
-        elif self.plane.throttle_frac > 0:
-            throttle_text = f"{self.plane.throttle_frac:.0%}"
-        else:
-            throttle_text = "None"
-        self.draw_text(30, C.WN_H - 100, f"Throttle: {throttle_text}")
-
-        if self.show_stall_warning:
-            gl.glColor3f(1, 0, 0) # Set color for text
-            self.draw_text(C.WN_W//2-20, C.WN_H-100, "[STALL]")
-
-        # Re-enable depth testing for the next frame
-        gl.glEnable(gl.GL_DEPTH_TEST)
-
+        self.draw_hud()

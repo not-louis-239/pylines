@@ -16,6 +16,8 @@ class PlaneModel:
     max_throttle: float  # Newtons
     aspect_ratio: float
     efficiency: float
+    # Safety
+    v_ne: float  # Velocity Never Exceed, in m/s
 
 # Visuals, tick updates and window size
 FPS = 60
@@ -44,7 +46,8 @@ PLANE_MODEL: PlaneModel = PlaneModel(
     mass=850,
     max_throttle=1200,
     aspect_ratio=7.5,
-    efficiency=0.8
+    efficiency=0.8,
+    v_ne=82.31
 )
 
 AIR_DENSITY = 1.225  # kg/m³
