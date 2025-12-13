@@ -61,11 +61,12 @@ class Sounds(AssetBank):
         # Warnings
         self.overspeed: Sound = self._load("overspeed.ogg")
         self.stall_warning: Sound = self._load("stall_warning.ogg")
+        self.menu_music: Sound = self._load("menu_music.ogg")
 
         self.augment()
 
     def augment(self):
-        self.good_landing.set_volume(5)
+        self.good_landing.set_volume(10)
 
     def _load(self, name: str) -> pg.mixer.Sound:
         return pg.mixer.Sound(BASE_DIR / "assets" / "sounds" / name)

@@ -9,7 +9,8 @@ from core.custom_types import RealNumber, AColour, Colour
 import core.constants as C
 from core.utils import clamp, draw_needle, draw_text
 from game.state_management import State
-from objects.objects import Plane, Ground, Sky
+from objects.objects import Plane
+from objects.scenery import Sky, Ground
 import OpenGL.GL as gl
 import OpenGL.GLU as glu
 

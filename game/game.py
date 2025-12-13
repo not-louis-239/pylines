@@ -1,5 +1,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
+import pygame as pg
+
 from core.asset_manager import Assets
 from game.state_management import TitleScreen
 from game.game_screen import GameScreen
@@ -12,11 +14,12 @@ if TYPE_CHECKING:
 class Game:
     def __init__(self) -> None:
         self.assets = Assets()
+        self.prev_keys: ScancodeWrapper = pg.key.get_pressed()
         self.states: dict[str, State] = {
             "title": TitleScreen(self),
             "game": GameScreen(self),
         }
-        self.state = "game"
+        self.state = "title"
 
     def update(self, dt) -> None:
         self.states[self.state].update(dt)
