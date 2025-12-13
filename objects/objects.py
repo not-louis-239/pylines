@@ -61,7 +61,6 @@ class Plane(Entity):
 
         # Pitch, yaw, roll
         pitch, yaw, roll = self.rot
-        print((roll+180)%360 - 180)
 
         # Forward vector (where the nose points)
         forward_vec = pg.Vector3(

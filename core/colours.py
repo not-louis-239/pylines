@@ -82,3 +82,6 @@ SKY_COLOUR_SCHEMES: dict[str, ColourScheme] = {
         _hex_to_rgb("#E3B153")
     )
 }
+
+BLUE = (179, 228, 255)
+BROWN = (255, 206, 173)

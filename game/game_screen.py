@@ -4,7 +4,7 @@ import math
 
 import pygame as pg
 
-from core.colours import SKY_COLOUR_SCHEMES
+from core.colours import SKY_COLOUR_SCHEMES, BLUE, WHITE, BROWN
 from core.custom_types import RealNumber, AColour, Colour
 import core.constants as C
 from core.utils import clamp, draw_needle, draw_text
@@ -179,27 +179,58 @@ class GameScreen(State):
         draw_text(hud_surface, (C.WN_W//2+300, C.WN_H*0.85 - 20), 'centre', 'centre', f"{int(self.plane.vel.length() * 1.94384):03d}", (192, 192, 192), 25, self.font)
         draw_needle(hud_surface, centre, angle, 100)
 
-        # Altimeter
-        pg.draw.rect(hud_surface, (255, 255, 255), (C.WN_W//2-135, C.WN_H*0.7+10, 270, 100))
-        pg.draw.rect(hud_surface, (0, 0, 0), (C.WN_W//2-133, C.WN_H*0.7+12, 266, 96))
-        draw_text(hud_surface, (C.WN_W//2+100, (C.WN_H*3)//4), 'right', 'centre', f"{self.plane.pos.y * 3.28084:,.0f} ft", (255, 255, 255), 30, self.font)
+        # Altimeter (left)
+        alt_centre = (C.WN_W//2 - 110, int(C.WN_H*0.74))
+        alt_size = 160, 70
+        alt_rect = pg.Rect(0, 0, *alt_size)
+        alt_rect.center = alt_centre
+        pg.draw.rect(hud_surface, (255, 255, 255), alt_rect)
+        inner_alt_rect = pg.Rect(0, 0, alt_size[0]-4, alt_size[1]-4)
+        inner_alt_rect.center = alt_centre
+        pg.draw.rect(hud_surface, (0, 0, 0), inner_alt_rect)
+        draw_text(
+            hud_surface,
+            (alt_centre[0], alt_centre[1]-15),
+            'centre', 'centre',
+            f"{self.plane.pos.y * 3.28084:,.0f} ft",
+            (255, 255, 255),
+            27,
+            self.fonts.monospaced
+        )
 
-        # VSI
-        vs_ft_per_min = self.plane.vel.y * 196.85  # Convert
-        text_colour: Colour = (179, 228, 255) if vs_ft_per_min > 0 else (255, 255, 255) if vs_ft_per_min == 0 else (255, 206, 173)
-        draw_text(hud_surface, (C.WN_W//2+90, C.WN_H*0.7+80), 'right', 'centre', f"{vs_ft_per_min:+,.0f} / min", text_colour, 30, self.fonts.monospaced)
+        # VSI (below altimeter)
+        vsi_centre = (alt_centre[0], alt_centre[1]+15)
+        vs_ft_per_min = self.plane.vel.y * 196.85
+        text_colour: Colour = BLUE if vs_ft_per_min > 0 else WHITE if vs_ft_per_min == 0 else BROWN
+        draw_text(
+            hud_surface,
+            vsi_centre,
+            'centre', 'centre',
+            f"{vs_ft_per_min:+,.0f} / min",
+            text_colour,
+            22,
+            self.fonts.monospaced
+        )
 
-        # Location
-        centre = (C.WN_W//2, C.WN_H*0.87)
-        size = 270, 50
-        rect = pg.Rect(0, 0, *size)
-        rect.center = centre  # type: ignore
-        pg.draw.rect(hud_surface, (255, 255, 255), rect)
-        size = 266, 46
-        rect.size = size
-        rect.center = centre  # type: ignore
-        pg.draw.rect(hud_surface, (0, 0, 0), rect)
-        draw_text(hud_surface, centre, 'centre', 'centre', f"({self.plane.pos.x:,.0f}m, {self.plane.pos.z:,.0f}m)", (255, 255, 255), 28, self.fonts.monospaced)
+        # Location / LOC (right)
+        loc_centre = (C.WN_W//2 + 85, int(C.WN_H*0.74))
+        loc_size = 210, 70
+        loc_rect = pg.Rect(0, 0, *loc_size)
+        loc_rect.center = loc_centre
+        pg.draw.rect(hud_surface, (255, 255, 255), loc_rect)
+        inner_loc_rect = pg.Rect(0, 0, loc_size[0]-4, loc_size[1]-4)
+        inner_loc_rect.center = loc_centre
+        pg.draw.rect(hud_surface, (0, 0, 0), inner_loc_rect)
+
+        draw_text(
+            hud_surface,
+            loc_centre,
+            'centre', 'centre',
+            f"({self.plane.pos.x:,.0f}m, {self.plane.pos.z:,.0f}m)",
+            (255, 255, 255),
+            22,
+            self.fonts.monospaced
+        )
 
         # Throttle bar
         draw_text(hud_surface, (C.WN_W*0.86, C.WN_H*0.97), 'centre', 'centre', "Throttle", (25, 20, 18), 30, self.fonts.monospaced)
@@ -214,6 +245,42 @@ class GameScreen(State):
         warning_col = (255, 0, 0) if self.show_stall_warning else (0, 0, 0)
         pg.draw.circle(hud_surface, (51, 43, 37), (C.WN_W//2-160, C.WN_H*0.96), 12)
         pg.draw.circle(hud_surface, (warning_col), (C.WN_W//2-160, C.WN_H*0.96), 10)
+
+        # Attitude indicator
+        ai_centre = (C.WN_W//2, int(C.WN_H*0.89))
+        ai_size = 170, 170
+        ai_rect = pg.Rect(0, 0, *ai_size)
+        ai_rect.center = ai_centre
+        pg.draw.rect(hud_surface, (255, 255, 255), ai_rect)
+        inner_ai_rect = pg.Rect(0, 0, ai_size[0]-4, ai_size[1]-4)
+        inner_ai_rect.center = ai_centre
+
+        tick_spacing = 5  # pixels per 5° of pitch
+
+        pg.draw.rect(hud_surface, (0, 0, 0), inner_ai_rect)
+
+        for deg in range(-20, 25, 5):  # pitch marks in degrees
+            if deg == 0:
+                width = 85
+            elif deg % 10 == 0:
+                width = 30
+            else:
+                width = 20
+
+            # vertical offset from centre
+            dy = -pitch * tick_spacing
+            y = ai_centre[1] + deg * tick_spacing + dy
+
+            pg.draw.line(
+                hud_surface,
+                (255, 255, 255),
+                (ai_centre[0] - width, y),
+                (ai_centre[0] + width, y),
+                3
+            )
+
+        pg.draw.line(hud_surface, (255, 255, 255), ai_centre, (ai_centre[0]-10, ai_centre[1]+5), 3)
+        pg.draw.line(hud_surface, (255, 255, 255), ai_centre, (ai_centre[0]+10, ai_centre[1]+5), 3)
 
         # Upload HUD surface to OpenGL
         hud_data = pg.image.tostring(hud_surface, "RGBA", True)
