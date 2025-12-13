@@ -43,6 +43,7 @@ class Plane(Entity):
     def check_landing(self):
         # Check landing for quality
         pitch, yaw, roll = self.rot
+        roll = (roll+180)%360 - 180  # Normalise
 
         landing_good = self.vel.y > -1.7 and abs(roll) < 5 and -pitch > -12
         landing_passable = self.vel.y > -4 and abs(roll) < 30 and -pitch > -20
@@ -60,6 +61,7 @@ class Plane(Entity):
 
         # Pitch, yaw, roll
         pitch, yaw, roll = self.rot
+        print((roll+180)%360 - 180)
 
         # Forward vector (where the nose points)
         forward_vec = pg.Vector3(
