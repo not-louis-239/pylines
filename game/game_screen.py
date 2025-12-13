@@ -4,7 +4,7 @@ import math
 
 import pygame as pg
 
-from core.colours import SKY_COLOUR_SCHEMES, BLUE, WHITE, BROWN
+from core.colours import SKY_COLOUR_SCHEMES, BLUE, WHITE, BROWN, DARK_BLUE, DARK_BROWN
 from core.custom_types import RealNumber, AColour, Colour
 import core.constants as C
 from core.utils import clamp, draw_needle, draw_text
@@ -55,6 +55,16 @@ class GameScreen(State):
 
         gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
         self.hud_surface = pg.Surface((C.WN_W, C.WN_H), pg.SRCALPHA)
+
+        ai_size = 170, 170
+        inner_ai_rect = pg.Rect(0, 0, ai_size[0]-4, ai_size[1]-4)
+        self.ai_mask = pg.Surface(inner_ai_rect.size, pg.SRCALPHA)
+        pg.draw.circle(
+            self.ai_mask,
+            (255, 255, 255),
+            (inner_ai_rect.width//2, inner_ai_rect.height//2),
+            inner_ai_rect.width//2
+        )
 
     def update(self, dt: int):
         self.plane.update(dt)
@@ -245,42 +255,117 @@ class GameScreen(State):
         warning_col = (255, 0, 0) if self.show_stall_warning else (0, 0, 0)
         pg.draw.circle(hud_surface, (51, 43, 37), (C.WN_W//2-160, C.WN_H*0.96), 12)
         pg.draw.circle(hud_surface, (warning_col), (C.WN_W//2-160, C.WN_H*0.96), 10)
+        if self.show_stall_warning:
+            draw_text(hud_surface, (C.WN_W//2, C.WN_H*0.62), 'centre', 'centre', "STALL", (210, 0, 0), 50, self.fonts.monospaced)
 
         # Attitude indicator
         ai_centre = (C.WN_W//2, int(C.WN_H*0.89))
         ai_size = 170, 170
         ai_rect = pg.Rect(0, 0, *ai_size)
         ai_rect.center = ai_centre
-        pg.draw.rect(hud_surface, (255, 255, 255), ai_rect)
+        pg.draw.circle(hud_surface, (255, 255, 255), ai_centre, 85)
         inner_ai_rect = pg.Rect(0, 0, ai_size[0]-4, ai_size[1]-4)
         inner_ai_rect.center = ai_centre
 
+        # AI fill surface (clipped)
+        ai_surface = pg.Surface(inner_ai_rect.size, pg.SRCALPHA)
+
         tick_spacing = 5  # pixels per 5° of pitch
 
-        pg.draw.rect(hud_surface, (0, 0, 0), inner_ai_rect)
+        # Horizon position (in local AI coords)
+        horizon_y = inner_ai_rect.height // 2 - pitch * tick_spacing
 
-        for deg in range(-20, 25, 5):  # pitch marks in degrees
+        # Sky (above horizon)
+        pg.draw.rect(
+            ai_surface,
+            DARK_BLUE,
+            (0, 0, inner_ai_rect.width, horizon_y)
+        )
+
+        # Ground (below horizon)
+        pg.draw.rect(
+            ai_surface,
+            DARK_BROWN,
+            (0, horizon_y, inner_ai_rect.width, inner_ai_rect.height - horizon_y)
+        )
+
+        # Draw pitch ticks
+        for deg in range(-90, 95, 5):  # pitch marks in degrees
             if deg == 0:
                 width = 85
             elif deg % 10 == 0:
                 width = 30
             else:
-                width = 20
+                width = 15
 
-            # vertical offset from centre
-            dy = -pitch * tick_spacing
-            y = ai_centre[1] + deg * tick_spacing + dy
+            y = horizon_y + deg * tick_spacing
 
-            pg.draw.line(
-                hud_surface,
-                (255, 255, 255),
-                (ai_centre[0] - width, y),
-                (ai_centre[0] + width, y),
-                3
+            if 0 <= y <= inner_ai_rect.height:
+                pg.draw.line(
+                    ai_surface,
+                    WHITE,
+                    (inner_ai_rect.width//2 - width, y),
+                    (inner_ai_rect.width//2 + width, y),
+                    3
+                )
+
+        cx = inner_ai_rect.width // 2
+        top_y = 20
+        bot_y = inner_ai_rect.height - 20
+        chev_w = 18
+        chev_h = 10
+
+        # Nose too low -> point up
+        if pitch >= C.CHEVRON_ANGLE:
+            pg.draw.polygon(
+                ai_surface, WHITE,
+                [
+                    (cx - (chev_w+7), bot_y+2),
+                    (cx + (chev_w+7), bot_y+2),
+                    (cx, bot_y - (chev_h+2)),
+                ]
+            )
+            pg.draw.polygon(
+                ai_surface, C.CHEVRON_COLOUR,
+                [
+                    (cx - chev_w, bot_y),
+                    (cx + chev_w, bot_y),
+                    (cx, bot_y - chev_h),
+                ]
+            )
+        # Nose too high -> point down
+        elif pitch <= -C.CHEVRON_ANGLE:
+            pg.draw.polygon(
+                ai_surface, WHITE,
+                [
+                    (cx - (chev_w+7), top_y-2),
+                    (cx + (chev_w+7), top_y-2),
+                    (cx, top_y + (chev_h+2)),
+                ]
+            )
+            pg.draw.polygon(
+                ai_surface, C.CHEVRON_COLOUR,
+                [
+                    (cx - chev_w, top_y),
+                    (cx + chev_w, top_y),
+                    (cx, top_y + chev_h),
+                ]
             )
 
-        pg.draw.line(hud_surface, (255, 255, 255), ai_centre, (ai_centre[0]-10, ai_centre[1]+5), 3)
-        pg.draw.line(hud_surface, (255, 255, 255), ai_centre, (ai_centre[0]+10, ai_centre[1]+5), 3)
+        rotated_ai = pg.transform.rotate(ai_surface, roll)
+        rot_rect = rotated_ai.get_rect(center=(inner_ai_rect.width//2, inner_ai_rect.height//2))
+
+        masked = pg.Surface(inner_ai_rect.size, pg.SRCALPHA)
+        masked.blit(rotated_ai, rot_rect)
+        masked.blit(self.ai_mask, (0, 0), special_flags=pg.BLEND_RGBA_MULT)
+
+        hud_surface.blit(masked, inner_ai_rect.topleft)
+
+        # Inverted V-bar (should stay fixed to the HUD in a consistent position)
+        pg.draw.line(hud_surface, (255, 255, 0), (ai_centre[0]-35, ai_centre[1]), (ai_centre[0]-15, ai_centre[1]), 3)
+        pg.draw.line(hud_surface, (255, 255, 0), (ai_centre[0]+35, ai_centre[1]), (ai_centre[0]+15, ai_centre[1]), 3)
+        pg.draw.line(hud_surface, (255, 255, 0), ai_centre, (ai_centre[0]-10, ai_centre[1]+5), 3)
+        pg.draw.line(hud_surface, (255, 255, 0), ai_centre, (ai_centre[0]+10, ai_centre[1]+5), 3)
 
         # Upload HUD surface to OpenGL
         hud_data = pg.image.tostring(hud_surface, "RGBA", True)

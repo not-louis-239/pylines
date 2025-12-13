@@ -58,3 +58,7 @@ BASE_DIR: Path = Path(__file__).resolve().parent.parent
 
 # Mathematical
 EPSILON = 0.001  # Treat anything smaller than this as zero
+
+# Visual
+CHEVRON_ANGLE = 40
+CHEVRON_COLOUR = (255, 0, 0)

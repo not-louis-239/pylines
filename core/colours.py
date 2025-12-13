@@ -85,3 +85,5 @@ SKY_COLOUR_SCHEMES: dict[str, ColourScheme] = {
 
 BLUE = (179, 228, 255)
 BROWN = (255, 206, 173)
+DARK_BLUE = (140, 208, 255)
+DARK_BROWN = (200, 125, 80)
