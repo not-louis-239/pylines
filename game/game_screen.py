@@ -8,6 +8,7 @@ from core.colours import SKY_COLOUR_SCHEMES, BLUE, WHITE, BROWN, DARK_BLUE, DARK
 from core.custom_types import RealNumber, AColour, Colour
 import core.constants as C
 from core.utils import clamp, draw_needle, draw_text, draw_transparent_rect
+from game.sound_manager import SoundManager
 from game.state_management import State
 from objects.objects import Plane
 from objects.scenery import Sky, Ground
@@ -22,12 +23,15 @@ class GameScreen(State):
     def __init__(self, game: Game) -> None:
         super().__init__(game)
         self.plane = Plane(game.assets.sounds)
+        self.sound_manager = SoundManager(game.assets.sounds)
         self.ground = Ground(game.assets.images.test_grass)  # Pass the loaded image to Ground
         self.sky = Sky()
         self.time_of_day: str = "sunset"
         self.show_stall_warning: bool = False
+        self.show_overspeed_warning: bool = False
 
         self.stall_channel = pg.mixer.Channel(3)
+        self.overspeed_channel = pg.mixer.Channel(4)
 
         # Font for text rendering
         self.font = pg.font.Font(game.assets.fonts.monospaced, 36)
@@ -69,21 +73,33 @@ class GameScreen(State):
 
     def reset(self) -> None:
         self.plane.reset()
+        self.sound_manager.stop()
+        self.overspeed_channel.stop()
         self.sounds.menu_music.fadeout(1_500)
 
     def update(self, dt: int):
         if self.plane.crashed:
             self.stall_channel.stop()
+            self.overspeed_channel.stop()
+            self.sound_manager.stop()
             return
 
+        self.sound_manager.update(self.plane.throttle_frac)
         self.plane.update(dt)
-        self.show_stall_warning = self.plane.aoa > self.plane.model.stall_angle
 
+        self.show_stall_warning = self.plane.aoa > self.plane.model.stall_angle
         if self.show_stall_warning:
             if not self.stall_channel.get_busy():
                 self.stall_channel.play(self.sounds.stall_warning, loops=-1)
         else:
             self.stall_channel.stop()
+
+        self.show_overspeed_warning = self.plane.vel.length() > self.plane.model.v_ne  # Both in m/s
+        if self.show_overspeed_warning:
+            if not self.overspeed_channel.get_busy():
+                self.overspeed_channel.play(self.sounds.overspeed, loops=-1)
+        else:
+            self.overspeed_channel.stop()
 
     def _draw_text(self, x: RealNumber, y: RealNumber, text: str,
                   colour: AColour = (255, 255, 255, 255), bg_colour: AColour | None = None):  # FIXME: no workie!
@@ -135,7 +151,7 @@ class GameScreen(State):
             return
 
         rot_speed = 20 * dt/1000
-        throttle_speed = 0.5 * dt/1000
+        throttle_speed = 0.25 * dt/1000
 
         # Throttle
         if keys[pg.K_w]:
@@ -166,6 +182,16 @@ class GameScreen(State):
         pitch, yaw, roll = self.plane.rot
         hud_surface = self.hud_surface
         hud_surface.fill((0, 0, 0, 0))  # clear with transparency
+
+        # Stall warning
+        warning_x = C.WN_W//2-145
+        if self.show_stall_warning:
+            draw_text(hud_surface, (C.WN_W//2, C.WN_H*0.62), 'centre', 'centre', "STALL", (210, 0, 0), 50, self.fonts.monospaced)
+
+        # Overspeed warning
+        warning_x = C.WN_W//2+145
+        if self.show_overspeed_warning:
+            draw_text(hud_surface, (C.WN_W//2, C.WN_H*0.57), 'centre', 'centre', "OVERSPEED", (210, 0, 0), 50, self.fonts.monospaced)
 
         # Draw cockpit
         cockpit = self.images.cockpit
@@ -260,14 +286,6 @@ class GameScreen(State):
         rect = pg.Rect(0, 0, *size)
         rect.center = (C.WN_W*0.86, C.WN_H*0.94 - C.WN_H*0.19*(self.plane.throttle_frac))  # type: ignore
         pg.draw.rect(hud_surface, (255, 255, 255), rect)
-
-        # Stall warning
-        draw_text(hud_surface, (C.WN_W//2-160, C.WN_H*0.92), 'centre', 'centre', "STALL", (25, 20, 18), 20, self.fonts.monospaced)
-        warning_col = (255, 0, 0) if self.show_stall_warning else (0, 0, 0)
-        pg.draw.circle(hud_surface, (51, 43, 37), (C.WN_W//2-160, C.WN_H*0.96), 12)
-        pg.draw.circle(hud_surface, (warning_col), (C.WN_W//2-160, C.WN_H*0.96), 10)
-        if self.show_stall_warning:
-            draw_text(hud_surface, (C.WN_W//2, C.WN_H*0.62), 'centre', 'centre', "STALL", (210, 0, 0), 50, self.fonts.monospaced)
 
         # Attitude indicator
         ai_centre = (C.WN_W//2, int(C.WN_H*0.89))
@@ -377,6 +395,20 @@ class GameScreen(State):
         pg.draw.line(hud_surface, (255, 255, 0), (ai_centre[0]+35, ai_centre[1]), (ai_centre[0]+15, ai_centre[1]), 3)
         pg.draw.line(hud_surface, (255, 255, 0), ai_centre, (ai_centre[0]-10, ai_centre[1]+5), 3)
         pg.draw.line(hud_surface, (255, 255, 0), ai_centre, (ai_centre[0]+10, ai_centre[1]+5), 3)
+
+        # Cockpit warning lights
+        warning_x = C.WN_W//2-145
+        draw_text(hud_surface, (warning_x, C.WN_H*0.92), 'centre', 'centre', "STALL", (25, 20, 18), 20, self.fonts.monospaced)
+        warning_col = (255, 0, 0) if self.show_stall_warning else (0, 0, 0)
+        pg.draw.circle(hud_surface, (51, 43, 37), (warning_x, C.WN_H*0.96), 12)
+        pg.draw.circle(hud_surface, (warning_col), (warning_x, C.WN_H*0.96), 10)
+
+
+        warning_x = C.WN_W//2+145  # Overspeed
+        draw_text(hud_surface, (warning_x, C.WN_H*0.92), 'centre', 'centre', "OVERSPEED", (25, 20, 18), 20, self.fonts.monospaced)
+        warning_col = (255, 0, 0) if self.show_overspeed_warning else (0, 0, 0)
+        pg.draw.circle(hud_surface, (51, 43, 37), (warning_x, C.WN_H*0.96), 12)
+        pg.draw.circle(hud_surface, (warning_col), (warning_x, C.WN_H*0.96), 10)
 
         # Show crash reason on screen
         if self.plane.crash_reason == 'ground':

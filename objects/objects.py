@@ -138,6 +138,7 @@ class Plane(Entity):
         if self.pos.y == 0:
             cd *= 1.5  # Extra drag from friction with ground
         cd = min(cd, 0.5)
+        cd = 0  # DEBUG
 
         drag_mag = 0.5 * AIR_DENSITY * airspeed**2 * self.model.wing_area * cd
 
