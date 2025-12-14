@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 from typing import TYPE_CHECKING, cast
+from dataclasses import dataclass
 
 import OpenGL.GL as gl
 import OpenGL.GLU as glu
@@ -21,10 +22,28 @@ if TYPE_CHECKING:
     from core.custom_types import ScancodeWrapper, Surface
     from game.game import Game
 
+@dataclass
+class DialogMessage:
+    active_time: int = 0  # milliseconds
+    colour: Colour = WHITE
+    msg: str = ''
+
+    def set_message(self, msg: str, colour: Colour = WHITE, active_time: int = 2500):
+        self.active_time = active_time
+        self.msg = msg
+        self.colour = colour
+
+    def reset(self):
+        self.set_message('', WHITE, 0)
+
+    def update(self, dt: int):
+        self.active_time = max(self.active_time - dt, 0)
+
 class GameScreen(State):
     def __init__(self, game: Game) -> None:
         super().__init__(game)
-        self.plane = Plane(game.assets.sounds)
+        self.landing_dialog_box = DialogMessage()  # Must be before Plane otherwise causes error
+        self.plane = Plane(game.assets.sounds, self.landing_dialog_box)
         self.sound_manager = SoundManager(game.assets.sounds)
         self.ground = Ground(game.assets.images.test_grass)  # Pass the loaded image to Ground
         self.sky = Sky()
@@ -78,9 +97,13 @@ class GameScreen(State):
         self.sound_manager.stop()
         self.overspeed_channel.stop()
         self.sounds.menu_music.fadeout(1_500)
+        self.landing_dialog_box.reset()
 
     def update(self, dt: int):
+        self.landing_dialog_box.update(dt)
+
         if self.plane.crashed:
+            self.landing_dialog_box.reset()
             self.stall_channel.stop()
             self.overspeed_channel.stop()
             self.sound_manager.stop()
@@ -411,6 +434,16 @@ class GameScreen(State):
         warning_col = (255, 0, 0) if self.show_overspeed_warning else (0, 0, 0)
         pg.draw.circle(hud_surface, (51, 43, 37), (warning_x, C.WN_H*0.96), 12)
         pg.draw.circle(hud_surface, (warning_col), (warning_x, C.WN_H*0.96), 10)
+
+        # Show landing feedback
+        if self.landing_dialog_box.active_time:
+            draw_transparent_rect(
+                self.hud_surface, (C.WN_W//2-300, C.WN_H*0.15), (600, C.WN_H*0.1), (0, 0, 0, 180), 2
+            )
+            draw_text(
+                self.hud_surface, (C.WN_W//2, C.WN_H*0.2), 'centre', 'centre',
+                self.landing_dialog_box.msg, self.landing_dialog_box.colour, 30, self.fonts.monospaced
+            )
 
         # Show crash reason on screen
         if self.plane.crash_reason == 'ground':

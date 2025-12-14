@@ -19,13 +19,14 @@ class Rotation:
 def draw_text(surface: Surface, pos: tuple[float, float],
               horiz_align: Literal['left', 'centre', 'right'],
               vert_align: Literal['top', 'centre', 'bottom'],
-              text: str, colour: Colour, size: int, font: pg.font.Font | Path | str | None = None):
-    if isinstance(font, pg.font.Font):
-        font_obj = font
-    elif isinstance(font, (str, Path)):
-        font_obj = pg.font.Font(str(font), size)
+              text: str, colour: Colour, 
+              font_size: int, font_family: pg.font.Font | Path | str | None = None):
+    if isinstance(font_family, pg.font.Font):
+        font_obj = font_family
+    elif isinstance(font_family, (str, Path)):
+        font_obj = pg.font.Font(str(font_family), font_size)
     else:
-        font_obj = pg.font.Font(None, size)
+        font_obj = pg.font.Font(None, font_size)
 
     img = font_obj.render(text, True, colour)
     r = img.get_rect()

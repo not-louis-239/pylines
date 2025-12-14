@@ -1,20 +1,19 @@
 """General purpose module in which to place simulation objects."""
-
+from __future__ import annotations
+from typing import TYPE_CHECKING
 from math import asin, cos, degrees
 from math import radians as rad
 from math import sin
 
-import OpenGL.GL as gl
-import OpenGL.GLU as glu
 import pygame as pg
 
 from core.asset_manager import Sounds
-from core.constants import (AIR_DENSITY, EPSILON, GRAVITY, GROUND_SIZE,
-                            PLANE_MODELS, PRACTISE_LIMIT, WN_H, WN_W,
-                            PlaneModel)
-from core.custom_types import Coord3, Surface
+from core.constants import (AIR_DENSITY, EPSILON, GRAVITY, PLANE_MODELS, PRACTISE_LIMIT, PlaneModel)
+from core.custom_types import Surface
 from core.utils import clamp
 
+if TYPE_CHECKING:
+    from game.game_screen import DialogMessage
 
 class Entity:
     """Mental basis for all in-game physical objects"""
@@ -29,7 +28,7 @@ class Entity:
         pass
 
 class Plane(Entity):
-    def __init__(self, sounds: Sounds):
+    def __init__(self, sounds: Sounds, dialog_box: DialogMessage):
         super().__init__(0, 0, 0)
         self.model: PlaneModel = PLANE_MODELS["Cessna 172"]
 
@@ -45,6 +44,7 @@ class Plane(Entity):
 
         self.on_ground = True
         self.crash_reason: str | None = None
+        self.dialog_box = dialog_box
 
     @property
     def crashed(self) -> bool:
@@ -64,7 +64,7 @@ class Plane(Entity):
         self.flaps = 0
         self.crash_reason = None
 
-    def check_landing(self):
+    def process_landing(self):
         # Check landing for quality
         pitch, yaw, roll = self.rot
         roll = (roll+180)%360 - 180  # Normalise
@@ -74,8 +74,10 @@ class Plane(Entity):
 
         if landing_good:
             self.sounds.good_landing.play()
+            self.dialog_box.set_message("Good landing!", (0, 255, 0))
         elif landing_passable:
             self.sounds.hard_landing.play()
+            self.dialog_box.set_message("Oops... hard landing.", (255, 200, 0))
         else:
             self.sounds.crash.play()
             self.crash_reason = 'ground'
@@ -171,7 +173,7 @@ class Plane(Entity):
             self.pos.y = 0
 
             if not self.on_ground:  # Only check transition from air -> ground
-                self.check_landing()
+                self.process_landing()
 
             if not self.crashed:
                 self.vel.y = max(self.vel.y, 0)  # Plane can't fall through floor

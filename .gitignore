@@ -5,3 +5,5 @@ workflow
 GEMINI.md
 .geminiignore
 .DS_Store
+.mypy.ini
+.pylintrc
