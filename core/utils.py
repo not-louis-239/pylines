@@ -1,11 +1,14 @@
-from typing import Generator, Literal
 import math
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Generator, Literal
+
 import pygame as pg
 from pygame.surface import Surface
-from core.custom_types import Colour, AColour, RealNumber, Coord2
-from dataclasses import dataclass
+
 from core.colours import WHITE
+from core.custom_types import AColour, Colour, Coord2, RealNumber
+
 
 @dataclass
 class Rotation:

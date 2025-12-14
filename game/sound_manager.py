@@ -1,5 +1,7 @@
 from __future__ import annotations
+
 from typing import TYPE_CHECKING
+
 import pygame as pg
 
 if TYPE_CHECKING:

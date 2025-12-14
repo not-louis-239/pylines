@@ -1,8 +1,11 @@
+from pathlib import Path
+
 import pygame as pg
 from pygame.transform import scale, scale_by
-from pathlib import Path
-from core.custom_types import Sound
+
 from core.constants import BASE_DIR
+from core.custom_types import Sound
+
 
 class AssetBank:
     """Mental basis for all asset containers."""

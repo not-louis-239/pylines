@@ -1,10 +1,11 @@
-import pygame as pg
 import OpenGL.GL as gl
 import OpenGL.GLU as glu
+import pygame as pg
 
-from objects.objects import Entity
-from core.custom_types import Surface, Coord3
 from core.constants import GROUND_SIZE, WN_H, WN_W
+from core.custom_types import Coord3, Surface
+from objects.objects import Entity
+
 
 # TODO: This is unused, will come in useful when I add buildings and other more advanced scenery
 class SceneryObject:

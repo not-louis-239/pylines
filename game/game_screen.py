@@ -1,22 +1,24 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, cast
-import math
 
+import math
+from typing import TYPE_CHECKING, cast
+
+import OpenGL.GL as gl
+import OpenGL.GLU as glu
 import pygame as pg
 
-from core.colours import SKY_COLOUR_SCHEMES, BLUE, WHITE, BROWN, DARK_BLUE, DARK_BROWN
-from core.custom_types import RealNumber, AColour, Colour
 import core.constants as C
+from core.colours import (BLUE, BROWN, DARK_BLUE, DARK_BROWN,
+                          SKY_COLOUR_SCHEMES, WHITE)
+from core.custom_types import AColour, Colour, RealNumber
 from core.utils import clamp, draw_needle, draw_text, draw_transparent_rect
 from game.sound_manager import SoundManager
 from game.state_management import State
 from objects.objects import Plane
-from objects.scenery import Sky, Ground
-import OpenGL.GL as gl
-import OpenGL.GLU as glu
+from objects.scenery import Ground, Sky
 
 if TYPE_CHECKING:
-    from core.custom_types import Surface, ScancodeWrapper
+    from core.custom_types import ScancodeWrapper, Surface
     from game.game import Game
 
 class GameScreen(State):

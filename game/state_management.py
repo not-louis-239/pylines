@@ -1,15 +1,16 @@
 from __future__ import annotations
 
-from core.custom_types import ScancodeWrapper, Surface
-import pygame as pg
+from typing import TYPE_CHECKING, cast
+
 import OpenGL.GL as gl
 import OpenGL.GLU as glu
+import pygame as pg
+
 import core.constants as C
 from core.colours import WHITE
+from core.custom_types import ScancodeWrapper, Surface
 from core.utils import draw_text
-from typing import cast
 
-from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from game.game import Game
 

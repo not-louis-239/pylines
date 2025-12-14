@@ -1,8 +1,10 @@
 """Defined colours for the program"""
 
-from typing import overload, cast
 from dataclasses import dataclass
-from core.custom_types import Colour, AColour
+from typing import cast, overload
+
+from core.custom_types import AColour, Colour
+
 
 @dataclass(frozen=True)
 class ColourScheme:

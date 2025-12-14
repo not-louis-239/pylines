@@ -1,10 +1,12 @@
 from __future__ import annotations
+
 from typing import TYPE_CHECKING
+
 import pygame as pg
 
 from core.asset_manager import Assets
-from game.state_management import TitleScreen
 from game.game_screen import GameScreen
+from game.state_management import TitleScreen
 
 if TYPE_CHECKING:
     from core.custom_types import ScancodeWrapper, Surface

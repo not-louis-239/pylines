@@ -1,8 +1,10 @@
 from pathlib import Path
+
 import pygame as pg
 
-from core.custom_types import Colour, Surface, Coord2
+from core.custom_types import Colour, Coord2, Surface
 from core.utils import draw_text
+
 
 class Button:
     def __init__(self, pos: Coord2, w, h,

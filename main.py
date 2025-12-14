@@ -1,12 +1,11 @@
-import pygame as pg
 import OpenGL.GL as gl
 import OpenGL.GLU as glu
+import pygame as pg
 
-from core.constants import (
-    FPS, TPS, WN_H, WN_W,
-    INNER_RENDER_LIMIT, OUTER_RENDER_LIMIT
-)
+from core.constants import (FPS, INNER_RENDER_LIMIT, OUTER_RENDER_LIMIT, TPS,
+                            WN_H, WN_W)
 from game.game import Game
+
 
 def main():
     pg.init()

@@ -1,17 +1,20 @@
 """General purpose module in which to place simulation objects."""
 
-import pygame as pg
+from math import asin, cos, degrees
+from math import radians as rad
+from math import sin
+
 import OpenGL.GL as gl
 import OpenGL.GLU as glu
-from math import sin, cos, asin, degrees, radians as rad
+import pygame as pg
 
 from core.asset_manager import Sounds
-from core.custom_types import Surface, Coord3
+from core.constants import (AIR_DENSITY, EPSILON, GRAVITY, GROUND_SIZE,
+                            PLANE_MODELS, PRACTISE_LIMIT, WN_H, WN_W,
+                            PlaneModel)
+from core.custom_types import Coord3, Surface
 from core.utils import clamp
-from core.constants import (
-    GROUND_SIZE, WN_W, WN_H,
-    PlaneModel, PLANE_MODELS, AIR_DENSITY, GRAVITY, PRACTISE_LIMIT, EPSILON
-)
+
 
 class Entity:
     """Mental basis for all in-game physical objects"""

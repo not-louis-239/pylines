@@ -1,5 +1,6 @@
-from typing import TypeAlias
 import pathlib
+from typing import TypeAlias
+
 import pygame as pg
 
 # Visual types
