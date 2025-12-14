@@ -45,24 +45,30 @@ class Plane(Entity):
         self.on_ground = True
         self.crash_reason: str | None = None
         self.dialog_box = dialog_box
+        self.damage_level = 0  # from 0 to 1
 
     @property
     def crashed(self) -> bool:
         return self.crash_reason is not None
+
+    @property
+    def disabled(self) -> bool:
+        return self.damage_level == 1  # Fully damaged
 
     def reset(self) -> None:
         self.pos = pg.Vector3(0, 0, 0)
         self.vel = pg.Vector3(0, 0, 0)
         self.acc = pg.Vector3(0, 0, 0)
 
-        self.throttle_frac = 0
+        self.throttle_frac = 0  # from 0 to 1
         self.rot = pg.Vector3(0, 0, 0)
         self.show_stall_warning: bool = False
 
-        self.aoa = 0
+        self.aoa = 0  # degrees
         self.on_ground = True
         self.flaps = 0
         self.crash_reason = None
+        self.damage_level = 0
 
     def process_landing(self):
         # Check landing for quality
@@ -81,6 +87,7 @@ class Plane(Entity):
         else:
             self.sounds.crash.play()
             self.crash_reason = 'ground'
+            self.damage_level = 1  # Instant death if crash  # TODO: Should depend on excess velocity
 
     def update(self, dt: int):
         # Sideways movement - convert roll to yaw
@@ -97,7 +104,8 @@ class Plane(Entity):
         ).normalize()
 
         # Calculate thrust and weight
-        thrust = forward_vec * self.throttle_frac*self.model.max_throttle
+        thrust = pg.Vector3(0, 0, 0) if self.disabled else forward_vec * self.throttle_frac*self.model.max_throttle
+
         weight = pg.Vector3(0, -GRAVITY * self.model.mass, 0)
 
         # Calculate Angle of Attack (AoA)
@@ -143,7 +151,6 @@ class Plane(Entity):
         if self.pos.y == 0:
             cd *= 1.5  # Extra drag from friction with ground
         cd = min(cd, 0.5)
-        cd = 0  # DEBUG
 
         drag_mag = 0.5 * AIR_DENSITY * airspeed**2 * self.model.wing_area * cd
 
@@ -164,9 +171,16 @@ class Plane(Entity):
         if self.vel.length() > 1_000:
             self.vel.scale_to_length(1_000)
 
-        # Clamp
-        self.pos.x = clamp(self.pos.x, -PRACTISE_LIMIT, PRACTISE_LIMIT)
-        self.pos.z = clamp(self.pos.z, -PRACTISE_LIMIT, PRACTISE_LIMIT)
+        # Clamp position
+        self.pos.x = clamp(self.pos.x, (-PRACTISE_LIMIT, PRACTISE_LIMIT))
+        self.pos.z = clamp(self.pos.z, (-PRACTISE_LIMIT, PRACTISE_LIMIT))
+
+        # Damage update
+        if self.vel.length() > self.model.v_ne:
+            self.damage_level += 0.15 * dt/1000
+
+        # TODO: Overspeed damage should depend on excess
+        # TODO: Add damage when not on runway (once runways are added)
 
         # Ground collision
         if self.pos.y <= 0:
@@ -181,4 +195,6 @@ class Plane(Entity):
         else:
             self.on_ground = False
 
-class Runway(Entity): ...  # TODO
+        self.damage_level = clamp(self.damage_level, (0, 1))
+
+class Runway(Entity): ...  # TODO: Add runway scenery object logic

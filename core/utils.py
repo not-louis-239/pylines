@@ -19,7 +19,7 @@ class Rotation:
 def draw_text(surface: Surface, pos: tuple[float, float],
               horiz_align: Literal['left', 'centre', 'right'],
               vert_align: Literal['top', 'centre', 'bottom'],
-              text: str, colour: Colour, 
+              text: str, colour: Colour,
               font_size: int, font_family: pg.font.Font | Path | str | None = None):
     if isinstance(font_family, pg.font.Font):
         font_obj = font_family
@@ -78,7 +78,14 @@ def frange(start: int | float, stop: int | float, step: int | float) -> Generato
             yield current
             current += step
 
-def clamp(value: RealNumber, lower: RealNumber, upper: RealNumber):
+def clamp(value: RealNumber, clamp_range: tuple[RealNumber, RealNumber]):
+    lower, upper = clamp_range
+
+    if any(math.isnan(x) for x in (value, lower, upper)):
+        raise ValueError("NaN is not a valid input to clamp")
+    if lower > upper:
+        raise ValueError("upper bound must be greater than lower bound")  # keeps things consistent
+
     return max(lower, min(value, upper))
 
 def draw_transparent_rect(surface: Surface, pos: Coord2, size: Coord2,

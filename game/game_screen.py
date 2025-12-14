@@ -127,7 +127,7 @@ class GameScreen(State):
             self.overspeed_channel.stop()
 
     def _draw_text(self, x: RealNumber, y: RealNumber, text: str,
-                  colour: AColour = (255, 255, 255, 255), bg_colour: AColour | None = None):  # FIXME: no workie!
+                  colour: AColour = (255, 255, 255, 255), bg_colour: AColour | None = None):
         if bg_colour is None:
             text_surface = self.font.render(text, True, colour)
         else:
@@ -185,23 +185,25 @@ class GameScreen(State):
             self.plane.throttle_frac -= throttle_speed
 
         # Clamp throttle
-        self.plane.throttle_frac = clamp(self.plane.throttle_frac, 0, 1)
+        self.plane.throttle_frac = clamp(self.plane.throttle_frac, (0, 1))
 
+        authority = 1 - 0.875 * self.plane.damage_level**2
+        true_rot_speed = authority * rot_speed
         # Pitch
         if keys[pg.K_UP]:
-            self.plane.rot.x -= rot_speed * (1+(self.plane.rot.x/90))
+            self.plane.rot.x -= true_rot_speed * (1+(self.plane.rot.x/90))
         if keys[pg.K_DOWN]:
-            self.plane.rot.x += rot_speed * (1-(self.plane.rot.x/90))
+            self.plane.rot.x += true_rot_speed * (1-(self.plane.rot.x/90))
         # Turning (Roll)
         if keys[pg.K_LEFT]:
-            self.plane.rot.z -= rot_speed
+            self.plane.rot.z -= true_rot_speed
         if keys[pg.K_RIGHT]:
-            self.plane.rot.z += rot_speed
+            self.plane.rot.z += true_rot_speed
 
         # Clamp
         self.plane.rot.y %= 360
         self.plane.rot.z %= 360
-        self.plane.rot.x = clamp(self.plane.rot.x, -90, 90)
+        self.plane.rot.x = clamp(self.plane.rot.x, (-90, 90))
 
     def draw_hud(self):
         pitch, yaw, roll = self.plane.rot
@@ -217,6 +219,14 @@ class GameScreen(State):
         warning_x = C.WN_W//2+145
         if self.show_overspeed_warning:
             draw_text(hud_surface, (C.WN_W//2, C.WN_H*0.57), 'centre', 'centre', "OVERSPEED", (210, 0, 0), 50, self.fonts.monospaced)
+
+        # Damage overlay
+        if self.plane.damage_level > 0:
+            overlays = self.images.damage_overlays
+            # Damage_level is 0-1, so we can map it to the number of overlays
+            overlay_idx = min(len(overlays) - 1, int(self.plane.damage_level * (len(overlays))))
+            overlay = overlays[overlay_idx]
+            hud_surface.blit(overlay, (0, 0))
 
         # Draw cockpit
         cockpit = self.images.cockpit
@@ -278,7 +288,7 @@ class GameScreen(State):
             hud_surface,
             vsi_centre,
             'centre', 'centre',
-            f"{vs_ft_per_min:+,.0f} / min",
+            f"{vs_ft_per_min:+,.0f}/min",
             text_colour,
             22,
             self.fonts.monospaced

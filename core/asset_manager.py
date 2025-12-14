@@ -38,6 +38,16 @@ class Images(AssetBank):
         self.compass = self._load("compass.png")
         self.speed_dial = self._load("speed_dial.png")
         self.logo = self._load("logo.png")
+
+        self.damage_overlays: tuple = (
+            self._load("damage_1.png"),
+            self._load("damage_2.png"),
+            self._load("damage_3.png"),
+            self._load("damage_4.png"),
+            self._load("damage_5.png"),
+            self._load("damage_full.png")
+        )
+
         self.augment()
 
     def augment(self):
