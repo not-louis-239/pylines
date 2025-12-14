@@ -41,9 +41,13 @@ class Plane(Entity):
         self.aoa = 0
 
         self.on_ground = True
-        self.crashed = False
+        self.crash_reason: str | None = None
 
-    def reset(self):
+    @property
+    def crashed(self) -> bool:
+        return self.crash_reason is not None
+
+    def reset(self) -> None:
         self.pos = pg.Vector3(0, 0, 0)
         self.vel = pg.Vector3(0, 0, 0)
         self.acc = pg.Vector3(0, 0, 0)
@@ -55,7 +59,7 @@ class Plane(Entity):
         self.aoa = 0
         self.on_ground = True
         self.flaps = 0
-        self.crashed = False
+        self.crash_reason = None
 
     def check_landing(self):
         # Check landing for quality
@@ -71,7 +75,7 @@ class Plane(Entity):
             self.sounds.hard_landing.play()
         else:
             self.sounds.crash.play()
-            self.crashed = True
+            self.crash_reason = 'ground'
 
     def update(self, dt: int):
         # Sideways movement - convert roll to yaw
@@ -150,9 +154,9 @@ class Plane(Entity):
         self.vel += self.acc * dt/1000
         self.pos += self.vel * dt/1000
 
-        # Clamp velocity
-        if self.vel.length() > 1000:
-            self.vel.scale_to_length(1000)
+        # Clamp velocity to prevent NaNs
+        if self.vel.length() > 1_000:
+            self.vel.scale_to_length(1_000)
 
         # Clamp
         self.pos.x = clamp(self.pos.x, -PRACTISE_LIMIT, PRACTISE_LIMIT)
@@ -165,9 +169,9 @@ class Plane(Entity):
             if not self.on_ground:  # Only check transition from air -> ground
                 self.check_landing()
 
+            if not self.crashed:
+                self.vel.y = max(self.vel.y, 0)  # Plane can't fall through floor
             self.on_ground = True
-            if self.vel.y < 0:
-                self.vel.y = 0
         else:
             self.on_ground = False
 

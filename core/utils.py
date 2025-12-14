@@ -1,10 +1,11 @@
-from typing import Generator
+from typing import Generator, Literal
 import math
 from pathlib import Path
 import pygame as pg
 from pygame.surface import Surface
-from core.custom_types import Colour, RealNumber, Coord2
+from core.custom_types import Colour, AColour, RealNumber, Coord2
 from dataclasses import dataclass
+from core.colours import WHITE
 
 @dataclass
 class Rotation:
@@ -12,7 +13,9 @@ class Rotation:
     yaw: int
     roll: int
 
-def draw_text(surface: Surface, pos: tuple[float, float], horiz_align: str, vert_align: str,
+def draw_text(surface: Surface, pos: tuple[float, float],
+              horiz_align: Literal['left', 'centre', 'right'],
+              vert_align: Literal['top', 'centre', 'bottom'],
               text: str, colour: Colour, size: int, font: pg.font.Font | Path | str | None = None):
     if isinstance(font, pg.font.Font):
         font_obj = font
@@ -73,3 +76,15 @@ def frange(start: int | float, stop: int | float, step: int | float) -> Generato
 
 def clamp(value: RealNumber, lower: RealNumber, upper: RealNumber):
     return max(lower, min(value, upper))
+
+def draw_transparent_rect(surface: Surface, pos: Coord2, size: Coord2,
+                          bg_colour: AColour = (0, 0, 0, 180),
+                          border_thickness=0, border_colour: Colour = WHITE,
+                          ):
+    """Draws a semi-transparent rectangle with a border onto a surface.
+    For a transparent rect only, set border thickness to 0."""
+    box_surf = pg.Surface(size, pg.SRCALPHA)
+    box_surf.fill(bg_colour)
+    if border_thickness:
+        pg.draw.rect(box_surf, border_colour, box_surf.get_rect(), border_thickness)
+    surface.blit(box_surf, pos)

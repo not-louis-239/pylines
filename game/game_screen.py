@@ -7,7 +7,7 @@ import pygame as pg
 from core.colours import SKY_COLOUR_SCHEMES, BLUE, WHITE, BROWN, DARK_BLUE, DARK_BROWN
 from core.custom_types import RealNumber, AColour, Colour
 import core.constants as C
-from core.utils import clamp, draw_needle, draw_text
+from core.utils import clamp, draw_needle, draw_text, draw_transparent_rect
 from game.state_management import State
 from objects.objects import Plane
 from objects.scenery import Sky, Ground
@@ -69,11 +69,14 @@ class GameScreen(State):
 
     def reset(self) -> None:
         self.plane.reset()
-        self.sounds.menu_music.stop()
+        self.sounds.menu_music.fadeout(1_500)
 
     def update(self, dt: int):
-        self.plane.update(dt)
+        if self.plane.crashed:
+            self.stall_channel.stop()
+            return
 
+        self.plane.update(dt)
         self.show_stall_warning = self.plane.aoa > self.plane.model.stall_angle
 
         if self.show_stall_warning:
@@ -82,10 +85,7 @@ class GameScreen(State):
         else:
             self.stall_channel.stop()
 
-        if self.plane.crashed:
-            self.game.enter_state('title')
-
-    def draw_text(self, x: RealNumber, y: RealNumber, text: str,
+    def _draw_text(self, x: RealNumber, y: RealNumber, text: str,
                   colour: AColour = (255, 255, 255, 255), bg_colour: AColour | None = None):  # FIXME: no workie!
         if bg_colour is None:
             text_surface = self.font.render(text, True, colour)
@@ -129,6 +129,11 @@ class GameScreen(State):
         gl.glMatrixMode(gl.GL_MODELVIEW)
 
     def take_input(self, keys: ScancodeWrapper, dt: int) -> None:
+        if self.plane.crashed:
+            if keys[pg.K_SPACE]:
+                self.game.enter_state('title')
+            return
+
         rot_speed = 20 * dt/1000
         throttle_speed = 0.5 * dt/1000
 
@@ -372,6 +377,16 @@ class GameScreen(State):
         pg.draw.line(hud_surface, (255, 255, 0), (ai_centre[0]+35, ai_centre[1]), (ai_centre[0]+15, ai_centre[1]), 3)
         pg.draw.line(hud_surface, (255, 255, 0), ai_centre, (ai_centre[0]-10, ai_centre[1]+5), 3)
         pg.draw.line(hud_surface, (255, 255, 0), ai_centre, (ai_centre[0]+10, ai_centre[1]+5), 3)
+
+        # Show crash reason on screen
+        if self.plane.crash_reason == 'ground':
+            draw_transparent_rect(
+                self.hud_surface, (C.WN_W*0.28, C.WN_H*0.3), (C.WN_W*0.44, C.WN_H*0.3),
+                (0, 0, 0, 180), 2
+            )
+            draw_text(self.hud_surface, (C.WN_W//2, C.WN_H*0.35), 'centre', 'centre', 'CRASH', (255, 0, 0), 50, self.fonts.monospaced)
+            draw_text(self.hud_surface, (C.WN_W//2, C.WN_H*0.41), 'centre', 'centre', 'COLLISION WITH TERRAIN', (255, 255, 255), 30, self.fonts.monospaced)
+            draw_text(self.hud_surface, (C.WN_W//2, C.WN_H*0.54), 'centre', 'centre', 'Press Space to return to menu.', (255, 255, 255), 30, self.fonts.monospaced)
 
         # Upload HUD surface to OpenGL
         hud_data = pg.image.tostring(hud_surface, "RGBA", True)

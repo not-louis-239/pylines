@@ -5,6 +5,7 @@ import pygame as pg
 import OpenGL.GL as gl
 import OpenGL.GLU as glu
 import core.constants as C
+from core.colours import WHITE
 from core.utils import draw_text
 from typing import cast
 
@@ -59,11 +60,23 @@ class TitleScreen(State):
         self.update_prev_keys(keys)
 
     def draw(self, wn: Surface):
+        def draw_control(control: str, desc: str, y: float):
+            draw_text(self.display_surface, (C.WN_W//2 - 300, y), 'left', 'centre', control, WHITE, 30, self.fonts.monospaced)
+            draw_text(self.display_surface, (C.WN_W//2 - 50, y), 'left', 'centre', desc, WHITE, 30, self.fonts.monospaced)
+
         # Fill the display surface
         self.display_surface.fill((255, 255, 255) if self.fill else (0, 0, 0))
-        rect = self.images.logo.get_rect(center=(C.WN_W//2, C.WN_H*0.25))
+        rect = self.images.logo.get_rect(center=(C.WN_W//2, C.WN_H*0.15
+                                                 ))
         self.display_surface.blit(self.images.logo, rect)
-        draw_text(self.display_surface, (C.WN_W//2, 3*C.WN_H//5), 'centre', 'centre', "Press Space to begin.", (255, 255, 255), 30, self.fonts.monospaced)
+        draw_text(self.display_surface, (C.WN_W//2, C.WN_H*0.8), 'centre', 'centre', "Press Space for briefing.", (255, 255, 255), 30, self.fonts.monospaced)  # TODO: Add briefing
+        draw_text(self.display_surface, (C.WN_W//2, 0.95*C.WN_H), 'centre', 'centre', "Copyright (C) Louis Masarei-Boulton.", (127, 127, 127), 15, self.fonts.monospaced)
+
+        draw_text(self.display_surface, (C.WN_W//2, C.WN_H*0.3), 'centre', 'centre', "Flight Notes", (0, 192, 255), 40, self.fonts.monospaced)
+
+        draw_control("W/S", "Increase/decrease throttle", C.WN_H*0.4)
+        draw_control("Left/Right", "Turn sideways", C.WN_H*0.45)
+        draw_control("Up/Down", "Nose up/down", C.WN_H*0.5)
 
         # Convert the Pygame surface to an OpenGL texture
         texture_data = pg.image.tostring(self.display_surface, 'RGBA', True)
