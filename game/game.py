@@ -19,7 +19,11 @@ class Game:
             "title": TitleScreen(self),
             "game": GameScreen(self),
         }
-        self.state = "title"
+        self.enter_state('title')
+
+    def enter_state(self, state_name: str):
+        self.state = state_name
+        self.states[state_name].enter_state()
 
     def update(self, dt) -> None:
         self.states[self.state].update(dt)

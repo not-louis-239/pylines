@@ -19,6 +19,12 @@ class State:
         self.fonts = game.assets.fonts
         self.sounds = game.assets.sounds
 
+    def reset(self) -> None:
+        raise NotImplementedError
+
+    def enter_state(self) -> None:
+        self.reset()
+
     def update(self, dt: int) -> None:
         pass
 
@@ -38,21 +44,25 @@ class TitleScreen(State):
         self.display_surface = pg.Surface((C.WN_W, C.WN_H), pg.SRCALPHA)
         self.texture_id = gl.glGenTextures(1)
 
+    def reset(self) -> None:
+        self.sounds.menu_music.play(-1)
+        self.sounds.stall_warning.stop()
+
     def take_input(self, keys: ScancodeWrapper, dt: int) -> None:
         def pressed(key: int) -> bool:
             """Returns True if a key is pressed now but not last frame."""
             return keys[key] and not self.game.prev_keys[key]
 
-        # DEBUG Test
         if pressed(pg.K_SPACE):
-            self.game.state = 'game'
+            self.game.enter_state('game')
 
         self.update_prev_keys(keys)
 
     def draw(self, wn: Surface):
         # Fill the display surface
         self.display_surface.fill((255, 255, 255) if self.fill else (0, 0, 0))
-        draw_text(self.display_surface, (C.WN_W//2, C.WN_H//5), 'centre', 'centre', "Pylines", (255, 255, 255), 80, self.fonts.monospaced)
+        rect = self.images.logo.get_rect(center=(C.WN_W//2, C.WN_H*0.25))
+        self.display_surface.blit(self.images.logo, rect)
         draw_text(self.display_surface, (C.WN_W//2, 3*C.WN_H//5), 'centre', 'centre', "Press Space to begin.", (255, 255, 255), 30, self.fonts.monospaced)
 
         # Convert the Pygame surface to an OpenGL texture

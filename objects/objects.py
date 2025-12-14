@@ -10,7 +10,7 @@ from core.custom_types import Surface, Coord3
 from core.utils import clamp
 from core.constants import (
     GROUND_SIZE, WN_W, WN_H,
-    PlaneModel, PLANE_MODEL, AIR_DENSITY, GRAVITY, PRACTISE_LIMIT, EPSILON
+    PlaneModel, PLANE_MODELS, AIR_DENSITY, GRAVITY, PRACTISE_LIMIT, EPSILON
 )
 
 class Entity:
@@ -28,7 +28,7 @@ class Entity:
 class Plane(Entity):
     def __init__(self, sounds: Sounds):
         super().__init__(0, 0, 0)
-        self.model: PlaneModel = PLANE_MODEL
+        self.model: PlaneModel = PLANE_MODELS["Cessna 172"]
 
         self.vel: pg.Vector3 = pg.Vector3(0, 0, 0)
         self.acc: pg.Vector3 = pg.Vector3(0, 0, 0)
@@ -41,6 +41,21 @@ class Plane(Entity):
         self.aoa = 0
 
         self.on_ground = True
+        self.crashed = False
+
+    def reset(self):
+        self.pos = pg.Vector3(0, 0, 0)
+        self.vel = pg.Vector3(0, 0, 0)
+        self.acc = pg.Vector3(0, 0, 0)
+
+        self.throttle_frac = 0
+        self.rot = pg.Vector3(0, 0, 0)
+        self.show_stall_warning: bool = False
+
+        self.aoa = 0
+        self.on_ground = True
+        self.flaps = 0
+        self.crashed = False
 
     def check_landing(self):
         # Check landing for quality
@@ -56,6 +71,7 @@ class Plane(Entity):
             self.sounds.hard_landing.play()
         else:
             self.sounds.crash.play()
+            self.crashed = True
 
     def update(self, dt: int):
         # Sideways movement - convert roll to yaw

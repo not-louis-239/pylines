@@ -1,5 +1,5 @@
 import pygame as pg
-from pygame.transform import scale
+from pygame.transform import scale, scale_by
 from pathlib import Path
 from core.custom_types import Sound
 from core.constants import BASE_DIR
@@ -34,11 +34,13 @@ class Images(AssetBank):
         self.cockpit = self._load("cockpit_base.png")
         self.compass = self._load("compass.png")
         self.speed_dial = self._load("speed_dial.png")
+        self.logo = self._load("logo.png")
         self.augment()
 
     def augment(self):
         self.speed_dial = scale(self.speed_dial, (250, 250))
         self.compass = scale(self.compass, (250, 250))
+        self.logo = scale_by(self.logo, 0.2)
 
     def _load(self, name: str):
         return pg.image.load(BASE_DIR / "assets" / "images" / name).convert_alpha()

@@ -67,6 +67,10 @@ class GameScreen(State):
             inner_ai_rect.width//2
         )
 
+    def reset(self) -> None:
+        self.plane.reset()
+        self.sounds.menu_music.stop()
+
     def update(self, dt: int):
         self.plane.update(dt)
 
@@ -77,6 +81,9 @@ class GameScreen(State):
                 self.stall_channel.play(self.sounds.stall_warning, loops=-1)
         else:
             self.stall_channel.stop()
+
+        if self.plane.crashed:
+            self.game.enter_state('title')
 
     def draw_text(self, x: RealNumber, y: RealNumber, text: str,
                   colour: AColour = (255, 255, 255, 255), bg_colour: AColour | None = None):  # FIXME: no workie!
@@ -168,8 +175,6 @@ class GameScreen(State):
         rect = compass_rot.get_rect(center=centre)
         hud_surface.blit(compass_rot, rect)
 
-        draw_text(hud_surface, (C.WN_W//2-300, C.WN_H*0.85 + 20), 'centre', 'centre', "Heading", (192, 0, 0), 18, self.fonts.monospaced)
-        draw_text(hud_surface, (C.WN_W//2-300, C.WN_H*0.85 + 40), 'centre', 'centre', "Ground Track", (192, 160, 0), 18, self.fonts.monospaced)
         vel_flat = pg.Vector2(self.plane.vel.x, self.plane.vel.z)
         ground_track_deg = math.degrees(
             math.atan2(vel_flat.x, -vel_flat.y)
