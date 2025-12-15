@@ -7,3 +7,4 @@ GEMINI.md
 .DS_Store
 .mypy.ini
 .pylintrc
+.mypy_cache

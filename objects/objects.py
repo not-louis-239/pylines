@@ -130,7 +130,8 @@ class Plane(Entity):
         if self.aoa < self.model.stall_angle:
             cl = self.model.cl_max * self.aoa/self.model.stall_angle
         else:
-            cl = max(0, self.model.cl_max - (self.aoa-self.model.stall_angle)*0.2)
+            excess = self.aoa - self.model.stall_angle  # degrees
+            cl = max(0.125, self.model.cl_max * (1 - 0.1*excess))
         lift_mag = 0.5 * AIR_DENSITY * airspeed**2 * self.model.wing_area * cl
 
         airflow = -self.vel
@@ -153,10 +154,11 @@ class Plane(Entity):
         # Calculate drag
         cd = self.model.cd_min + self.model.cd_slope*abs(self.aoa)  # Baseline
         if self.aoa > self.model.stall_angle:
-            cd += (self.aoa-self.model.stall_angle)*0.012  # Stall drag penalty
+            excess = self.aoa - self.model.stall_angle  # degrees
+            cd += excess**2 * 0.004  # Stall drag penalty
         if self.pos.y == 0:
             cd *= 1.5  # Extra drag from friction with ground
-        cd = min(cd, 0.5)
+        cd = min(cd, 1)
 
         drag_mag = 0.5 * AIR_DENSITY * airspeed**2 * self.model.wing_area * cd
 
