@@ -50,6 +50,7 @@ class GameScreen(State):
         self.time_of_day: str = "sunset"
         self.show_stall_warning: bool = False
         self.show_overspeed_warning: bool = False
+        self.time_elapsed: int = 0  # milliseconds
 
         self.stall_channel = pg.mixer.Channel(3)
         self.overspeed_channel = pg.mixer.Channel(4)
@@ -98,8 +99,10 @@ class GameScreen(State):
         self.overspeed_channel.stop()
         self.sounds.menu_music.fadeout(1_500)
         self.landing_dialog_box.reset()
+        self.time_elapsed = 0
 
     def update(self, dt: int):
+        self.time_elapsed += dt
         self.landing_dialog_box.update(dt)
 
         if self.plane.crashed:
@@ -170,10 +173,20 @@ class GameScreen(State):
         gl.glMatrixMode(gl.GL_MODELVIEW)
 
     def take_input(self, keys: ScancodeWrapper, dt: int) -> None:
-        if self.plane.crashed:
-            if keys[pg.K_SPACE]:
-                self.game.enter_state('title')
-            return
+        # FIXME: Plane on ground but successfully landed causes
+        # softlock that requires killing and restarting the game
+
+        # Meta controls
+        if self.pressed(keys, pg.K_SPACE):
+            self.sounds.menu_music.stop()
+            self.game.enter_state('title')
+            self.sound_manager.stop()
+        if self.pressed(keys, pg.K_r):
+            self.plane.reset()
+
+        # Black flight controls
+        if not self.plane.flyable:
+            self.update_prev_keys(keys); return
 
         rot_speed = 20 * dt/1000
         throttle_speed = 0.25 * dt/1000
@@ -205,10 +218,17 @@ class GameScreen(State):
         self.plane.rot.z %= 360
         self.plane.rot.x = clamp(self.plane.rot.x, (-90, 90))
 
+        self.update_prev_keys(keys)
+
     def draw_hud(self):
         pitch, yaw, roll = self.plane.rot
         hud_surface = self.hud_surface
         hud_surface.fill((0, 0, 0, 0))  # clear with transparency
+
+        # Exit controls
+        if self.time_elapsed < 5_000 or not self.plane.flyable:
+            draw_text(hud_surface, (15, 30), 'left', 'centre', "R       restart flight", (255, 255, 255), 30, self.fonts.monospaced)
+            draw_text(hud_surface, (15, 60), 'left', 'centre', "Space   quit to menu", (255, 255, 255), 30, self.fonts.monospaced)
 
         # Stall warning
         warning_x = C.WN_W//2-145

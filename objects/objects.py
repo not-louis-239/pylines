@@ -55,6 +55,12 @@ class Plane(Entity):
     def disabled(self) -> bool:
         return self.damage_level == 1  # Fully damaged
 
+    @property
+    def flyable(self) -> bool:
+        return not self.crashed and not (
+            self.disabled and self.on_ground
+        )
+
     def reset(self) -> None:
         self.pos = pg.Vector3(0, 0, 0)
         self.vel = pg.Vector3(0, 0, 0)

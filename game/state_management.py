@@ -33,6 +33,10 @@ class State:
     def update_prev_keys(self, keys: ScancodeWrapper):
         self.game.prev_keys = keys
 
+    def pressed(self, keys: ScancodeWrapper, key: int) -> bool:
+        """Returns True if a key is pressed now but not last frame."""
+        return keys[key] and not self.game.prev_keys[key]
+
     def take_input(self, keys: ScancodeWrapper, dt: int) -> None:
         pass
 
@@ -51,11 +55,7 @@ class TitleScreen(State):
         self.sounds.stall_warning.stop()
 
     def take_input(self, keys: ScancodeWrapper, dt: int) -> None:
-        def pressed(key: int) -> bool:
-            """Returns True if a key is pressed now but not last frame."""
-            return keys[key] and not self.game.prev_keys[key]
-
-        if pressed(pg.K_SPACE):
+        if self.pressed(keys, pg.K_SPACE):
             self.game.enter_state('game')
 
         self.update_prev_keys(keys)
