@@ -61,6 +61,10 @@ class Plane(Entity):
             self.disabled and self.on_ground
         )
 
+    @property  # TODO: unused method, integrate where useful
+    def stalling(self) -> bool:
+        return self.aoa > self.model.stall_angle
+
     def reset(self) -> None:
         self.pos = pg.Vector3(0, 0, 0)
         self.vel = pg.Vector3(0, 0, 0)

@@ -173,9 +173,6 @@ class GameScreen(State):
         gl.glMatrixMode(gl.GL_MODELVIEW)
 
     def take_input(self, keys: ScancodeWrapper, dt: int) -> None:
-        # FIXME: Plane on ground but successfully landed causes
-        # softlock that requires killing and restarting the game
-
         # Meta controls
         if self.pressed(keys, pg.K_SPACE):
             self.sounds.menu_music.stop()
@@ -184,36 +181,64 @@ class GameScreen(State):
         if self.pressed(keys, pg.K_r):
             self.plane.reset()
 
-        # Black flight controls
+        # Block flight controls if crashed or disabled
         if not self.plane.flyable:
-            self.update_prev_keys(keys); return
+            self.update_prev_keys(keys)
+            return
 
-        rot_speed = 20 * dt/1000
-        throttle_speed = 0.25 * dt/1000
-
-        # Throttle
+        # Throttle controls
+        throttle_speed = 0.3 * dt/1000
         if keys[pg.K_w]:
             self.plane.throttle_frac += throttle_speed
         if keys[pg.K_s]:
             self.plane.throttle_frac -= throttle_speed
-
-        # Clamp throttle
         self.plane.throttle_frac = clamp(self.plane.throttle_frac, (0, 1))
 
-        authority = 1 - 0.875 * self.plane.damage_level**2
-        true_rot_speed = authority * rot_speed
+        # Aerodynamic control effectiveness
+        base_rot_speed = 20 * dt/1000
+        airspeed = self.plane.vel.length()
+
+        # 1. Base effectiveness based on airspeed
+        # Controls are fully effective around 50 m/s (100 knots)
+        # Using a sqrt curve for better feel at lower speeds
+        MANEUVERING_SPEED_THRESHOLD = 50.0
+        aero_effectiveness = min(1.0, (airspeed / MANEUVERING_SPEED_THRESHOLD) ** 0.5)
+
+        # 2. Damage model
+        damage_authority = 1 - 0.875 * self.plane.damage_level**2
+
+        # 3. Stall reduces control authority
+        # Pitch is mushy, roll is heavily compromised
+        stall_effectiveness = 0.3 if self.show_stall_warning else 1.0
+        roll_stall_effectiveness = 0.1 if self.show_stall_warning else 1.0
+
+        # 4. Ground effect
+        # Controls have minimal effect on the ground at low speeds
+        ground_effectiveness = 1.0
+        if self.plane.on_ground:
+            # Controls become effective as speed builds for takeoff
+            ground_effectiveness = min(1.0, airspeed / 25.0) # Full authority at ~50 knots
+
+        # --- Final Calculation ---
+        pitch_authority = aero_effectiveness * damage_authority * stall_effectiveness * ground_effectiveness
+        roll_authority = aero_effectiveness * damage_authority * roll_stall_effectiveness * ground_effectiveness
+
+        final_pitch_speed = base_rot_speed * pitch_authority
+        final_roll_speed = base_rot_speed * roll_authority
+
+        # --- Apply Controls ---
         # Pitch
         if keys[pg.K_UP]:
-            self.plane.rot.x -= true_rot_speed * (1+(self.plane.rot.x/90))
+            self.plane.rot.x -= final_pitch_speed * (1 + (self.plane.rot.x / 90))
         if keys[pg.K_DOWN]:
-            self.plane.rot.x += true_rot_speed * (1-(self.plane.rot.x/90))
+            self.plane.rot.x += final_pitch_speed * (1 - (self.plane.rot.x / 90))
         # Turning (Roll)
         if keys[pg.K_LEFT]:
-            self.plane.rot.z -= true_rot_speed
+            self.plane.rot.z -= final_roll_speed
         if keys[pg.K_RIGHT]:
-            self.plane.rot.z += true_rot_speed
+            self.plane.rot.z += final_roll_speed
 
-        # Clamp
+        # Clamp rotation values
         self.plane.rot.y %= 360
         self.plane.rot.z %= 360
         self.plane.rot.x = clamp(self.plane.rot.x, (-90, 90))
