@@ -196,47 +196,19 @@ class GameScreen(State):
 
         # Aerodynamic control effectiveness
         base_rot_speed = 20 * dt/1000
-        airspeed = self.plane.vel.length()
-
-        # 1. Base effectiveness based on airspeed
-        # Controls are fully effective around 50 m/s (100 knots)
-        # Using a sqrt curve for better feel at lower speeds
-        MANEUVERING_SPEED_THRESHOLD = 50.0
-        aero_effectiveness = min(1.0, (airspeed / MANEUVERING_SPEED_THRESHOLD) ** 0.5)
-
-        # 2. Damage model
         damage_authority = 1 - 0.875 * self.plane.damage_level**2
+        final_rot_speed = damage_authority * base_rot_speed
 
-        # 3. Stall reduces control authority
-        # Pitch is mushy, roll is heavily compromised
-        stall_effectiveness = 0.3 if self.show_stall_warning else 1.0
-        roll_stall_effectiveness = 0.1 if self.show_stall_warning else 1.0
-
-        # 4. Ground effect
-        # Controls have minimal effect on the ground at low speeds
-        ground_effectiveness = 1.0
-        if self.plane.on_ground:
-            # Controls become effective as speed builds for takeoff
-            ground_effectiveness = min(1.0, airspeed / 25.0) # Full authority at ~50 knots
-
-        # --- Final Calculation ---
-        pitch_authority = aero_effectiveness * damage_authority * stall_effectiveness * ground_effectiveness
-        roll_authority = aero_effectiveness * damage_authority * roll_stall_effectiveness * ground_effectiveness
-
-        final_pitch_speed = base_rot_speed * pitch_authority
-        final_roll_speed = base_rot_speed * roll_authority
-
-        # --- Apply Controls ---
         # Pitch
         if keys[pg.K_UP]:
-            self.plane.rot.x -= final_pitch_speed * (1 + (self.plane.rot.x / 90))
+            self.plane.rot.x -= final_rot_speed * (1 + (self.plane.rot.x / 90))
         if keys[pg.K_DOWN]:
-            self.plane.rot.x += final_pitch_speed * (1 - (self.plane.rot.x / 90))
+            self.plane.rot.x += final_rot_speed * (1 - (self.plane.rot.x / 90))
         # Turning (Roll)
         if keys[pg.K_LEFT]:
-            self.plane.rot.z -= final_roll_speed
+            self.plane.rot.z -= final_rot_speed
         if keys[pg.K_RIGHT]:
-            self.plane.rot.z += final_roll_speed
+            self.plane.rot.z += final_rot_speed
 
         # Clamp rotation values
         self.plane.rot.y %= 360
