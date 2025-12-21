@@ -47,7 +47,7 @@ class GameScreen(State):
         self.sound_manager = SoundManager(game.assets.sounds)
         self.ground = Ground(game.assets.images.test_grass)  # Pass the loaded image to Ground
         self.sky = Sky()
-        self.time_of_day: str = "sunset"
+        self.time_of_day: str = "night"
         self.show_stall_warning: bool = False
         self.show_overspeed_warning: bool = False
         self.time_elapsed: int = 0  # milliseconds
