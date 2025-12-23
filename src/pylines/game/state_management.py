@@ -57,9 +57,6 @@ class TitleScreen(State):
         )
 
     def reset(self) -> None:
-        # FIXME: menu music plays twice when returning from settings menu
-        # solution is to make a separate menu music channel to manage menu music
-        self.sounds.menu_music.play(-1)
         self.sounds.stall_warning.stop()
 
     def take_input(self, keys: ScancodeWrapper, events: EventList, dt: int) -> None:
