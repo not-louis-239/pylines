@@ -1,3 +1,5 @@
+"""Generic state management module"""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
@@ -10,6 +12,7 @@ import pylines.core.constants as C
 from pylines.core.colours import WHITE
 from pylines.core.custom_types import ScancodeWrapper, Surface
 from pylines.core.utils import draw_text
+from pylines.objects.buttons import Button
 
 if TYPE_CHECKING:
     from game.game import Game
@@ -37,7 +40,7 @@ class State:
         """Returns True if a key is pressed now but not last frame."""
         return keys[key] and not self.game.prev_keys[key]
 
-    def take_input(self, keys: ScancodeWrapper, dt: int) -> None:
+    def take_input(self, keys: ScancodeWrapper, events: list[pg.event.Event], dt: int) -> None:
         pass
 
     def draw(self, wn: Surface):
@@ -48,14 +51,22 @@ class TitleScreen(State):
         super().__init__(game)
         self.display_surface = pg.Surface((C.WN_W, C.WN_H), pg.SRCALPHA)
         self.texture_id = gl.glGenTextures(1)
+        self.settings_button = Button(
+            (120, C.WN_H-90), 200, 80, (25, 75, 75), (200, 255, 255),
+            "Settings", self.fonts.monospaced, 30
+        )
 
     def reset(self) -> None:
+        # FIXME: menu music plays twice when returning from settings menu
+        # solution is to make a separate menu music channel to manage menu music
         self.sounds.menu_music.play(-1)
         self.sounds.stall_warning.stop()
 
-    def take_input(self, keys: ScancodeWrapper, dt: int) -> None:
+    def take_input(self, keys: ScancodeWrapper, events: list[pg.event.Event], dt: int) -> None:
         if self.pressed(keys, pg.K_SPACE):
             self.game.enter_state('game')
+        if self.settings_button.check_click(events):
+            self.game.enter_state('settings')
 
         self.update_prev_keys(keys)
 
@@ -77,6 +88,7 @@ class TitleScreen(State):
         draw_control("W/S", "Increase/decrease throttle", C.WN_H*0.4)
         draw_control("Left/Right", "Turn sideways", C.WN_H*0.45)
         draw_control("Up/Down", "Nose up/down", C.WN_H*0.5)
+        self.settings_button.draw(self.display_surface)
 
         # Convert the Pygame surface to an OpenGL texture
         texture_data = pg.image.tostring(self.display_surface, 'RGBA', True)
@@ -118,40 +130,32 @@ class TitleScreen(State):
         gl.glMatrixMode(gl.GL_MODELVIEW)
         gl.glPopMatrix()
 
-class SettingsScreen(State):  # FIXME: work in progress
+class SettingsScreen(State):
     def __init__(self, game: Game):
         super().__init__(game)
         self.display_surface = pg.Surface((C.WN_W, C.WN_H), pg.SRCALPHA)
         self.texture_id = gl.glGenTextures(1)
+        self.back_button = Button(
+            (120, C.WN_H-90), 200, 80, (25, 75, 75), (200, 255, 255),
+            "Back to Main Menu", self.fonts.monospaced, 30
+        )
 
     def reset(self) -> None:
-        self.sounds.menu_music.play(-1)
-        self.sounds.stall_warning.stop()
+        pass
 
-    def take_input(self, keys: ScancodeWrapper, dt: int) -> None:
-        if self.pressed(keys, pg.K_SPACE):
-            self.game.enter_state('game')
+    def take_input(self, keys: ScancodeWrapper, events: list[pg.event.Event], dt: int) -> None:
+        if self.back_button.check_click(events):
+            self.game.enter_state('title')
 
         self.update_prev_keys(keys)
 
     def draw(self, wn: Surface):
-        def draw_control(control: str, desc: str, y: float):
-            draw_text(self.display_surface, (C.WN_W//2 - 300, y), 'left', 'centre', control, WHITE, 30, self.fonts.monospaced)
-            draw_text(self.display_surface, (C.WN_W//2 - 50, y), 'left', 'centre', desc, WHITE, 30, self.fonts.monospaced)
-
         # Fill the display surface
         self.display_surface.fill((0, 0, 0))
-        rect = self.images.logo.get_rect(center=(C.WN_W//2, C.WN_H*0.15
-                                                 ))
-        self.display_surface.blit(self.images.logo, rect)
-        draw_text(self.display_surface, (C.WN_W//2, C.WN_H*0.8), 'centre', 'centre', "Press Space for briefing.", (255, 255, 255), 30, self.fonts.monospaced)  # TODO: Add briefing
-        draw_text(self.display_surface, (C.WN_W//2, 0.95*C.WN_H), 'centre', 'centre', "Copyright (C) Louis Masarei-Boulton.", (127, 127, 127), 15, self.fonts.monospaced)
 
-        draw_text(self.display_surface, (C.WN_W//2, C.WN_H*0.3), 'centre', 'centre', "Flight Notes", (0, 192, 255), 40, self.fonts.monospaced)
-
-        draw_control("W/S", "Increase/decrease throttle", C.WN_H*0.4)
-        draw_control("Left/Right", "Turn sideways", C.WN_H*0.45)
-        draw_control("Up/Down", "Nose up/down", C.WN_H*0.5)
+        # Draw text
+        draw_text(self.display_surface, (C.WN_W//2, C.WN_H*0.15), 'centre', 'centre', "Settings", (0, 192, 255), 40, self.fonts.monospaced)
+        self.back_button.draw(self.display_surface)
 
         # Convert the Pygame surface to an OpenGL texture
         texture_data = pg.image.tostring(self.display_surface, 'RGBA', True)

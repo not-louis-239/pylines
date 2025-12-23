@@ -4,10 +4,11 @@ import pygame as pg
 
 from pylines.core.custom_types import Colour, Coord2, Surface
 from pylines.core.utils import draw_text
+from pylines.core.custom_types import RealNumber
 
 class Button:
-    def __init__(self, pos: Coord2, w, h,
-                 colour: Colour, text_colour: Colour, text: str, font: Path) -> None:
+    def __init__(self, pos: Coord2, w: RealNumber, h: RealNumber,
+                 colour: Colour, text_colour: Colour, text: str, font: Path, font_size: int) -> None:
         self.pos = pg.Vector2(*pos)
         self.w = w
         self.h = h
@@ -15,6 +16,7 @@ class Button:
         self.text_colour = text_colour
         self.text = text
         self.font = font
+        self.font_size = font_size
 
         self.rect = pg.Rect(0, 0, self.w, self.h)
         self.rect.center = (int(self.pos.x), int(self.pos.y))

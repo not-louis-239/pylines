@@ -35,7 +35,8 @@ def main():
 
     running = True
     while running:
-        for event in pg.event.get():
+        events = pg.event.get()
+        for event in events:
             # Quit
             if event.type == pg.QUIT:
                 running = False
@@ -46,7 +47,7 @@ def main():
         dt = clock.tick(FPS)
         keys = pg.key.get_pressed()
 
-        game.take_input(keys, dt)
+        game.take_input(keys, events, dt)
         game.draw(wn)
         pg.display.flip()
 

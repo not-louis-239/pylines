@@ -1,3 +1,5 @@
+"""State management module for separating game state from other states"""
+
 from __future__ import annotations
 
 import math
