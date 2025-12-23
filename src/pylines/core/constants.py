@@ -97,7 +97,7 @@ AIR_DENSITY = 1.225  # kg/m³
 GRAVITY = 9.8        # m/s²
 
 # File loading
-BASE_DIR: Path = Path(__file__).resolve().parent.parent
+BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent.parent
 
 # Mathematical
 EPSILON = 0.001  # Treat anything smaller than this as zero

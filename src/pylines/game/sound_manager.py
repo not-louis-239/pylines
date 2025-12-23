@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import pygame as pg
 
 if TYPE_CHECKING:
-    from core.asset_manager import Sounds
+    from pylines.core.asset_manager import Sounds
 
 class SoundManager:
     """

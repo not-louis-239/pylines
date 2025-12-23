@@ -4,13 +4,13 @@ from typing import TYPE_CHECKING
 
 import pygame as pg
 
-from core.asset_manager import Assets
-from game.game_screen import GameScreen
-from game.state_management import TitleScreen
+from pylines.core.asset_manager import Assets
+from pylines.game.game_screen import GameScreen
+from pylines.game.state_management import TitleScreen
 
 if TYPE_CHECKING:
-    from core.custom_types import ScancodeWrapper, Surface
-    from game.state_management import State
+    from pylines.core.custom_types import ScancodeWrapper, Surface
+    from pylines.game.state_management import State
 
 
 class Game:

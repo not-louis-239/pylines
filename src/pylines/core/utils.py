@@ -6,8 +6,8 @@ from typing import Generator, Literal
 import pygame as pg
 from pygame.surface import Surface
 
-from core.colours import WHITE
-from core.custom_types import AColour, Colour, Coord2, RealNumber
+from .colours import WHITE
+from .custom_types import AColour, Colour, Coord2, RealNumber
 
 
 @dataclass

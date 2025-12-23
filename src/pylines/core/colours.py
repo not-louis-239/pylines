@@ -3,8 +3,7 @@
 from dataclasses import dataclass
 from typing import cast, overload
 
-from core.custom_types import AColour, Colour
-
+from .custom_types import AColour, Colour
 
 @dataclass(frozen=True)
 class ColourScheme:

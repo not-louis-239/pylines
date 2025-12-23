@@ -3,8 +3,8 @@ from pathlib import Path
 import pygame as pg
 from pygame.transform import scale, scale_by
 
-from core.constants import BASE_DIR
-from core.custom_types import Sound
+from .constants import BASE_DIR
+from .custom_types import Sound
 
 
 class AssetBank:

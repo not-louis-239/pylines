@@ -1,10 +1,15 @@
+import sys
+import os
 import OpenGL.GL as gl
 import OpenGL.GLU as glu
 import pygame as pg
 
-from core.constants import (FPS, INNER_RENDER_LIMIT, OUTER_RENDER_LIMIT, TPS,
+# Add the 'src' directory to the Python path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), 'src')))
+
+from pylines.core.constants import (FPS, INNER_RENDER_LIMIT, OUTER_RENDER_LIMIT, TPS,
                             WN_H, WN_W)
-from game.game import Game
+from pylines.game.game import Game
 
 
 def main():

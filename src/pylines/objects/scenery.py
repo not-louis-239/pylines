@@ -2,9 +2,9 @@ import OpenGL.GL as gl
 import OpenGL.GLU as glu
 import pygame as pg
 
-from core.constants import GROUND_SIZE, WN_H, WN_W
-from core.custom_types import Coord3, Surface
-from objects.objects import Entity
+from pylines.core.constants import GROUND_SIZE, WN_H, WN_W
+from pylines.core.custom_types import Coord3, Surface
+from pylines.objects.objects import Entity
 
 
 # TODO: This is unused, will come in useful when I add buildings and other more advanced scenery

@@ -7,13 +7,13 @@ from math import sin
 
 import pygame as pg
 
-from core.asset_manager import Sounds
-from core.constants import (AIR_DENSITY, EPSILON, GRAVITY, PLANE_MODELS, PRACTISE_LIMIT, PlaneModel)
-from core.custom_types import Surface
-from core.utils import clamp
+from pylines.core.asset_manager import Sounds
+from pylines.core.constants import (AIR_DENSITY, EPSILON, GRAVITY, PLANE_MODELS, PRACTISE_LIMIT, PlaneModel)
+from pylines.core.custom_types import Surface
+from pylines.core.utils import clamp
 
 if TYPE_CHECKING:
-    from game.game_screen import DialogMessage
+    from pylines.game.game_screen import DialogMessage
 
 class Entity:
     """Mental basis for all in-game physical objects"""

@@ -8,19 +8,19 @@ import OpenGL.GL as gl
 import OpenGL.GLU as glu
 import pygame as pg
 
-import core.constants as C
-from core.colours import (BLUE, BROWN, DARK_BLUE, DARK_BROWN,
+import pylines.core.constants as C
+from pylines.core.colours import (BLUE, BROWN, DARK_BLUE, DARK_BROWN,
                           SKY_COLOUR_SCHEMES, WHITE)
-from core.custom_types import AColour, Colour, RealNumber
-from core.utils import clamp, draw_needle, draw_text, draw_transparent_rect
-from game.sound_manager import SoundManager
-from game.state_management import State
-from objects.objects import Plane
-from objects.scenery import Ground, Sky
+from pylines.core.custom_types import AColour, Colour, RealNumber
+from pylines.core.utils import clamp, draw_needle, draw_text, draw_transparent_rect
+from pylines.game.sound_manager import SoundManager
+from pylines.game.state_management import State
+from pylines.objects.objects import Plane
+from pylines.objects.scenery import Ground, Sky
 
 if TYPE_CHECKING:
-    from core.custom_types import ScancodeWrapper, Surface
-    from game.game import Game
+    from pylines.core.custom_types import ScancodeWrapper, Surface
+    from pylines.game.game import Game
 
 @dataclass
 class DialogMessage:
