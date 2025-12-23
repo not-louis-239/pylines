@@ -14,6 +14,7 @@ Coord3: TypeAlias = tuple[RealNumber, RealNumber, RealNumber]
 
 # Event types
 ScancodeWrapper: TypeAlias = pg.key.ScancodeWrapper
+EventList: TypeAlias = list[pg.event.Event]
 
 # Asset types
 Surface: TypeAlias = pg.Surface

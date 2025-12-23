@@ -10,12 +10,12 @@ import pygame as pg
 
 import pylines.core.constants as C
 from pylines.core.colours import WHITE
-from pylines.core.custom_types import ScancodeWrapper, Surface
+from pylines.core.custom_types import ScancodeWrapper, Surface, EventList
 from pylines.core.utils import draw_text
 from pylines.objects.buttons import Button
 
 if TYPE_CHECKING:
-    from game.game import Game
+    from pylines.game.game import Game
 
 class State:
     def __init__(self, game: Game) -> None:
@@ -40,7 +40,7 @@ class State:
         """Returns True if a key is pressed now but not last frame."""
         return keys[key] and not self.game.prev_keys[key]
 
-    def take_input(self, keys: ScancodeWrapper, events: list[pg.event.Event], dt: int) -> None:
+    def take_input(self, keys: ScancodeWrapper, events: EventList, dt: int) -> None:
         pass
 
     def draw(self, wn: Surface):
@@ -62,11 +62,11 @@ class TitleScreen(State):
         self.sounds.menu_music.play(-1)
         self.sounds.stall_warning.stop()
 
-    def take_input(self, keys: ScancodeWrapper, events: list[pg.event.Event], dt: int) -> None:
+    def take_input(self, keys: ScancodeWrapper, events: EventList, dt: int) -> None:
         if self.pressed(keys, pg.K_SPACE):
-            self.game.enter_state('game')
+            self.game.enter_state(self.game.States.GAME)
         if self.settings_button.check_click(events):
-            self.game.enter_state('settings')
+            self.game.enter_state(self.game.States.SETTINGS)
 
         self.update_prev_keys(keys)
 
@@ -143,9 +143,9 @@ class SettingsScreen(State):
     def reset(self) -> None:
         pass
 
-    def take_input(self, keys: ScancodeWrapper, events: list[pg.event.Event], dt: int) -> None:
+    def take_input(self, keys: ScancodeWrapper, events: EventList, dt: int) -> None:
         if self.back_button.check_click(events):
-            self.game.enter_state('title')
+            self.game.enter_state(self.game.States.TITLE)
 
         self.update_prev_keys(keys)
 

@@ -2,9 +2,8 @@ from pathlib import Path
 
 import pygame as pg
 
-from pylines.core.custom_types import Colour, Coord2, Surface
+from pylines.core.custom_types import Colour, Coord2, Surface, RealNumber, EventList
 from pylines.core.utils import draw_text
-from pylines.core.custom_types import RealNumber
 
 class Button:
     def __init__(self, pos: Coord2, w: RealNumber, h: RealNumber,
@@ -22,7 +21,7 @@ class Button:
         self.rect.center = (int(self.pos.x), int(self.pos.y))
 
     # Returns True once when held
-    def check_click(self, event_list: list[pg.event.Event]) -> bool:
+    def check_click(self, event_list: EventList) -> bool:
         for e in event_list:
             if e.type == pg.MOUSEBUTTONDOWN and e.button == 1:
                 if self.rect.collidepoint(e.pos):

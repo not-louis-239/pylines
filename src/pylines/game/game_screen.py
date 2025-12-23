@@ -13,7 +13,7 @@ import pygame as pg
 import pylines.core.constants as C
 from pylines.core.colours import (BLUE, BROWN, DARK_BLUE, DARK_BROWN,
                           SKY_COLOUR_SCHEMES, WHITE)
-from pylines.core.custom_types import AColour, Colour, RealNumber
+from pylines.core.custom_types import AColour, Colour, RealNumber, EventList
 from pylines.core.utils import clamp, draw_needle, draw_text, draw_transparent_rect
 from pylines.game.sound_manager import SoundManager
 from pylines.game.state_management import State
@@ -174,11 +174,11 @@ class GameScreen(State):
         gl.glPopMatrix()
         gl.glMatrixMode(gl.GL_MODELVIEW)
 
-    def take_input(self, keys: ScancodeWrapper, dt: int) -> None:
+    def take_input(self, keys: ScancodeWrapper, events: EventList, dt: int) -> None:
         # Meta controls
         if self.pressed(keys, pg.K_SPACE):
             self.sounds.menu_music.stop()
-            self.game.enter_state('title')
+            self.game.enter_state(self.game.States.TITLE)
             self.sound_manager.stop()
         if self.pressed(keys, pg.K_r):
             self.plane.reset()
