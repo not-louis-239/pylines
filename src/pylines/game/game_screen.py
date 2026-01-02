@@ -196,26 +196,27 @@ class GameScreen(State):
             self.plane.throttle_frac -= throttle_speed
         self.plane.throttle_frac = clamp(self.plane.throttle_frac, (0, 1))
 
-        # Aerodynamic control effectiveness
-        base_rot_speed = 20 * dt/1000
-        damage_authority = 1 - 0.875 * self.plane.damage_level**2
-        final_rot_speed = damage_authority * base_rot_speed
+        base_rot_accel = 1.5 * dt/1000
+        control_authority = 1 - 0.875 * self.plane.damage_level**2  # reduce authority based on damage level
+        rot_accel = control_authority * base_rot_accel
+
+        # TODO: Move rotation controls to the Plane object
 
         # Pitch
         if keys[pg.K_UP]:
-            self.plane.rot.x -= final_rot_speed * (1 + (self.plane.rot.x / 90))
+            self.plane.rot_rate.x -= rot_accel * (1 + (self.plane.rot.x / 90))
         if keys[pg.K_DOWN]:
-            self.plane.rot.x += final_rot_speed * (1 - (self.plane.rot.x / 90))
-        # Turning (Roll)
-        if keys[pg.K_LEFT]:
-            self.plane.rot.z -= final_rot_speed
-        if keys[pg.K_RIGHT]:
-            self.plane.rot.z += final_rot_speed
+            self.plane.rot_rate.x += rot_accel * (1 - (self.plane.rot.x / 90))
+        if not (keys[pg.K_UP] or keys[pg.K_DOWN]):
+            self.plane.rot_rate.x *= 0.95
 
-        # Clamp rotation values
-        self.plane.rot.y %= 360
-        self.plane.rot.z %= 360
-        self.plane.rot.x = clamp(self.plane.rot.x, (-90, 90))
+        # Turning
+        if keys[pg.K_LEFT]:
+            self.plane.rot_rate.z -= rot_accel
+        if keys[pg.K_RIGHT]:
+            self.plane.rot_rate.z += rot_accel
+        if not (keys[pg.K_LEFT] or keys[pg.K_RIGHT]):
+            self.plane.rot_rate.z *= 0.95
 
         self.update_prev_keys(keys)
 

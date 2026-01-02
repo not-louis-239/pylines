@@ -133,7 +133,7 @@ class SettingsScreen(State):
         self.display_surface = pg.Surface((C.WN_W, C.WN_H), pg.SRCALPHA)
         self.texture_id = gl.glGenTextures(1)
         self.back_button = Button(
-            (120, C.WN_H-90), 200, 80, (25, 75, 75), (200, 255, 255),
+            (170, C.WN_H-90), 300, 80, (25, 75, 75), (200, 255, 255),
             "Back to Main Menu", self.fonts.monospaced, 30
         )
 

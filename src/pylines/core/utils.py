@@ -99,3 +99,6 @@ def draw_transparent_rect(surface: Surface, pos: Coord2, size: Coord2,
     if border_thickness:
         pg.draw.rect(box_surf, border_colour, box_surf.get_rect(), border_thickness)
     surface.blit(box_surf, pos)
+
+def get_sign(n: int | float):
+    return 1 if n > 0 else 0 if n == 0 else -1

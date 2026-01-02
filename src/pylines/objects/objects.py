@@ -31,21 +31,9 @@ class Plane(Entity):
     def __init__(self, sounds: Sounds, dialog_box: DialogMessage):
         super().__init__(0, 0, 0)
         self.model: PlaneModel = PLANE_MODELS["Cessna 172"]
-
-        self.vel: pg.Vector3 = pg.Vector3(0, 0, 0)
-        self.acc: pg.Vector3 = pg.Vector3(0, 0, 0)
-        self.rot: pg.Vector3 = pg.Vector3(0, 0, 0)  # pitch, yaw, roll
-
-        self.throttle_frac: float = 0
-        self.flaps: float = 0
-
         self.sounds = sounds
-        self.aoa = 0
-
-        self.on_ground = True
-        self.crash_reason: str | None = None
         self.dialog_box = dialog_box
-        self.damage_level = 0  # from 0 to 1
+        self.reset()
 
     @property
     def crashed(self) -> bool:
@@ -70,8 +58,11 @@ class Plane(Entity):
         self.vel = pg.Vector3(0, 0, 0)
         self.acc = pg.Vector3(0, 0, 0)
 
-        self.throttle_frac = 0  # from 0 to 1
-        self.rot = pg.Vector3(0, 0, 0)
+        self.throttle_frac: float = 0  # from 0 to 1
+        self.flaps: float = 0
+
+        self.rot = pg.Vector3(0, 0, 0)  # pitch, yaw, roll
+        self.rot_rate = pg.Vector3(0, 0, 0)
         self.show_stall_warning: bool = False
 
         self.aoa = 0  # degrees
@@ -182,6 +173,23 @@ class Plane(Entity):
         # Clamp velocity to prevent NaNs
         if self.vel.length() > 1_000:
             self.vel.scale_to_length(1_000)
+
+        # Rotation
+        self.rot_rate.x = clamp(self.rot_rate.x, (-1, 1))  # TODO: make clamping dt-dependent
+        self.rot_rate.z = clamp(self.rot_rate.z, (-5, 5))
+        self.rot.x += self.rot_rate.x * (1 - abs(self.rot.x / 90))
+        self.rot.z += self.rot_rate.z
+
+        # Stalling
+        if self.stalling:
+            self.rot_rate.x += 3 * dt/1000
+
+        # TODO: fix AoA calculation
+
+        # Clamp rotation values
+        self.rot.y %= 360
+        self.rot.z %= 360
+        self.rot.x = clamp(self.rot.x, (-90, 90))
 
         # Clamp position
         self.pos.x = clamp(self.pos.x, (-PRACTISE_LIMIT, PRACTISE_LIMIT))
