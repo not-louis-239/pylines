@@ -19,7 +19,7 @@ class PlaneModel:
     # Safety
     v_ne: float  # Velocity Never Exceed, in m/s
     # Name
-    name: str = "DefaultModel"
+    name: str
 
 # Visuals, tick updates and window size
 FPS = 60
@@ -40,6 +40,7 @@ CAMERA_OFFSET_Y: float = 0.1  # Offset camera or else ground will not render, in
 # Physics
 PLANE_MODELS: dict[str, PlaneModel] = {
     "Cessna 172": PlaneModel(
+        name="Cessna 172",
         cl_max=1.2,
         cd_min=0.03,
         cd_slope=0.0015,
@@ -52,6 +53,7 @@ PLANE_MODELS: dict[str, PlaneModel] = {
         v_ne=82.31
     ),
     "Piper Cub": PlaneModel(
+        name="Piper Cub",
         cl_max=1.4,           # more lift, slower stall
         cd_min=0.035,         # slightly higher drag
         cd_slope=0.0018,
@@ -64,6 +66,7 @@ PLANE_MODELS: dict[str, PlaneModel] = {
         v_ne=70.0             # slower Vne
     ),
     "Extra 300": PlaneModel(
+        name="Extra 300",
         cl_max=1.1,           # moderate lift
         cd_min=0.025,         # very aerodynamic
         cd_slope=0.0020,
@@ -76,6 +79,7 @@ PLANE_MODELS: dict[str, PlaneModel] = {
         v_ne=120.0            # can go much faster
     ),
     "Airbus A320": PlaneModel(
+        name="Airbus A320",
         cl_max=1.5,           # airliners have decent lift at high AoA
         cd_min=0.02,          # sleek but heavier plane
         cd_slope=0.0012,      # drag rises slowly with AoA
