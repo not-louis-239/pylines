@@ -4,13 +4,14 @@ import OpenGL.GL as gl
 import OpenGL.GLU as glu
 import pygame as pg
 
-# Add the 'src' directory to the Python path
+# Add src directory to Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), 'src')))
 
-from pylines.core.constants import (FPS, INNER_RENDER_LIMIT, OUTER_RENDER_LIMIT, TPS,
-                            WN_H, WN_W)
+from pylines.core.constants import (
+    FPS, INNER_RENDER_LIMIT, OUTER_RENDER_LIMIT, TPS,
+    WN_H, WN_W
+)
 from pylines.game.game import Game
-
 
 def main():
     pg.init()
@@ -26,10 +27,10 @@ def main():
     gl.glViewport(0, 0, WN_W, WN_H)
     gl.glMatrixMode(gl.GL_PROJECTION)
     gl.glLoadIdentity()
-    glu.gluPerspective(45, WN_W/WN_H, INNER_RENDER_LIMIT, OUTER_RENDER_LIMIT) # Field of view, aspect ratio, near, far clipping plane
+    glu.gluPerspective(45, WN_W/WN_H, INNER_RENDER_LIMIT, OUTER_RENDER_LIMIT)  # Field of view, aspect ratio, near, far clipping plane
     gl.glMatrixMode(gl.GL_MODELVIEW)
     gl.glLoadIdentity()
-    gl.glEnable(gl.GL_DEPTH_TEST) # Enable depth testing for 3D objects
+    gl.glEnable(gl.GL_DEPTH_TEST)  # Enable depth testing for 3D objects
 
     game = Game()
 

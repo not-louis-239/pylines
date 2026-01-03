@@ -5,6 +5,7 @@ from math import asin, cos, degrees
 from math import radians as rad
 from math import sin
 
+import OpenGL.GL as gl
 import pygame as pg
 
 from pylines.core.asset_manager import Sounds
@@ -94,10 +95,9 @@ class Plane(Entity):
         # Sideways movement - convert roll to yaw
         self.rot.y += sin(rad(self.rot.z)) * 30 * dt/1000 * self.throttle_frac
 
-        # Pitch, yaw, roll
         pitch, yaw, roll = self.rot
 
-        # Forward vector (where the nose points)
+        # Forward vector (where nose points)
         forward_vec = pg.Vector3(
             sin(rad(yaw)) * cos(rad(pitch)),
             sin(rad(-pitch)),  # pitch is negated since +pitch = nose down
@@ -121,7 +121,7 @@ class Plane(Entity):
             pitch_velocity = asin(vel_unit_vec.y)      # radians
             self.aoa = degrees(pitch_forward - pitch_velocity)
 
-        # Calculate lift, using the previously calculated airspeed
+        # Calculate lift, using previously calculated airspeed
         if self.aoa < self.model.stall_angle:
             cl = self.model.cl_max * self.aoa/self.model.stall_angle
         else:
@@ -139,16 +139,16 @@ class Plane(Entity):
             up = pg.Vector3(0, 1, 0)
             right = forward_vec.cross(up).normalize()
 
-            # 3. Lift direction = airflow_dir rotated 90° around right vector
+            # Lift direction = airflow_dir rotated 90° around right vector
             # Approximate small-angle rotation using cross product:
             lift_dir = airflow_dir.cross(right).normalize()
 
-            # 4. Lift vector
+            # Lift vector
             lift = lift_dir * lift_mag
 
         # Calculate drag
         cd = self.model.cd_min + self.model.cd_slope*abs(self.aoa)  # Baseline
-        if self.aoa > self.model.stall_angle:
+        if self.stalling:
             excess = self.aoa - self.model.stall_angle  # degrees
             cd += excess**2 * 0.004  # Stall drag penalty
         if self.pos.y == 0:
@@ -162,11 +162,9 @@ class Plane(Entity):
         else:
             drag = -self.vel.normalize() * drag_mag
 
-        # Combine forces
+        # Combine and integrate
         net_force = thrust + weight + lift + drag  # Force vector in Newtons
         self.acc = net_force / self.model.mass
-
-        # Integrate
         self.vel += self.acc * dt/1000
         self.pos += self.vel * dt/1000
 
@@ -184,7 +182,7 @@ class Plane(Entity):
         if self.stalling:
             self.rot_rate.x += 3 * dt/1000
 
-        # TODO: fix AoA calculation
+        # TODO: make AoA calculation more accurate
 
         # Clamp rotation values
         self.rot.y %= 360
@@ -206,7 +204,7 @@ class Plane(Entity):
         if self.pos.y <= 0:
             self.pos.y = 0
 
-            if not self.on_ground:  # Only check transition from air -> ground
+            if not self.on_ground:
                 self.process_landing()
 
             if not self.crashed:
@@ -217,4 +215,31 @@ class Plane(Entity):
 
         self.damage_level = clamp(self.damage_level, (0, 1))
 
-class Runway(Entity): ...  # TODO: Add runway scenery object logic
+class Runway(Entity):
+    def __init__(self, x: float, y: float, z: float, width: float, length: float, heading: float = 0):
+        super().__init__(x, y, z)
+        self.width = width
+        self.length = length
+        self.heading = heading
+
+    def draw(self):
+        # TODO: fix runway z-fighting with ground
+
+        gl.glPushMatrix()
+
+        # Translate and rotate to runway's position and heading
+        gl.glTranslatef(self.pos.x, self.pos.y + 0.1, self.pos.z)  # y-offset prevents z-fighting
+        gl.glRotatef(self.heading, 0, 1, 0)
+        gl.glColor3f(0.2, 0.2, 0.2)
+
+        half_width = self.width / 2
+        half_length = self.length / 2
+
+        gl.glBegin(gl.GL_QUADS)
+        gl.glVertex3f(-half_width, 0, -half_length)
+        gl.glVertex3f(half_width, 0, -half_length)
+        gl.glVertex3f(half_width, 0, half_length)
+        gl.glVertex3f(-half_width, 0, half_length)
+        gl.glEnd()
+
+        gl.glPopMatrix()

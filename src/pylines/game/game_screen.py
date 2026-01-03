@@ -17,7 +17,7 @@ from pylines.core.custom_types import AColour, Colour, RealNumber, EventList
 from pylines.core.utils import clamp, draw_needle, draw_text, draw_transparent_rect
 from pylines.game.sound_manager import SoundManager
 from pylines.game.state_management import State
-from pylines.objects.objects import Plane
+from pylines.objects.objects import Plane, Runway
 from pylines.objects.scenery import Ground, Sky
 
 if TYPE_CHECKING:
@@ -48,8 +48,9 @@ class GameScreen(State):
         self.plane = Plane(game.assets.sounds, self.landing_dialog_box)
         self.sound_manager = SoundManager(game.assets.sounds)
         self.ground = Ground(game.assets.images.test_grass)  # Pass the loaded image to Ground
+        self.runway = Runway(x=0, y=0, z=0, width=50, length=1000)
         self.sky = Sky()
-        self.time_of_day: str = "night"
+        self.time_of_day: str = "day"
         self.show_stall_warning: bool = False
         self.show_overspeed_warning: bool = False
         self.time_elapsed: int = 0  # milliseconds
@@ -557,4 +558,5 @@ class GameScreen(State):
         gl.glTranslatef(-self.plane.pos.x, -(self.plane.pos.y+C.CAMERA_OFFSET_Y), -self.plane.pos.z)
 
         self.ground.draw()
+        self.runway.draw()
         self.draw_hud()

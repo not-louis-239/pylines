@@ -35,7 +35,7 @@ PRACTISE_LIMIT = GROUND_SIZE * 0.95  # The user is "unauthorised" to go further
 # Rendering
 INNER_RENDER_LIMIT = 0.05
 OUTER_RENDER_LIMIT = 100000
-CAMERA_OFFSET_Y: float = 0.1  # Offset camera or else ground will not render, in metres
+CAMERA_OFFSET_Y: float = 0.2  # Offset camera or else ground will not render, in metres
 
 # Physics
 PLANE_MODELS: dict[str, PlaneModel] = {
