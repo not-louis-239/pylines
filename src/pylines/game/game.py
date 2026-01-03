@@ -6,12 +6,15 @@ from enum import Enum, auto
 import pygame as pg
 
 from pylines.core.asset_manager import Assets
-from pylines.game.game_screen import GameScreen
-from pylines.game.state_management import TitleScreen, SettingsScreen
+from pylines.core.data_manager import save_data, load_data
+from pylines.game.screens.game_screen import GameScreen
+
+from pylines.game.screens.title import TitleScreen
+from pylines.game.screens.settings import SettingsScreen
 
 if TYPE_CHECKING:
     from pylines.core.custom_types import ScancodeWrapper, Surface, EventList
-    from pylines.game.state_management import State
+    from pylines.game.states import State
 
 class Game:
     class States(Enum):
@@ -30,6 +33,7 @@ class Game:
 
         self.music_channel = pg.mixer.Channel(0)  # Reserve channel 0 for music                                                    │
         self.state: Game.States = Game.States.TITLE  # Explicitly set initial state
+        self.save_data, *_ = load_data("data/save_data.json")
         self.enter_state(Game.States.TITLE)
 
     def enter_state(self, state_name: States):
@@ -56,3 +60,6 @@ class Game:
 
     def draw(self, wn: Surface) -> None:
         self.states[self.state].draw(wn)
+
+    def quit_game(self):
+        save_data(self.save_data)

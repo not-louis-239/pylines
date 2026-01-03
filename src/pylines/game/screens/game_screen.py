@@ -15,8 +15,8 @@ from pylines.core.colours import (BLUE, BROWN, DARK_BLUE, DARK_BROWN,
                           SKY_COLOUR_SCHEMES, WHITE)
 from pylines.core.custom_types import AColour, Colour, RealNumber, EventList
 from pylines.core.utils import clamp, draw_needle, draw_text, draw_transparent_rect
-from pylines.game.sound_manager import SoundManager
-from pylines.game.state_management import State
+from pylines.game.engine_sound import SoundManager
+from pylines.game.states import State
 from pylines.objects.objects import Plane, Runway
 from pylines.objects.scenery import Ground, Sky
 
@@ -199,7 +199,8 @@ class GameScreen(State):
 
         base_rot_accel = 1.5 * dt/1000
         control_authority = 1 - 0.875 * self.plane.damage_level**2  # reduce authority based on damage level
-        rot_accel = control_authority * base_rot_accel
+        speed_authority_factor = clamp((self.plane.vel.length()/30.87)**2, (0.01, 1))  # based on vel in m/s
+        rot_accel = control_authority * base_rot_accel * speed_authority_factor * (0.2 if self.plane.on_ground else 1)
 
         # TODO: Move rotation controls to the Plane object
 

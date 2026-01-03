@@ -40,6 +40,7 @@ def main():
         for event in events:
             # Quit
             if event.type == pg.QUIT:
+                game.quit_game()
                 running = False
 
             if event.type == TICK:

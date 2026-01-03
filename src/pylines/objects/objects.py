@@ -14,7 +14,7 @@ from pylines.core.custom_types import Surface
 from pylines.core.utils import clamp
 
 if TYPE_CHECKING:
-    from pylines.game.game_screen import DialogMessage
+    from pylines.game.screens.game_screen import DialogMessage
 
 class Entity:
     """Mental basis for all in-game physical objects"""
