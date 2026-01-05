@@ -96,7 +96,8 @@ class Plane(Entity):
         # Sideways movement - convert roll to yaw
         self.rot.y += sin(rad(self.rot.z)) * 30 * dt/1000 * self.throttle_frac
 
-        pitch, yaw, roll = self.rot
+        pitch, yaw, *_ = self.rot
+        roll = (self.rot.z + 180) % 360 - 180
 
         # Forward vector (where nose points)
         forward_vec = pg.Vector3(
@@ -180,10 +181,20 @@ class Plane(Entity):
         if self.vel.length() > 1_000:
             self.vel.scale_to_length(1_000)
 
-        # Yaw torque
+        # Roll stabilisation
+        roll_stability_torque = -roll * self.model.roll_stability_factor
+        self.rot_rate.z += roll_stability_torque * dt/1000
+
+        # Yaw torque from rudder
         yaw_torque = self.rudder * self.model.rudder_sensitivity * dt/1000
         self.rot_rate.y += yaw_torque
-        self.rot_rate.z += self.rudder * self.model.rudder_roll_effect * dt/1000
+        self.rot_rate.y *= (1 - 0.8 * dt/1000)
+
+        factor = clamp(1 - abs(self.rot.z)/self.model.max_bank_angle, (0, 1))  # XXX guilty line found
+        effective_rudder_roll = self.model.rudder_roll_effect * factor  # extra roll from rudder
+        if self.on_ground:
+            effective_rudder_roll *= 0.2  # mostly suppressed if on ground
+        self.rot_rate.z += self.rudder * effective_rudder_roll * dt/1000
 
         # Clamp and integrate rotation
         self.rot_rate.x = clamp(self.rot_rate.x, (-25, 25))

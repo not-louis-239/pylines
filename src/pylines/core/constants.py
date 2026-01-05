@@ -9,18 +9,20 @@ class PlaneModel:
     cl_max: float
     cd_min: float
     cd_slope: float      # per degree of AoA
-    # Other physics stuff
+    # Other
     stall_angle: float   # in degrees
     wing_area: float     # m²
     mass: float          # kg
     max_throttle: float  # Newtons
     aspect_ratio: float
     efficiency: float
+    roll_stability_factor: float
     # Flaps and rudder
-    flap_lift_bonus: float
-    flap_drag_penalty: float
-    rudder_sensitivity: float
-    rudder_roll_effect: float
+    flap_lift_bonus: float     # decimal, e.g. 0.3 = +30%
+    flap_drag_penalty: float   # decimal, e.g. 0.3 = +30%
+    rudder_sensitivity: float  # torque factor applied per second
+    rudder_roll_effect: float  # small roll from rudder deflection
+    max_bank_angle: float      # beyond this, rudder won't cause roll
     # Safety
     v_ne: float  # Velocity Never Exceed, in m/s
     # Name
@@ -55,10 +57,12 @@ PLANE_MODELS: dict[str, PlaneModel] = {
         aspect_ratio=7.5,
         efficiency=0.8,
         v_ne=82.31,
-        flap_lift_bonus=0.3,       # +30% lift when fully extended
-        flap_drag_penalty=0.5,     # +50% drag when fully extended
-        rudder_sensitivity=50.0,   # torque factor applied per second
-        rudder_roll_effect=5.0     # small roll caused by rudder deflection
+        flap_lift_bonus=0.3,
+        flap_drag_penalty=0.5,
+        rudder_sensitivity=50.0,
+        rudder_roll_effect=5.0,
+        roll_stability_factor=3,
+        max_bank_angle = 30
     )
 }
 
