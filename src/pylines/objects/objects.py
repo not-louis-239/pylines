@@ -50,7 +50,7 @@ class Plane(Entity):
             self.disabled and self.on_ground
         )
 
-    @property  # TODO: unused method, integrate where useful
+    @property
     def stalling(self) -> bool:
         return self.aoa > self.model.stall_angle
 
@@ -60,7 +60,9 @@ class Plane(Entity):
         self.acc = pg.Vector3(0, 0, 0)
 
         self.throttle_frac: float = 0  # from 0 to 1
-        self.flaps: float = 0
+        self.flaps: float = 0  # 0 = down, 1 = up
+        self.rudder: float = 0  # from -1 to 1 (deflection)
+        self.braking = False
 
         self.rot = pg.Vector3(0, 0, 0)  # pitch, yaw, roll
         self.rot_rate = pg.Vector3(0, 0, 0)
@@ -68,7 +70,6 @@ class Plane(Entity):
 
         self.aoa = 0  # degrees
         self.on_ground = True
-        self.flaps = 0
         self.crash_reason = None
         self.damage_level = 0
 
@@ -106,7 +107,6 @@ class Plane(Entity):
 
         # Calculate thrust and weight
         thrust = pg.Vector3(0, 0, 0) if self.disabled else forward_vec * self.throttle_frac*self.model.max_throttle
-
         weight = pg.Vector3(0, -GRAVITY * self.model.mass, 0)
 
         # Calculate Angle of Attack (AoA)
@@ -122,7 +122,7 @@ class Plane(Entity):
             self.aoa = degrees(pitch_forward - pitch_velocity)
 
         # Calculate lift, using previously calculated airspeed
-        if self.aoa < self.model.stall_angle:
+        if not self.stalling:
             cl = self.model.cl_max * self.aoa/self.model.stall_angle
         else:
             excess = self.aoa - self.model.stall_angle  # degrees
@@ -143,6 +143,9 @@ class Plane(Entity):
             # Approximate small-angle rotation using cross product:
             lift_dir = airflow_dir.cross(right).normalize()
 
+            # Lift increase from flaps
+            lift_mag *= 1 + self.flaps * self.model.flap_lift_bonus
+
             # Lift vector
             lift = lift_dir * lift_mag
 
@@ -156,11 +159,16 @@ class Plane(Entity):
         cd = min(cd, 1)
 
         drag_mag = 0.5 * AIR_DENSITY * airspeed**2 * self.model.wing_area * cd
+        # Drag increase from flaps
+        drag_mag *= 1 + self.flaps * self.model.flap_drag_penalty
 
         if airspeed < EPSILON:
             drag = pg.Vector3(0, 0, 0)
         else:
             drag = -self.vel.normalize() * drag_mag
+
+        if self.braking and self.on_ground:
+            drag *= 3
 
         # Combine and integrate
         net_force = thrust + weight + lift + drag  # Force vector in Newtons
@@ -172,32 +180,42 @@ class Plane(Entity):
         if self.vel.length() > 1_000:
             self.vel.scale_to_length(1_000)
 
-        # Rotation
-        self.rot_rate.x = clamp(self.rot_rate.x, (-1, 1))  # TODO: make clamping dt-dependent
+        # Yaw torque
+        yaw_torque = self.rudder * self.model.rudder_sensitivity * dt/1000
+        self.rot_rate.y += yaw_torque
+        self.rot_rate.z += self.rudder * self.model.rudder_roll_effect * dt/1000
+
+        # Clamp and integrate rotation
+        self.rot_rate.x = clamp(self.rot_rate.x, (-25, 25))
+        self.rot_rate.y = clamp(self.rot_rate.y, (-100, 100))
         self.rot_rate.z = clamp(self.rot_rate.z, (-5, 5))
-        self.rot.x += self.rot_rate.x * (1 - abs(self.rot.x / 90))
-        self.rot.z += self.rot_rate.z
+
+        self.rot.x += self.rot_rate.x * (1 - abs(self.rot.x / 90)) * dt/1000  # Rotation is slower near top or bottom
+        self.rot.y += self.rot_rate.y * dt/1000
+        self.rot.z += self.rot_rate.z * dt/1000
 
         # Stalling
         if self.stalling:
-            self.rot_rate.x += 3 * dt/1000
+            STALL_DROOP_RATE = 5
+            self.rot_rate.x += STALL_DROOP_RATE * dt/1000  # pitch down sharply
 
-        # TODO: make AoA calculation more accurate
+        # TODO: AoA shouldn't simply be calculated as
+        #  pitch difference between velocity and forward vectors.
 
-        # Clamp rotation values
+        # Clamp/normalise rotation values
         self.rot.y %= 360
         self.rot.z %= 360
         self.rot.x = clamp(self.rot.x, (-90, 90))
 
-        # Clamp position
+        # Clamp position to prevent going off the map
         self.pos.x = clamp(self.pos.x, (-PRACTISE_LIMIT, PRACTISE_LIMIT))
         self.pos.z = clamp(self.pos.z, (-PRACTISE_LIMIT, PRACTISE_LIMIT))
 
-        # Damage update
-        if self.vel.length() > self.model.v_ne:
-            self.damage_level += 0.15 * dt/1000
+        # Damage update - damage is proportional to square of excess velocity
+        DAMAGE_FACTOR = 0.002
+        dp_excess = max(0, self.vel.length()**2 - self.model.v_ne**2)  # represents excess dynamic pressure
+        self.damage_level += dt/1000 * DAMAGE_FACTOR * dp_excess
 
-        # TODO: Overspeed damage should depend on excess
         # TODO: Add damage when not on runway (once runways are added)
 
         # Ground collision

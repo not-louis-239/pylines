@@ -23,7 +23,11 @@ class Game:
         SETTINGS = auto()
 
     def __init__(self) -> None:
+        # Load assets and files
         self.assets = Assets()
+        self.save_data, *_ = load_data("data/save_data.json")
+
+        # Set up keys and states
         self.prev_keys: ScancodeWrapper = pg.key.get_pressed()
         self.states: dict[Game.States, State] = {
             Game.States.TITLE: TitleScreen(self),
@@ -31,9 +35,11 @@ class Game:
             Game.States.SETTINGS: SettingsScreen(self),
         }
 
-        self.music_channel = pg.mixer.Channel(0)  # Reserve channel 0 for music                                                    │
+        # Music
+        self.music_channel = pg.mixer.Channel(0)
+
+        # States
         self.state: Game.States = Game.States.TITLE  # Explicitly set initial state
-        self.save_data, *_ = load_data("data/save_data.json")
         self.enter_state(Game.States.TITLE)
 
     def enter_state(self, state_name: States):

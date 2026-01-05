@@ -118,7 +118,7 @@ class GameScreen(State):
         self.sound_manager.update(self.plane.throttle_frac)
         self.plane.update(dt)
 
-        self.show_stall_warning = self.plane.aoa > self.plane.model.stall_angle
+        self.show_stall_warning = self.plane.stalling
         if self.show_stall_warning:
             if not self.stall_channel.get_busy():
                 self.stall_channel.play(self.sounds.stall_warning, loops=-1)
@@ -177,11 +177,11 @@ class GameScreen(State):
 
     def take_input(self, keys: ScancodeWrapper, events: EventList, dt: int) -> None:
         # Meta controls
-        if self.pressed(keys, pg.K_SPACE):
+        if self.pressed(keys, pg.K_p):
             self.sounds.menu_music.stop()
             self.game.enter_state(self.game.States.TITLE)
             self.sound_manager.stop()
-        if self.pressed(keys, pg.K_r):
+        if self.pressed(keys, pg.K_r):  # r to reset
             self.plane.reset()
 
         # Block flight controls if crashed or disabled
@@ -190,14 +190,14 @@ class GameScreen(State):
             return
 
         # Throttle controls
-        throttle_speed = 0.3 * dt/1000
+        throttle_speed = 0.4 * dt/1000
         if keys[pg.K_w]:
             self.plane.throttle_frac += throttle_speed
         if keys[pg.K_s]:
             self.plane.throttle_frac -= throttle_speed
         self.plane.throttle_frac = clamp(self.plane.throttle_frac, (0, 1))
 
-        base_rot_accel = 1.5 * dt/1000
+        base_rot_accel = 20 * dt/1000
         control_authority = 1 - 0.875 * self.plane.damage_level**2  # reduce authority based on damage level
         speed_authority_factor = clamp((self.plane.vel.length()/30.87)**2, (0.01, 1))  # based on vel in m/s
         rot_accel = control_authority * base_rot_accel * speed_authority_factor * (0.2 if self.plane.on_ground else 1)
@@ -206,11 +206,11 @@ class GameScreen(State):
 
         # Pitch
         if keys[pg.K_UP]:
-            self.plane.rot_rate.x -= rot_accel * (1 + (self.plane.rot.x / 90))
-        if keys[pg.K_DOWN]:
             self.plane.rot_rate.x += rot_accel * (1 - (self.plane.rot.x / 90))
+        if keys[pg.K_DOWN]:
+            self.plane.rot_rate.x -= rot_accel * (1 + (self.plane.rot.x / 90))
         if not (keys[pg.K_UP] or keys[pg.K_DOWN]):
-            self.plane.rot_rate.x *= 0.95
+            self.plane.rot_rate.x *= (1 - 0.8 * dt/1000)
 
         # Turning
         if keys[pg.K_LEFT]:
@@ -218,7 +218,30 @@ class GameScreen(State):
         if keys[pg.K_RIGHT]:
             self.plane.rot_rate.z += rot_accel
         if not (keys[pg.K_LEFT] or keys[pg.K_RIGHT]):
-            self.plane.rot_rate.z *= 0.95
+            self.plane.rot_rate.z *= (1 - 0.8 * dt/1000)
+
+        # Flaps
+        FLAPS_SPEED = 2
+        if keys[pg.K_z]:
+            self.plane.flaps += FLAPS_SPEED * dt/1000
+        if keys[pg.K_x]:
+            self.plane.flaps -= FLAPS_SPEED * dt/1000
+        self.plane.flaps = clamp(self.plane.flaps, (0, 1))
+
+        # Rudder
+        RUDDER_SPEED = 2.5
+        RUDDER_SNAPBACK = 1
+        if keys[pg.K_a]:
+            self.plane.rudder -= RUDDER_SPEED * dt/1000
+        if keys[pg.K_d]:
+            self.plane.rudder += RUDDER_SPEED * dt/1000
+        if not (keys[pg.K_a] or keys[pg.K_d]):
+            decay = RUDDER_SNAPBACK * dt/1000
+            self.plane.rudder *= max(0, 1 - decay)
+        self.plane.rudder = clamp(self.plane.rudder, (-1, 1))
+
+        # Brakes
+        self.plane.braking = keys[pg.K_b]  # b to brake
 
         self.update_prev_keys(keys)
 
@@ -229,8 +252,8 @@ class GameScreen(State):
 
         # Exit controls
         if self.time_elapsed < 5_000 or not self.plane.flyable:
-            draw_text(hud_surface, (15, 30), 'left', 'centre', "R       restart flight", (255, 255, 255), 30, self.fonts.monospaced)
-            draw_text(hud_surface, (15, 60), 'left', 'centre', "Space   quit to menu", (255, 255, 255), 30, self.fonts.monospaced)
+            draw_text(hud_surface, (15, 30), 'left', 'centre', "R    restart flight", (255, 255, 255), 30, self.fonts.monospaced)
+            draw_text(hud_surface, (15, 60), 'left', 'centre', "P    quit to menu", (255, 255, 255), 30, self.fonts.monospaced)
 
         # Stall warning
         warning_x = C.WN_W//2-145
@@ -343,6 +366,13 @@ class GameScreen(State):
         rect = pg.Rect(0, 0, *size)
         rect.center = (C.WN_W*0.86, C.WN_H*0.94 - C.WN_H*0.19*(self.plane.throttle_frac))  # type: ignore
         pg.draw.rect(hud_surface, (255, 255, 255), rect)
+
+        # Flaps indicator
+        pg.draw.line(hud_surface, (51, 43, 37), (C.WN_W*0.90, C.WN_H*0.93), (C.WN_W*0.90, C.WN_H*0.76), 3)
+        size = 30, 15
+        rect = pg.Rect(0, 0, *size)
+        rect.center = (C.WN_W*0.90, C.WN_H*0.93 - C.WN_H*0.17*(self.plane.flaps))  # type: ignore
+        pg.draw.rect(hud_surface, (220, 220, 220), rect)
 
         # Attitude indicator
         ai_centre = (C.WN_W//2, int(C.WN_H*0.89))
@@ -485,7 +515,7 @@ class GameScreen(State):
             )
             draw_text(self.hud_surface, (C.WN_W//2, C.WN_H*0.35), 'centre', 'centre', 'CRASH', (255, 0, 0), 50, self.fonts.monospaced)
             draw_text(self.hud_surface, (C.WN_W//2, C.WN_H*0.41), 'centre', 'centre', 'COLLISION WITH TERRAIN', (255, 255, 255), 30, self.fonts.monospaced)
-            draw_text(self.hud_surface, (C.WN_W//2, C.WN_H*0.54), 'centre', 'centre', 'Press Space to return to menu.', (255, 255, 255), 30, self.fonts.monospaced)
+            draw_text(self.hud_surface, (C.WN_W//2, C.WN_H*0.54), 'centre', 'centre', 'Press P to return to menu.', (255, 255, 255), 30, self.fonts.monospaced)
 
         # Upload HUD surface to OpenGL
         hud_data = pg.image.tostring(hud_surface, "RGBA", True)

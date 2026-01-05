@@ -1,10 +1,14 @@
 __pycache__
 .venv
 todo.txt
+
 workflow
+data
+
 GEMINI.md
 .geminiignore
 .DS_Store
+
 .mypy.ini
 .pylintrc
 .mypy_cache

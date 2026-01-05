@@ -39,9 +39,8 @@ class JSONConvertible(ABC):
 
 @dataclass
 class ConfigObject(JSONConvertible):
-    time: Literal["system", "custom"] = "system"  # "system" or "custom"
+    time_option: Literal["system", "custom"] = "system"  # "system" or "custom"
     time_custom: int = 18
-    time_zone: int = 0  # GMT offset in hours
     invert_y_axis: bool = False
 
     def to_json(self) -> JSONValue:
