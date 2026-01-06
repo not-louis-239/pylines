@@ -94,8 +94,8 @@ class Plane(Entity):
 
     def update(self, dt: int):
         # Sideways movement - convert roll to yaw
-        self.rot.y += sin(rad(self.rot.z)) * 30 * dt/1000 * self.throttle_frac
-
+        CONVERSION_FACTOR = 30
+        self.rot.y += sin(rad(self.rot.z)) * clamp(self.vel.length()/30.87, (0, 1)) * CONVERSION_FACTOR * dt/1000
         pitch, yaw, *_ = self.rot
         roll = (self.rot.z + 180) % 360 - 180
 
@@ -145,7 +145,7 @@ class Plane(Entity):
             lift_dir = airflow_dir.cross(right).normalize()
 
             # Lift increase from flaps
-            lift_mag *= 1 + self.flaps * self.model.flap_lift_bonus
+            lift_mag *= 1 + (1 - self.flaps) * self.model.flap_lift_bonus
 
             # Lift vector
             lift = lift_dir * lift_mag
@@ -160,8 +160,9 @@ class Plane(Entity):
         cd = min(cd, 1)
 
         drag_mag = 0.5 * AIR_DENSITY * airspeed**2 * self.model.wing_area * cd
+
         # Drag increase from flaps
-        drag_mag *= 1 + self.flaps * self.model.flap_drag_penalty
+        drag_mag *= 1 + (1 - self.flaps) * self.model.flap_drag_penalty
 
         if airspeed < EPSILON:
             drag = pg.Vector3(0, 0, 0)
@@ -199,7 +200,7 @@ class Plane(Entity):
         # Clamp and integrate rotation
         self.rot_rate.x = clamp(self.rot_rate.x, (-25, 25))
         self.rot_rate.y = clamp(self.rot_rate.y, (-100, 100))
-        self.rot_rate.z = clamp(self.rot_rate.z, (-5, 5))
+        self.rot_rate.z = clamp(self.rot_rate.z, (-25, 25))
 
         self.rot.x += self.rot_rate.x * (1 - abs(self.rot.x / 90)) * dt/1000  # Rotation is slower near top or bottom
         self.rot.y += self.rot_rate.y * dt/1000
