@@ -19,6 +19,8 @@ from pylines.core.custom_types import Coord3, Surface
 from pylines.objects.objects import Entity
 
 # TODO: Add LargeSceneryObject class (for ground and ocean, vs SceneryObject, which is for smaller objects, e.g. buildings)
+class LargeSceneryObject:
+    ...
 
 # TODO: Start using scenery object class once buildings and other advanced scenery are implemented
 class SceneryObject:

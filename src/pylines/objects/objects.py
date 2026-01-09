@@ -96,7 +96,7 @@ class Plane(Entity):
 
         # TODO: Collision with buildings and ocean should be auto-lethal
         # (add once buildings and ocean are implemented)
-        
+
         def crash(*, damage_taken: float = 0.0, lethal: bool = False, reason: str = 'ground'):
             self.damage_level = 1 if lethal else min(self.damage_level + damage_taken, 1)
 
@@ -312,12 +312,14 @@ class Runway(Entity):
         self.heading = heading
 
     def draw(self):
-        # FIXME: runway z-fights with ground plane
-
         gl.glPushMatrix()
 
+        # Enable polygon offset to "pull" the runway towards the camera
+        gl.glEnable(gl.GL_POLYGON_OFFSET_FILL)
+        gl.glPolygonOffset(-1.0, -1.0)
+
         # Translate and rotate to runway's position and heading
-        gl.glTranslatef(self.pos.x, self.pos.y + 0.1, self.pos.z)  # y-offset prevents z-fighting
+        gl.glTranslatef(self.pos.x, 0.1 + self.pos.y, self.pos.z)
         gl.glRotatef(self.heading, 0, 1, 0)
         gl.glColor3f(0.2, 0.2, 0.2)
 
@@ -330,5 +332,8 @@ class Runway(Entity):
         gl.glVertex3f(half_width, 0, half_length)
         gl.glVertex3f(-half_width, 0, half_length)
         gl.glEnd()
+
+        # Disable polygon offset
+        gl.glDisable(gl.GL_POLYGON_OFFSET_FILL)
 
         gl.glPopMatrix()
