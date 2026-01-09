@@ -18,7 +18,9 @@ from pylines.core.constants import GROUND_SIZE, WN_H, WN_W
 from pylines.core.custom_types import Coord3, Surface
 from pylines.objects.objects import Entity
 
-# TODO: This is unused, will come in useful when I add buildings and other more advanced scenery
+# TODO: Add LargeSceneryObject class (for ground and ocean, vs SceneryObject, which is for smaller objects, e.g. buildings)
+
+# TODO: Start using scenery object class once buildings and other advanced scenery are implemented
 class SceneryObject:
     def __init__(self, pos: pg.Vector3):
         self.position = pos
@@ -123,7 +125,10 @@ class Sky(Entity):
         gl.glPopMatrix()
         gl.glMatrixMode(gl.GL_MODELVIEW)
 
-# TODO: Expand these when the time is right
+class Ocean(Entity):
+    ...
+
+# TODO: Expand scenery objects
 # (when all core featuers have been implemented,
 # and it is time to expand scenery)
 class Building(SceneryObject): ...

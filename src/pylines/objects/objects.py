@@ -86,23 +86,70 @@ class Plane(Entity):
         self.damage_level = 0
 
     def process_landing(self):
+        def good_landing():
+            self.sounds.good_landing.play()
+            self.dialog_box.set_message("Good landing!", (0, 255, 0))
+
+        def hard_landing():
+            self.sounds.hard_landing.play()
+            self.dialog_box.set_message("Whoops. Hard landing.", (255, 200, 0))
+
+        # TODO: Collision with buildings and ocean should be auto-lethal
+        # (add once buildings and ocean are implemented)
+        
+        def crash(*, damage_taken: float = 0.0, lethal: bool = False, reason: str = 'ground'):
+            self.damage_level = 1 if lethal else min(self.damage_level + damage_taken, 1)
+
+            if self.damage_level >= 1:
+                self.sounds.crash.play()
+                self.crash_reason = reason
+                return
+
+            self.sounds.hard_landing.play()
+            self.dialog_box.set_message("Hard landing. Damage sustained.", (255, 80, 0))
+
         # Check landing for quality
         pitch, yaw, roll = self.rot
         roll = (roll+180)%360 - 180  # Normalise
 
-        landing_good = self.vel.y > -1.7 and abs(roll) < 5 and -pitch > -12
-        landing_passable = self.vel.y > -4 and abs(roll) < 30 and -pitch > -20
+        # Safety parameters
+        SAFE_VS = -1.7  # m/s
+        MAX_OK_VS = -4
+        MAX_SAFE_PITCH = 12
+        MAX_SAFE_ROLL = 8
 
-        if landing_good:
-            self.sounds.good_landing.play()
-            self.dialog_box.set_message("Good landing!", (0, 255, 0))
-        elif landing_passable:
-            self.sounds.hard_landing.play()
-            self.dialog_box.set_message("Oops... hard landing.", (255, 200, 0))
+        # Impact metrics
+        vs = -self.vel.y
+        roll_mag = abs(roll)
+        pitch_mag = abs(pitch)
+
+        # Normalised excess (0–1)
+        vs_factor = clamp((vs - abs(SAFE_VS)) / (abs(MAX_OK_VS) - abs(SAFE_VS)), (0, 1))
+        roll_factor = min(roll_mag / MAX_SAFE_ROLL, 3)
+        pitch_factor = min(pitch_mag / MAX_SAFE_PITCH, 2)
+
+        # Weighted damage
+        impact_severity = (
+            0.6 * vs_factor +
+            0.25 * roll_factor +
+            0.15 * pitch_factor
+        )
+
+        visual_pitch = -pitch  # Pitch is inverted in OpenGL
+        if visual_pitch > MAX_SAFE_PITCH:  # nose up too much
+            impact_severity *= 1 + 0.02 * (visual_pitch - MAX_SAFE_PITCH)
+        elif visual_pitch < -MAX_SAFE_PITCH:  # nose down too much
+            impact_severity *= 1 + 0.04 * -(visual_pitch - -MAX_SAFE_PITCH)
+
+        MAX_SAFE_IMPACT = 0.25
+        MAX_OK_IMPACT = 0.6
+        # Outcome mapping
+        if impact_severity <= MAX_SAFE_IMPACT:
+            good_landing()
+        elif impact_severity <= MAX_OK_IMPACT:
+            hard_landing()
         else:
-            self.sounds.crash.play()
-            self.crash_reason = 'ground'
-            self.damage_level = 1  # Instant death if crash  # TODO: Should depend on excess velocity
+            crash(damage_taken=impact_severity-MAX_OK_IMPACT)
 
     def update(self, dt: int):
         # Sideways movement - convert roll to yaw
@@ -203,7 +250,7 @@ class Plane(Entity):
         self.rot_rate.y += yaw_torque
         self.rot_rate.y *= (1 - 0.8 * dt/1000)
 
-        factor = clamp(1 - abs(self.rot.z)/self.model.max_bank_angle, (0, 1))  # XXX guilty line found
+        factor = clamp(1 - abs(self.rot.z)/self.model.max_bank_angle, (0, 1))
         effective_rudder_roll = self.model.rudder_roll_effect * factor  # extra roll from rudder
         if self.on_ground:
             effective_rudder_roll *= 0.2  # mostly suppressed if on ground
@@ -223,8 +270,8 @@ class Plane(Entity):
             STALL_DROOP_RATE = 5
             self.rot_rate.x += STALL_DROOP_RATE * dt/1000  # pitch down sharply
 
-        # TODO: AoA shouldn't simply be calculated as
-        #  pitch difference between velocity and forward vectors.
+        # TODO: Improve AoA calculation
+        # AoA should not simply be the pitch difference between velocity and forward vectors
 
         # Clamp/normalise rotation values
         self.rot.y %= 360
@@ -265,7 +312,7 @@ class Runway(Entity):
         self.heading = heading
 
     def draw(self):
-        # TODO: fix runway z-fighting with ground
+        # FIXME: runway z-fights with ground plane
 
         gl.glPushMatrix()
 
