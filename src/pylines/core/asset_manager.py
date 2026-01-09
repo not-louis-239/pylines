@@ -15,9 +15,8 @@ from pathlib import Path
 import pygame as pg
 from pygame.transform import scale, scale_by
 
-from .constants import BASE_DIR
+from .paths import ROOT_DIR
 from .custom_types import Sound
-
 
 class AssetBank:
     """Mental basis for all asset containers."""
@@ -40,7 +39,7 @@ class Fonts(AssetBank):
         self.augment()
 
     def _load(self, name: str) -> Path:
-        return BASE_DIR / "assets" / "fonts" / name
+        return ROOT_DIR / "assets" / "fonts" / name
 
 class Images(AssetBank):
     def __init__(self):
@@ -68,7 +67,7 @@ class Images(AssetBank):
         self.logo = scale_by(self.logo, 0.2)
 
     def _load(self, name: str):
-        return pg.image.load(BASE_DIR / "assets" / "images" / name).convert_alpha()
+        return pg.image.load(ROOT_DIR / "assets" / "images" / name).convert_alpha()
 
 class Sounds(AssetBank):
     def __init__(self) -> None:
@@ -96,7 +95,7 @@ class Sounds(AssetBank):
         self.good_landing.set_volume(10)
 
     def _load(self, name: str) -> pg.mixer.Sound:
-        return pg.mixer.Sound(BASE_DIR / "assets" / "sounds" / name)
+        return pg.mixer.Sound(ROOT_DIR / "assets" / "sounds" / name)
 
 class Assets:
     def __init__(self) -> None:

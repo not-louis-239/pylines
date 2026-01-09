@@ -47,9 +47,9 @@ WN_W = 1350
 WN_H = 850
 
 # Ground size
-GROUND_SIZE = 100_000
+GROUND_SIZE = 100_000  # distance from origin, metres
 
-PRACTISE_LIMIT = GROUND_SIZE * 0.95  # The user is "unauthorised" to go further
+PRACTISE_LIMIT = GROUND_SIZE * 0.99  # The user is "unauthorised" to go further
 
 # Rendering
 INNER_RENDER_LIMIT = 0.05
@@ -84,9 +84,6 @@ for model_name, model_data in PLANE_MODELS.items():
 
 AIR_DENSITY = 1.225  # kg/m³
 GRAVITY = 9.8        # m/s²
-
-# File loading
-BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent.parent
 
 # Mathematical
 EPSILON = 0.001  # Treat anything smaller than this as zero
