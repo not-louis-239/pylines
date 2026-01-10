@@ -16,8 +16,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
-import OpenGL.GL as gl
-import OpenGL.GLU as glu
+from OpenGL import GL as gl, GLU as glu
 import pygame as pg
 
 import pylines.core.constants as C
@@ -61,7 +60,7 @@ class TitleScreen(State):
         rect = self.images.logo.get_rect(center=(C.WN_W//2, C.WN_H*0.15
                                                  ))
         self.display_surface.blit(self.images.logo, rect)
-        draw_text(self.display_surface, (C.WN_W//2, C.WN_H*0.8), 'centre', 'centre', "Press Space for briefing.", (255, 255, 255), 30, self.fonts.monospaced)  # TODO: Add briefing
+        draw_text(self.display_surface, (C.WN_W//2, C.WN_H*0.8), 'centre', 'centre', "Press Space for briefing.", (255, 255, 255), 30, self.fonts.monospaced)
         draw_text(self.display_surface, (C.WN_W//2, 0.95*C.WN_H), 'centre', 'centre', "Copyright (C) Louis Masarei-Boulton.", (127, 127, 127), 15, self.fonts.monospaced)
 
         draw_text(self.display_surface, (C.WN_W//2, C.WN_H*0.3), 'centre', 'centre', "Flight Notes", (0, 192, 255), 40, self.fonts.monospaced)

@@ -18,8 +18,7 @@ import math
 from typing import TYPE_CHECKING, cast
 from dataclasses import dataclass
 
-import OpenGL.GL as gl
-import OpenGL.GLU as glu
+from OpenGL import GL as gl, GLU as glu
 import pygame as pg
 
 import pylines.core.constants as C
@@ -30,7 +29,7 @@ from pylines.core.utils import clamp, draw_needle, draw_text, draw_transparent_r
 from pylines.game.engine_sound import SoundManager
 from pylines.game.states import State
 from pylines.objects.objects import Plane, Runway
-from pylines.objects.scenery import Ground, Sky
+from pylines.objects.scenery import Ground, Sky, Sun
 
 if TYPE_CHECKING:
     from pylines.core.custom_types import ScancodeWrapper, Surface
@@ -62,6 +61,7 @@ class GameScreen(State):
         self.ground = Ground(game.assets.images.test_grass)  # Pass the loaded image to Ground
         self.runway = Runway(x=0, y=0, z=0, width=50, length=1000)
         self.sky = Sky()
+        self.sun = Sun(game.assets.images.sun)
         self.time_of_day: str = "day"
         self.show_stall_warning: bool = False
         self.show_overspeed_warning: bool = False
@@ -376,14 +376,14 @@ class GameScreen(State):
         pg.draw.line(hud_surface, (51, 43, 37), (C.WN_W*0.86, C.WN_H*0.94), (C.WN_W*0.86, C.WN_H*0.75), 3)
         size = 40, 20
         rect = pg.Rect(0, 0, *size)
-        rect.center = (C.WN_W*0.86, C.WN_H*0.94 - C.WN_H*0.19*(self.plane.throttle_frac))  # type: ignore
+        rect.center = (C.WN_W*0.86, C.WN_H*0.94 - C.WN_H*0.19*(self.plane.throttle_frac))  # type: ignore[arg-type]
         pg.draw.rect(hud_surface, (255, 255, 255), rect)
 
         # Flaps indicator
         pg.draw.line(hud_surface, (51, 43, 37), (C.WN_W*0.90, C.WN_H*0.93), (C.WN_W*0.90, C.WN_H*0.76), 3)
         size = 30, 15
         rect = pg.Rect(0, 0, *size)
-        rect.center = (C.WN_W*0.90, C.WN_H*0.93 - C.WN_H*0.17*(self.plane.flaps))  # type: ignore
+        rect.center = (C.WN_W*0.90, C.WN_H*0.93 - C.WN_H*0.17*(self.plane.flaps))  # type: ignore[arg-type]
         pg.draw.rect(hud_surface, (220, 220, 220), rect)
 
         # Attitude indicator
@@ -600,6 +600,7 @@ class GameScreen(State):
         gl.glRotatef(self.plane.rot.y, 0, 1, 0) # 1. Yaw
         gl.glTranslatef(-self.plane.pos.x, -(self.plane.pos.y+C.CAMERA_OFFSET_Y), -self.plane.pos.z)
 
+        self.sun.draw()
         self.ground.draw()
         self.runway.draw()
         self.draw_hud()
