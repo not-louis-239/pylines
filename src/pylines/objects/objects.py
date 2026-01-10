@@ -17,7 +17,7 @@ from math import asin, cos, degrees
 from math import radians as rad
 from math import sin
 
-import OpenGL.GL as gl
+from OpenGL import GL as gl
 import pygame as pg
 
 from pylines.core.asset_manager import Sounds
@@ -124,7 +124,7 @@ class Plane(Entity):
         pitch_mag = abs(pitch)
 
         # Normalised excess (0–1)
-        vs_factor = clamp((vs - abs(SAFE_VS)) / (abs(MAX_OK_VS) - abs(SAFE_VS)), (0, 1))
+        vs_factor = max(0, ((vs - SAFE_VS) / (MAX_OK_VS - SAFE_VS))) ** 2
         roll_factor = min(roll_mag / MAX_SAFE_ROLL, 3)
         pitch_factor = min(pitch_mag / MAX_SAFE_PITCH, 2)
 
@@ -143,7 +143,13 @@ class Plane(Entity):
 
         MAX_SAFE_IMPACT = 0.25
         MAX_OK_IMPACT = 0.6
+
         # Outcome mapping
+
+        if vs > 12:  # ~2400 ft/min, extreme VS is auto-lethal
+            crash(lethal=True)
+            return
+
         if impact_severity <= MAX_SAFE_IMPACT:
             good_landing()
         elif impact_severity <= MAX_OK_IMPACT:
