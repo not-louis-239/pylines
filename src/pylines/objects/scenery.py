@@ -10,35 +10,104 @@
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
-import OpenGL.GL as gl
-import OpenGL.GLU as glu
+from OpenGL import GL as gl, GLU as glu
 import pygame as pg
 
 from pylines.core.constants import GROUND_SIZE, WN_H, WN_W
 from pylines.core.custom_types import Coord3, Surface
 from pylines.objects.objects import Entity
 
-# TODO: Add LargeSceneryObject class (for ground and ocean, vs SceneryObject, which is for smaller objects, e.g. buildings)
-class LargeSceneryObject:
-    ...
-
-# TODO: Start using scenery object class once buildings and other advanced scenery are implemented
-class SceneryObject:
-    def __init__(self, pos: pg.Vector3):
-        self.position = pos
+class SceneryObject(Entity):
+    def __init__(self, x, y, z):
+        super().__init__(x, y, z)
 
     def draw(self):
         raise NotImplementedError
 
-class Ground(Entity):
-    def __init__(self, image_surface: Surface) -> None:
-        super().__init__(0, 0, 0) # Initialize pos for Ground at origin
+class LargeSceneryObject(SceneryObject):
+    def __init__(self, x, y, z):
+        super().__init__(x, y, z)
         self.vertices: list[Coord3] = [
             (-GROUND_SIZE, 0, -GROUND_SIZE),
             (-GROUND_SIZE, 0, GROUND_SIZE),
             (GROUND_SIZE, 0, -GROUND_SIZE),
             (GROUND_SIZE, 0, GROUND_SIZE)
         ]
+
+    def draw(self):
+        raise NotImplementedError
+
+class CelestialObject(SceneryObject):
+    def __init__(self, image_surface: Surface, direction: pg.Vector3, scale: float = 1.0):
+        super().__init__(0, 0, 0)
+        self.direction = direction.normalize()
+        self.scale = scale
+        self.texture_id = None
+        self._load_texture(image_surface)
+
+    def _load_texture(self, image_surface: Surface):
+        image_surface = pg.transform.flip(image_surface, False, True)
+        image_data = pg.image.tostring(image_surface, "RGBA", True)
+        self.texture_id = gl.glGenTextures(1)
+
+        gl.glBindTexture(gl.GL_TEXTURE_2D, self.texture_id)
+        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR)
+        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR)
+        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_S, gl.GL_CLAMP_TO_EDGE)
+        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_T, gl.GL_CLAMP_TO_EDGE)
+        gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGBA, image_surface.get_width(), image_surface.get_height(), 0, gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, image_data)
+        gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
+
+    def draw(self):
+        distance = 19000.0
+        size = 1500.0 * self.scale
+        pos = self.direction * distance
+
+        gl.glPushMatrix()
+
+        # --- Save state ---
+        was_blend_enabled = gl.glIsEnabled(gl.GL_BLEND)
+        was_depth_mask_enabled = gl.glGetIntegerv(gl.GL_DEPTH_WRITEMASK)
+        
+        gl.glTranslatef(pos.x, pos.y, pos.z)
+
+        # Billboard
+        modelview = gl.glGetFloatv(gl.GL_MODELVIEW_MATRIX)
+        inverse_rotation = [
+            modelview[0][0], modelview[1][0], modelview[2][0], 0.0,
+            modelview[0][1], modelview[1][1], modelview[2][1], 0.0,
+            modelview[0][2], modelview[1][2], modelview[2][2], 0.0,
+            0.0, 0.0, 0.0, 1.0,
+        ]
+        gl.glMultMatrixf(inverse_rotation)
+
+        gl.glEnable(gl.GL_TEXTURE_2D)
+        gl.glBindTexture(gl.GL_TEXTURE_2D, self.texture_id)
+        gl.glColor4f(1.0, 1.0, 1.0, 1.0)
+
+        gl.glEnable(gl.GL_BLEND)
+        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE)
+        gl.glDepthMask(gl.GL_FALSE)
+
+        gl.glBegin(gl.GL_QUADS)
+        gl.glTexCoord2f(0, 0); gl.glVertex3f(-size, -size, 0)
+        gl.glTexCoord2f(1, 0); gl.glVertex3f(size, -size, 0)
+        gl.glTexCoord2f(1, 1); gl.glVertex3f(size, size, 0)
+        gl.glTexCoord2f(0, 1); gl.glVertex3f(-size, size, 0)
+        gl.glEnd()
+
+        # --- Restore state ---
+        gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
+        gl.glDepthMask(was_depth_mask_enabled)
+        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA) # Restore default blend func
+        if not was_blend_enabled:
+            gl.glDisable(gl.GL_BLEND)
+
+        gl.glPopMatrix()
+
+class Ground(LargeSceneryObject):
+    def __init__(self, image_surface: Surface) -> None:
+        super().__init__(0, 0, 0)  # Initialize pos for Ground at origin
         self.texture_id = None
         self._load_texture(image_surface)
 
@@ -90,7 +159,7 @@ class Ground(Entity):
 
         gl.glPopMatrix()
 
-class Sky(Entity):
+class Sky(LargeSceneryObject):
     def __init__(self) -> None:
         super().__init__(0, 0, 0)  # Sky placed at origin
 
@@ -127,16 +196,20 @@ class Sky(Entity):
         gl.glPopMatrix()
         gl.glMatrixMode(gl.GL_MODELVIEW)
 
-class Ocean(Entity):
+class Ocean(LargeSceneryObject):
     ...
 
 # TODO: Expand scenery objects
 # (when all core featuers have been implemented,
 # and it is time to expand scenery)
 class Building(SceneryObject): ...
-class CelestialObject(SceneryObject): ...
 
-# TODO: Celestial objects should be different from scenery objects
-# as they always appear at a fixed angle from the viewpoint in the sky
-class Sun(CelestialObject): ...
-class Moon(CelestialObject): ...
+class Sun(CelestialObject):
+    def __init__(self, image_surface: Surface):
+        direction = pg.Vector3(0.5, 0.5, -1)
+        super().__init__(image_surface, direction, scale=0.5)
+
+class Moon(CelestialObject):
+    def __init__(self, image_surface: Surface):
+        direction = pg.Vector3(-0.5, -0.5, 1)
+        super().__init__(image_surface, direction, scale=0.5)
