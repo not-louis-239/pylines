@@ -68,7 +68,6 @@ class CelestialObject(SceneryObject):
         # --- Save state ---
         was_blend_enabled = gl.glIsEnabled(gl.GL_BLEND)
         was_depth_mask_enabled = gl.glGetIntegerv(gl.GL_DEPTH_WRITEMASK)
-        
         gl.glTranslatef(pos.x, pos.y, pos.z)
 
         # Billboard
@@ -199,9 +198,7 @@ class Sky(LargeSceneryObject):
 class Ocean(LargeSceneryObject):
     ...
 
-# TODO: Expand scenery objects
-# (when all core featuers have been implemented,
-# and it is time to expand scenery)
+# TODO: Expand building objects once heightmap implementation is done
 class Building(SceneryObject): ...
 
 class Sun(CelestialObject):
