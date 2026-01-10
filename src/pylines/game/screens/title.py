@@ -16,8 +16,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
-import OpenGL.GL as gl
-import OpenGL.GLU as glu
+from OpenGL import GL as gl, GLU as glu
 import pygame as pg
 
 import pylines.core.constants as C

@@ -14,8 +14,7 @@
 
 import sys
 import os
-import OpenGL.GL as gl
-import OpenGL.GLU as glu
+from OpenGL import GL as gl, GLU as glu
 import pygame as pg
 
 # Add src directory to Python path

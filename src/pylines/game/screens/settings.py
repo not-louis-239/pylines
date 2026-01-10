@@ -14,8 +14,7 @@ from typing import cast, TYPE_CHECKING, Any, Callable, Literal
 from dataclasses import dataclass
 
 import pygame as pg
-import OpenGL.GL as gl
-import OpenGL.GLU as glu
+from OpenGL import GL as gl, GLU as glu
 
 import pylines.core.constants as C
 from pylines.core.custom_types import ScancodeWrapper, EventList, Surface
