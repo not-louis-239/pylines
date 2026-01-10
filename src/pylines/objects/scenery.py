@@ -12,6 +12,7 @@
 
 from OpenGL import GL as gl, GLU as glu
 import pygame as pg
+import numpy as np
 
 from pylines.core.constants import GROUND_SIZE, WN_H, WN_W
 from pylines.core.custom_types import Coord3, Surface
@@ -105,9 +106,10 @@ class CelestialObject(SceneryObject):
         gl.glPopMatrix()
 
 class Ground(LargeSceneryObject):
-    def __init__(self, image_surface: Surface) -> None:
+    def __init__(self, image_surface: Surface, heightmap: np.ndarray) -> None:
         super().__init__(0, 0, 0)  # Initialize pos for Ground at origin
         self.texture_id = None
+        self.heightmap = heightmap
         self._load_texture(image_surface)
 
     def _load_texture(self, image_surface: Surface):

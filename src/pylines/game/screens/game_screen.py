@@ -58,7 +58,7 @@ class GameScreen(State):
         self.landing_dialog_box = DialogMessage()  # Must be before Plane otherwise causes error
         self.plane = Plane(game.assets.sounds, self.landing_dialog_box)
         self.sound_manager = SoundManager(game.assets.sounds)
-        self.ground = Ground(game.assets.images.test_grass)  # Pass the loaded image to Ground
+        self.ground = Ground(game.assets.images.test_grass, game.assets.map.heightmap)  # Pass the loaded image to Ground
         self.runway = Runway(x=0, y=0, z=0, width=50, length=1000)
         self.sky = Sky()
         self.sun = Sun(game.assets.images.sun)

@@ -11,6 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
 from pathlib import Path
+import json
+from PIL import Image
+import numpy as np
 
 import pygame as pg
 from pygame.transform import scale, scale_by
@@ -19,7 +22,7 @@ from .paths import ROOT_DIR
 from .custom_types import Sound
 
 class AssetBank:
-    """Mental basis for all asset containers."""
+    """Base class to store assets."""
 
     def __init__(self) -> None:
         """Base method to set assets."""
@@ -70,6 +73,22 @@ class Images(AssetBank):
     def _load(self, name: str):
         return pg.image.load(ROOT_DIR / "assets" / "images" / name).convert_alpha()
 
+class MapData(AssetBank):
+    def __init__(self) -> None:
+        with open("assets/map/height.json") as f:
+            meta = json.load(f)
+            self.MIN_H = meta["heights"]["min"]
+            self.MAX_H = meta["heights"]["max"]
+            self.SEA_LEVEL = meta["heights"]["sea_lvl"]
+
+        img = Image.open("assets/map/heightmap.png")
+        arr = np.array(img, dtype=np.uint16)
+
+        self.heightmap = self.MIN_H + (arr / 65535) * (self.MAX_H - self.MIN_H)
+
+    def _load(self, name: str) -> Path:
+        return ROOT_DIR / "assets" / "map" / name
+
 class Sounds(AssetBank):
     def __init__(self) -> None:
         # UI
@@ -103,3 +122,4 @@ class Assets:
         self.images: Images = Images()
         self.fonts: Fonts = Fonts()
         self.sounds: Sounds = Sounds()
+        self.map: MapData = MapData()
