@@ -84,6 +84,7 @@ class Plane(Entity):
 
         self.aoa = 0  # degrees
         self.on_ground = True
+        self._prev_on_ground = True
         self.crash_reason = None
         self.damage_level = 0
 
@@ -298,17 +299,19 @@ class Plane(Entity):
         # TODO: Add damage when not on runway (once runways are added)
 
         # Collision detection
-        GROUND_HEIGHT = self.ground.get_height(self.pos.x, self.pos.z)
+        ground_height = self.ground.get_height(self.pos.x, self.pos.z)
+
+        # Update _prev_on_ground before current on_ground is determined
+        self._prev_on_ground = self.on_ground
 
         # TODO: for now it's the ground height, but runways should be a factor as well, as well as ocean
-        if self.pos.y <= GROUND_HEIGHT:
-            self.pos.y = GROUND_HEIGHT
+        if self.pos.y <= ground_height:
+            self.pos.y = ground_height  # Snap to ground
+            self.vel.y = 0              # Stop vertical movement
 
-            if not self.on_ground:
+            # Only process landing if just touched down
+            if not self._prev_on_ground:
                 self.process_landing()
-
-            if not self.crashed:
-                self.vel.y = max(self.vel.y, 0)  # Plane can't fall through floor
             self.on_ground = True
         else:
             self.on_ground = False
