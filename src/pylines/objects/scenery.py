@@ -10,6 +10,8 @@
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
+from typing import TYPE_CHECKING
+
 from OpenGL import GL as gl, GLU as glu
 import pygame as pg
 import numpy as np
@@ -20,6 +22,9 @@ from pylines.core.asset_manager import MapData
 from pylines.core.constants import WORLD_SIZE, WN_H, WN_W
 from pylines.core.custom_types import Coord3, Surface
 from pylines.objects.objects import Entity
+
+if TYPE_CHECKING:
+    from pylines.core.heightmap import Heightmap
 
 class SceneryObject(Entity):
     def __init__(self, x, y, z):
@@ -109,15 +114,17 @@ class CelestialObject(SceneryObject):
         gl.glPopMatrix()
 
 class Ground(LargeSceneryObject):
-    def __init__(self, image_surface: Surface, map_data: MapData) -> None:
+    # TODO: fix heightmap rendering incorrectly
+
+    def __init__(self, image_surface: Surface, heightmap: Heightmap) -> None:
         super().__init__(0, 0, 0)
         self.texture_id = None
         self._load_texture(image_surface)
 
-        self.map_data = map_data
         self.vbo = None
         self.ebo = None
-        self.grid_resolution = 200 # Number of vertices along one edge
+        self.grid_resolution = 400  # Number of vertices along one edge
+        self.heightmap = heightmap
         self.vertices = self._create_vertex_grid()  # type: ignore[arg-type]
         self.indices = self._create_index_buffer()
         self._setup_vbo()
@@ -128,6 +135,7 @@ class Ground(LargeSceneryObject):
         # Each vertex will have (x, y, z, u, v)
         data = []
         step = WORLD_SIZE * 2 / self.grid_resolution
+
         # The texture_repeat_count from the old draw method implies 200 repeats over GROUND_SIZE*2 extent
         # So one repeat covers (GROUND_SIZE * 2) / 200 = GROUND_SIZE / 100
         # The U, V coordinates should reflect this
@@ -137,7 +145,7 @@ class Ground(LargeSceneryObject):
             for j in range(self.grid_resolution + 1):
                 x = -WORLD_SIZE + j * step
                 z = -WORLD_SIZE + i * step
-                y = self.map_data.get_height(x, z)
+                y = self.heightmap.height_at(x, z)
 
                 # Calculate texture coordinates (u, v)
                 u = (x + WORLD_SIZE) * texture_scale_factor
@@ -182,9 +190,6 @@ class Ground(LargeSceneryObject):
         gl.glBufferData(gl.GL_ELEMENT_ARRAY_BUFFER, self.indices.nbytes, self.indices, gl.GL_STATIC_DRAW)
         # Unbind the buffer
         gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, 0)
-
-    def get_height(self, x: float, z: float) -> float:
-        return self.map_data.get_height(x, z)
 
     def _load_texture(self, image_surface: Surface):
         # OpenGL textures are Y-flipped compared to Pygame

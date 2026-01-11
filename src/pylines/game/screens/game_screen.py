@@ -57,7 +57,7 @@ class GameScreen(State):
         self._frame_count = 0
         self.landing_dialog_box = DialogMessage()  # Must be before Plane otherwise causes error
         self.sound_manager = SoundManager(game.assets.sounds)
-        self.ground = Ground(game.assets.images.test_grass, game.assets.map)  # Pass the loaded image to Ground
+        self.ground = Ground(game.assets.images.test_grass, game.heightmap)  # Pass the loaded image to Ground
         self.plane = Plane(game.assets.sounds, self.landing_dialog_box, self.ground)
         self.runway = Runway(x=0, y=0, z=0, width=50, length=1000)
         self.sky = Sky()
@@ -148,7 +148,7 @@ class GameScreen(State):
         print(f"\033[32mFrame {self._frame_count:,}\033[0m")
         print(f"Plane Velocity: {_prettyvec(self.plane.vel)}")
         print(f"Plane Position: {_prettyvec(self.plane.pos)}")
-        print(f"Ground Alt:     {self.ground.get_height(self.plane.pos.x, self.plane.pos.z):.4f}")
+        print(f"Ground Alt:     {self.ground.heightmap.height_at(self.plane.pos.x, self.plane.pos.z):.4f}")
 
     def _draw_text(self, x: RealNumber, y: RealNumber, text: str,
                   colour: AColour = (255, 255, 255, 255), bg_colour: AColour | None = None):
@@ -515,7 +515,7 @@ class GameScreen(State):
         pg.draw.circle(hud_surface, (warning_col), (warning_x, C.WN_H*0.96), 10)
 
         # DEBUG: show ground altitude directly below plane
-        ground_alt = self.ground.get_height(self.plane.pos.x, self.plane.pos.z)
+        ground_alt = self.ground.heightmap.height_at(self.plane.pos.x, self.plane.pos.z)
         draw_text(hud_surface, (C.WN_W*0.5, C.WN_H*0.6), 'centre', 'centre', f"Ground Alt: {metres_to_ft(ground_alt):,.0f} ft", cols.WHITE, 30, self.fonts.monospaced)
 
         # Show landing feedback
@@ -608,8 +608,13 @@ class GameScreen(State):
         gl.glRotatef(self.plane.rot.x, 1, 0, 0) # 2. Pitch
         gl.glRotatef(self.plane.rot.y, 0, 1, 0) # 1. Yaw
 
-        ground_height = self.ground.get_height(self.plane.pos.x, self.plane.pos.z) # DEBUG to test interpolation
-        gl.glTranslatef(-self.plane.pos.x, -ground_height + C.CAMERA_OFFSET_Y, -self.plane.pos.z)
+        ground_y = self.ground.heightmap.height_at(self.plane.pos.x, self.plane.pos.z)  # DEBUG to test interpolation
+        camera_y = max(
+            self.plane.pos.y + C.CAMERA_OFFSET_Y,
+            ground_y + C.CAMERA_OFFSET_Y
+        )
+        
+        gl.glTranslatef(-self.plane.pos.x, -camera_y, -self.plane.pos.z)
 
         self.sun.draw()
         self.ground.draw()

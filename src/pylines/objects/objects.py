@@ -69,7 +69,7 @@ class Plane(Entity):
         return self.aoa > self.model.stall_angle
 
     def reset(self) -> None:
-        self.pos = pg.Vector3(0, self.ground.get_height(0, 0), 0)
+        self.pos = pg.Vector3(0, self.ground.heightmap.height_at(0, 0), 0)
         self.vel = pg.Vector3(0, 0, 0)
         self.acc = pg.Vector3(0, 0, 0)
 
@@ -299,7 +299,7 @@ class Plane(Entity):
         # TODO: Add damage when not on runway (once runways are added)
 
         # Collision detection
-        ground_height = self.ground.get_height(self.pos.x, self.pos.z)
+        ground_height = self.ground.heightmap.height_at(self.pos.x, self.pos.z)
 
         # TODO: for now it's the ground height, but runways should be a factor as well, as well as ocean
         if self.pos.y <= ground_height:

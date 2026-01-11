@@ -31,7 +31,7 @@ class Heightmap:
         image_z = map_value(z, -self.world_size, self.world_size, 0, self.h - 1)
         return image_x, image_z
 
-    def get_height(self, x: float, z: float) -> float:
+    def height_at(self, x: float, z: float) -> float:
         ix, iz = self._world_to_map(x, z)
 
         ix = np.clip(ix, 0, self.w - (1+EPSILON))
