@@ -145,10 +145,11 @@ class GameScreen(State):
         else:
             self.overspeed_channel.stop()
 
-        print(f"\033[32mFrame {self._frame_count:,}\033[0m")
-        print(f"Plane Velocity: {_prettyvec(self.plane.vel)}")
-        print(f"Plane Position: {_prettyvec(self.plane.pos)}")
-        print(f"Ground Alt:     {self.ground.heightmap.height_at(self.plane.pos.x, self.plane.pos.z):.4f}")
+        # DEBUG lines kept for now, will be deleted once stepping behaviour is fixed
+        # print(f"\033[32mFrame {self._frame_count:,}\033[0m")
+        # print(f"Plane Velocity: {_prettyvec(self.plane.vel)}")
+        # print(f"Plane Position: {_prettyvec(self.plane.pos)}")
+        # print(f"Ground Alt:     {self.ground.heightmap.height_at(self.plane.pos.x, self.plane.pos.z):.4f}")
 
     def _draw_text(self, x: RealNumber, y: RealNumber, text: str,
                   colour: AColour = (255, 255, 255, 255), bg_colour: AColour | None = None):
@@ -613,7 +614,7 @@ class GameScreen(State):
             self.plane.pos.y + C.CAMERA_OFFSET_Y,
             ground_y + C.CAMERA_OFFSET_Y
         )
-        
+
         gl.glTranslatef(-self.plane.pos.x, -camera_y, -self.plane.pos.z)
 
         self.sun.draw()

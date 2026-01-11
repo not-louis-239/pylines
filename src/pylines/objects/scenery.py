@@ -114,8 +114,6 @@ class CelestialObject(SceneryObject):
         gl.glPopMatrix()
 
 class Ground(LargeSceneryObject):
-    # TODO: fix heightmap rendering incorrectly
-
     def __init__(self, image_surface: Surface, heightmap: Heightmap) -> None:
         super().__init__(0, 0, 0)
         self.texture_id = None

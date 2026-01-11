@@ -119,6 +119,7 @@ class MapData(AssetBank):
 
         img_path = ROOT_DIR / "assets/map/heightmap.png"
         img = Image.open(img_path)
+
         self.height_array = np.array(img, dtype=np.float32)
 
     def _load(self, name: str) -> Path:

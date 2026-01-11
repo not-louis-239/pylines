@@ -24,7 +24,8 @@ class Heightmap:
         self.h, self.w = height_array.shape
         self.max_val = np.max(height_array)
 
-        assert self.max_val > 0, "Heightmap is empty or invalid"  # this line is here to stay
+        if self.max_val <= 0:
+            raise ValueError("Heightmap is empty or invalid")
 
     def _world_to_map(self, x: float, z: float) -> tuple[float, float]:
         image_x = map_value(x, -self.world_size, self.world_size, 0, self.w - 1)

@@ -17,7 +17,7 @@ from enum import Enum, auto
 
 import pygame as pg
 
-from pylines.core.asset_manager import Assets
+from pylines.core.asset_manager import Assets, MapData
 from pylines.core.data_manager import save_data, load_data
 from pylines.game.screens.game_screen import GameScreen
 
@@ -44,8 +44,10 @@ class Game:
         # Set up keys and states
         self.prev_keys: ScancodeWrapper = pg.key.get_pressed()
 
-        heightmap = self.assets.map
-        self.heightmap = Heightmap(
+        # The MapData instance should be garbage collected
+        # after Game has derived its height, size and data
+        heightmap: MapData = self.assets.map
+        self.heightmap: Heightmap = Heightmap(
             heightmap.height_array,
             heightmap.MIN_H,
             heightmap.MAX_H,
