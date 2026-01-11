@@ -13,6 +13,8 @@
 from OpenGL import GL as gl, GLU as glu
 import pygame as pg
 import numpy as np
+import ctypes
+import numpy as np
 
 from pylines.core.asset_manager import MapData
 from pylines.core.constants import GROUND_SIZE, WN_H, WN_W
@@ -113,20 +115,73 @@ class Ground(LargeSceneryObject):
         self._load_texture(image_surface)
 
         self.map_data = map_data
-
+        self.vbo = None
+        self.ebo = None
         self.grid_resolution = 200 # Number of vertices along one edge
         self.vertices = self._create_vertex_grid()
+        self.indices = self._create_index_buffer()
+        self._setup_vbo()
+        self._setup_ebo()
 
     def _create_vertex_grid(self):
-        vertices = []
+        # We need to store vertices and texture coordinates
+        # Each vertex will have (x, y, z, u, v)
+        data = []
         step = GROUND_SIZE * 2 / self.grid_resolution
+        # The texture_repeat_count from the old draw method implies 200 repeats over GROUND_SIZE*2 extent
+        # So one repeat covers (GROUND_SIZE * 2) / 200 = GROUND_SIZE / 100
+        # The U, V coordinates should reflect this
+        texture_scale_factor = 200.0 / (GROUND_SIZE * 2) # How many texture repeats per world unit
+
         for i in range(self.grid_resolution + 1):
             for j in range(self.grid_resolution + 1):
                 x = -GROUND_SIZE + j * step
                 z = -GROUND_SIZE + i * step
                 y = self.map_data.get_height(x, z)
-                vertices.append((x, y, z))
-        return vertices
+
+                # Calculate texture coordinates (u, v)
+                u = (x + GROUND_SIZE) * texture_scale_factor
+                v = (z + GROUND_SIZE) * texture_scale_factor
+
+                data.extend([x, y, z, u, v])
+        return np.array(data, dtype=np.float32)
+
+    def _create_index_buffer(self):
+        indices = []
+        # Loop through rows of the grid
+        for i in range(self.grid_resolution):
+            # For each row, loop through columns
+            for j in range(self.grid_resolution + 1):
+                # Add vertex from current row
+                indices.append(i * (self.grid_resolution + 1) + j)
+                # Add vertex from next row
+                indices.append((i + 1) * (self.grid_resolution + 1) + j)
+            # Add degenerate triangles to connect strips
+            # if it's not the last row
+            if i != self.grid_resolution - 1:
+                indices.append((i + 1) * (self.grid_resolution + 1) + self.grid_resolution)
+                indices.append((i + 1) * (self.grid_resolution + 1))
+        return np.array(indices, dtype=np.uint32)
+
+    def _setup_vbo(self):
+        # Create a buffer object
+        self.vbo = gl.glGenBuffers(1)
+        # Bind the buffer
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.vbo)
+        # Upload the data
+        gl.glBufferData(gl.GL_ARRAY_BUFFER, self.vertices.nbytes, self.vertices, gl.GL_STATIC_DRAW)
+        # Unbind the buffer
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
+
+    def _setup_ebo(self):
+        # Create a buffer object
+        self.ebo = gl.glGenBuffers(1)
+        # Bind the buffer
+        gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, self.ebo)
+        # Upload the data
+        gl.glBufferData(gl.GL_ELEMENT_ARRAY_BUFFER, self.indices.nbytes, self.indices, gl.GL_STATIC_DRAW)
+        # Unbind the buffer
+        gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, 0)
 
     def get_height(self, x: float, z: float) -> float:
         return self.map_data.get_height(x, z)
@@ -160,27 +215,25 @@ class Ground(LargeSceneryObject):
         gl.glBindTexture(gl.GL_TEXTURE_2D, self.texture_id)
         gl.glColor3f(1.0, 1.0, 1.0)
 
-        texture_repeat_count = 200
+        gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
+        gl.glEnableClientState(gl.GL_TEXTURE_COORD_ARRAY)
 
-        for i in range(self.grid_resolution):
-            gl.glBegin(gl.GL_TRIANGLE_STRIP)
-            for j in range(self.grid_resolution + 1):
-                # Vertex 1 (current row)
-                v1_index = i * (self.grid_resolution + 1) + j
-                v1 = self.vertices[v1_index]
-                u = (v1[0] / (GROUND_SIZE * 2) + 0.5) * texture_repeat_count
-                v = (v1[2] / (GROUND_SIZE * 2) + 0.5) * texture_repeat_count
-                gl.glTexCoord2f(u, v)
-                gl.glVertex3f(v1[0], v1[1], v1[2])
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.vbo)
+        gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, self.ebo)
 
-                # Vertex 2 (next row)
-                v2_index = (i + 1) * (self.grid_resolution + 1) + j
-                v2 = self.vertices[v2_index]
-                u = (v2[0] / (GROUND_SIZE * 2) + 0.5) * texture_repeat_count
-                v = (v2[2] / (GROUND_SIZE * 2) + 0.5) * texture_repeat_count
-                gl.glTexCoord2f(u, v)
-                gl.glVertex3f(v2[0], v2[1], v2[2])
-            gl.glEnd()
+        # Stride is 5 * sizeof(float) because each vertex has x,y,z,u,v
+        # Vertex position is at offset 0
+        gl.glVertexPointer(3, gl.GL_FLOAT, self.vertices.itemsize * 5, ctypes.c_void_p(0))
+        # Texture coordinates are at offset 3 * sizeof(float)
+        gl.glTexCoordPointer(2, gl.GL_FLOAT, self.vertices.itemsize * 5, ctypes.c_void_p(self.vertices.itemsize * 3))
+
+        gl.glDrawElements(gl.GL_TRIANGLE_STRIP, len(self.indices), gl.GL_UNSIGNED_INT, None)
+
+        gl.glDisableClientState(gl.GL_VERTEX_ARRAY)
+        gl.glDisableClientState(gl.GL_TEXTURE_COORD_ARRAY)
+
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
+        gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, 0)
 
         gl.glDisable(gl.GL_TEXTURE_2D)
         gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
