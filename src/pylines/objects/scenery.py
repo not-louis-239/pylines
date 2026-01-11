@@ -12,8 +12,8 @@
 
 from OpenGL import GL as gl, GLU as glu
 import pygame as pg
-import numpy as np
 
+from pylines.core.asset_manager import MapData
 from pylines.core.constants import GROUND_SIZE, WN_H, WN_W
 from pylines.core.custom_types import Coord3, Surface
 from pylines.objects.objects import Entity
@@ -106,11 +106,29 @@ class CelestialObject(SceneryObject):
         gl.glPopMatrix()
 
 class Ground(LargeSceneryObject):
-    def __init__(self, image_surface: Surface, heightmap: np.ndarray) -> None:
-        super().__init__(0, 0, 0)  # Initialize pos for Ground at origin
+    def __init__(self, image_surface: Surface, map_data: MapData) -> None:
+        super().__init__(0, 0, 0)
         self.texture_id = None
-        self.heightmap = heightmap
         self._load_texture(image_surface)
+
+        self.map_data = map_data
+
+        self.grid_resolution = 200 # Number of vertices along one edge
+        self.vertices = self._create_vertex_grid()
+
+    def _create_vertex_grid(self):
+        vertices = []
+        step = GROUND_SIZE * 2 / self.grid_resolution
+        for i in range(self.grid_resolution + 1):
+            for j in range(self.grid_resolution + 1):
+                x = -GROUND_SIZE + j * step
+                z = -GROUND_SIZE + i * step
+                y = self.map_data.get_height(x, z)
+                vertices.append((x, y, z))
+        return vertices
+
+    def get_height(self, x: float, z: float) -> float:
+        return self.map_data.get_height(x, z)
 
     def _load_texture(self, image_surface: Surface):
         # OpenGL textures are Y-flipped compared to Pygame
@@ -134,28 +152,38 @@ class Ground(LargeSceneryObject):
     def draw(self):
         gl.glPushMatrix()
 
-        # Enable polygon offset to prevent Z-fighting with other objects on the ground
         gl.glEnable(gl.GL_POLYGON_OFFSET_FILL)
         gl.glPolygonOffset(-1.0, -1.0)
 
         gl.glEnable(gl.GL_TEXTURE_2D)
         gl.glBindTexture(gl.GL_TEXTURE_2D, self.texture_id)
-        gl.glColor3f(1.0, 1.0, 1.0) # Remove any potential color tint from glColor3f
+        gl.glColor3f(1.0, 1.0, 1.0)
 
-        gl.glBegin(gl.GL_TRIANGLE_STRIP)
+        texture_repeat_count = 200
 
-        # Assign texture coordinates (U, V) to each vertex
-        texture_repeat_count = 1000  # Texture repeats over large ground
-        gl.glTexCoord2f(0.0, 0.0); gl.glVertex3f(self.vertices[0][0], self.vertices[0][1], self.vertices[0][2])
-        gl.glTexCoord2f(0.0, texture_repeat_count); gl.glVertex3f(self.vertices[1][0], self.vertices[1][1], self.vertices[1][2])
-        gl.glTexCoord2f(texture_repeat_count, 0.0); gl.glVertex3f(self.vertices[2][0], self.vertices[2][1], self.vertices[2][2])
-        gl.glTexCoord2f(texture_repeat_count, texture_repeat_count); gl.glVertex3f(self.vertices[3][0], self.vertices[3][1], self.vertices[3][2])
-        gl.glEnd()
+        for i in range(self.grid_resolution):
+            gl.glBegin(gl.GL_TRIANGLE_STRIP)
+            for j in range(self.grid_resolution + 1):
+                # Vertex 1 (current row)
+                v1_index = i * (self.grid_resolution + 1) + j
+                v1 = self.vertices[v1_index]
+                u = (v1[0] / (GROUND_SIZE * 2) + 0.5) * texture_repeat_count
+                v = (v1[2] / (GROUND_SIZE * 2) + 0.5) * texture_repeat_count
+                gl.glTexCoord2f(u, v)
+                gl.glVertex3f(v1[0], v1[1], v1[2])
+
+                # Vertex 2 (next row)
+                v2_index = (i + 1) * (self.grid_resolution + 1) + j
+                v2 = self.vertices[v2_index]
+                u = (v2[0] / (GROUND_SIZE * 2) + 0.5) * texture_repeat_count
+                v = (v2[2] / (GROUND_SIZE * 2) + 0.5) * texture_repeat_count
+                gl.glTexCoord2f(u, v)
+                gl.glVertex3f(v2[0], v2[1], v2[2])
+            gl.glEnd()
 
         gl.glDisable(gl.GL_TEXTURE_2D)
-        gl.glBindTexture(gl.GL_TEXTURE_2D, 0)  # Unbind texture
+        gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
 
-        # Disable polygon offset after drawing the ground
         gl.glDisable(gl.GL_POLYGON_OFFSET_FILL)
 
         gl.glPopMatrix()

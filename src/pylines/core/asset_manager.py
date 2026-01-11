@@ -19,7 +19,9 @@ import pygame as pg
 from pygame.transform import scale, scale_by
 
 from .paths import ROOT_DIR
+from .constants import GROUND_SIZE
 from .custom_types import Sound
+from .utils import map_value
 
 class AssetBank:
     """Base class to store assets."""
@@ -73,22 +75,6 @@ class Images(AssetBank):
     def _load(self, name: str):
         return pg.image.load(ROOT_DIR / "assets" / "images" / name).convert_alpha()
 
-class MapData(AssetBank):
-    def __init__(self) -> None:
-        with open("assets/map/height.json") as f:
-            meta = json.load(f)
-            self.MIN_H = meta["heights"]["min"]
-            self.MAX_H = meta["heights"]["max"]
-            self.SEA_LEVEL = meta["heights"]["sea_lvl"]
-
-        img = Image.open("assets/map/heightmap.png")
-        arr = np.array(img, dtype=np.uint16)
-
-        self.heightmap = self.MIN_H + (arr / 65535) * (self.MAX_H - self.MIN_H)
-
-    def _load(self, name: str) -> Path:
-        return ROOT_DIR / "assets" / "map" / name
-
 class Sounds(AssetBank):
     def __init__(self) -> None:
         # UI
@@ -123,3 +109,39 @@ class Assets:
         self.fonts: Fonts = Fonts()
         self.sounds: Sounds = Sounds()
         self.map: MapData = MapData()
+
+class MapData(AssetBank):
+    def __init__(self) -> None:
+        with open(ROOT_DIR / "assets/map/height.json") as f:
+            meta = json.load(f)
+            self.MIN_H = meta["heights"]["min"]
+            self.MAX_H = meta["heights"]["max"]
+            self.SEA_LEVEL = meta["heights"]["sea_lvl"]
+
+        img_path = ROOT_DIR / "assets/map/heightmap.png"
+        img = Image.open(img_path)
+        self.height_array = np.array(img, dtype=np.uint16)
+        self.height_surface = pg.transform.grayscale(pg.image.load(img_path))  # Load as grayscale Pygame surface
+        self.width, self.height = self.height_surface.get_size()  # Store dimensions
+        self.world_size = GROUND_SIZE # Store world size
+
+    def get_height(self, x: float, z: float) -> float:
+        # Map world coordinates (x, z) to image coordinates (ix, iy)
+        # World origin (0,0) is center of heightmap.
+        # Image origin (0,0) is top-left.
+        ix = map_value(x, -self.world_size, self.world_size, 0, self.width - 1)
+        iy = map_value(z, -self.world_size, self.world_size, 0, self.height - 1)
+
+        # Clamp coordinates to be within image bounds
+        ix = int(max(0, min(ix, self.width - 1)))
+        iy = int(max(0, min(iy, self.height - 1)))
+
+        # Get pixel brightness (0-255)
+        brightness = self.height_surface.get_at((ix, iy)).r
+
+        # Map brightness to height
+        height = map_value(brightness, 0, 255, self.MIN_H, self.MAX_H)
+        return height
+
+    def _load(self, name: str) -> Path:
+        return ROOT_DIR / "assets" / "map" / name

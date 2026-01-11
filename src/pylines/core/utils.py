@@ -113,4 +113,13 @@ def draw_transparent_rect(surface: Surface, pos: Coord2, size: Coord2,
     surface.blit(box_surf, pos)
 
 def get_sign(n: int | float):
+    if not (isinstance(n, int) or isinstance(n, float)):
+        raise ValueError("get sign: invalid number")
+
     return 1 if n > 0 else 0 if n == 0 else -1
+
+def map_value(value: float, in_min: float, in_max: float, out_min: float, out_max: float) -> float:
+    """Maps a value from one range to another."""
+    if in_min == in_max:
+        return out_min
+    return (value - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
