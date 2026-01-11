@@ -27,6 +27,7 @@ from pylines.core.utils import clamp
 
 if TYPE_CHECKING:
     from pylines.game.screens.game_screen import DialogMessage
+    from pylines.objects.scenery import Ground
 
 class Entity:
     """Mental basis for all in-game physical objects"""
@@ -41,11 +42,12 @@ class Entity:
         pass
 
 class Plane(Entity):
-    def __init__(self, sounds: Sounds, dialog_box: DialogMessage):
+    def __init__(self, sounds: Sounds, dialog_box: DialogMessage, ground: Ground):
         super().__init__(0, 0, 0)
         self.model: PlaneModel = PLANE_MODELS["Cessna 172"]
         self.sounds = sounds
         self.dialog_box = dialog_box
+        self.ground = ground
         self.reset()
 
     @property
@@ -67,7 +69,7 @@ class Plane(Entity):
         return self.aoa > self.model.stall_angle
 
     def reset(self) -> None:
-        self.pos = pg.Vector3(0, 0, 0)
+        self.pos = pg.Vector3(0, self.ground.get_height(0, 0), 0)
         self.vel = pg.Vector3(0, 0, 0)
         self.acc = pg.Vector3(0, 0, 0)
 
@@ -295,9 +297,12 @@ class Plane(Entity):
 
         # TODO: Add damage when not on runway (once runways are added)
 
-        # Ground collision
-        if self.pos.y <= 0:
-            self.pos.y = 0
+        # Collision detection
+        GROUND_HEIGHT = self.ground.get_height(self.pos.x, self.pos.z)
+
+        # TODO: for now it's the ground height, but runways should be a factor as well, as well as ocean
+        if self.pos.y <= GROUND_HEIGHT:
+            self.pos.y = GROUND_HEIGHT
 
             if not self.on_ground:
                 self.process_landing()

@@ -12,6 +12,7 @@
 
 from OpenGL import GL as gl, GLU as glu
 import pygame as pg
+import numpy as np
 
 from pylines.core.asset_manager import MapData
 from pylines.core.constants import GROUND_SIZE, WN_H, WN_W
