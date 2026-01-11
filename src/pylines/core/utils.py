@@ -122,4 +122,15 @@ def map_value(value: float, in_min: float, in_max: float, out_min: float, out_ma
     """Maps a value from one range to another."""
     if in_min == in_max:
         return out_min
-    return (value - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
+
+    range_scale_factor = (out_max - out_min) / (in_max - in_min)
+    return range_scale_factor * (value - in_min) + out_min
+
+# TODO: make a more universal unit_convert func, but this will do for now
+def metres_to_ft(value: RealNumber) -> RealNumber:
+    """Convert a distance in metres to feet"""
+    return value * 3.280839895
+
+# For debug only
+def _prettyvec(vec: pg.Vector3, dp: int = 3) -> str:
+    return f"({vec.x:,.{dp}f}, {vec.y:,.{dp}f}, {vec.z:,.{dp}f})"

@@ -22,10 +22,9 @@ from OpenGL import GL as gl, GLU as glu
 import pygame as pg
 
 import pylines.core.constants as C
-from pylines.core.colours import (BLUE, BROWN, DARK_BLUE, DARK_BROWN,
-                          SKY_COLOUR_SCHEMES, WHITE)
+import pylines.core.colours as cols
 from pylines.core.custom_types import AColour, Colour, RealNumber, EventList
-from pylines.core.utils import clamp, draw_needle, draw_text, draw_transparent_rect
+from pylines.core.utils import clamp, draw_needle, draw_text, draw_transparent_rect, metres_to_ft, _prettyvec
 from pylines.game.engine_sound import SoundManager
 from pylines.game.states import State
 from pylines.objects.objects import Plane, Runway
@@ -38,16 +37,16 @@ if TYPE_CHECKING:
 @dataclass
 class DialogMessage:
     active_time: int = 0  # milliseconds
-    colour: Colour = WHITE
+    colour: Colour = cols.WHITE
     msg: str = ''
 
-    def set_message(self, msg: str, colour: Colour = WHITE, active_time: int = 2500):
+    def set_message(self, msg: str, colour: Colour = cols.WHITE, active_time: int = 2500):
         self.active_time = active_time
         self.msg = msg
         self.colour = colour
 
     def reset(self):
-        self.set_message('', WHITE, 0)
+        self.set_message('', cols.WHITE, 0)
 
     def update(self, dt: int):
         self.active_time = max(self.active_time - dt, 0)
@@ -55,6 +54,7 @@ class DialogMessage:
 class GameScreen(State):
     def __init__(self, game: Game) -> None:
         super().__init__(game)
+        self._frame_count = 0
         self.landing_dialog_box = DialogMessage()  # Must be before Plane otherwise causes error
         self.sound_manager = SoundManager(game.assets.sounds)
         self.ground = Ground(game.assets.images.test_grass, game.assets.map)  # Pass the loaded image to Ground
@@ -117,6 +117,7 @@ class GameScreen(State):
         self.time_elapsed = 0
 
     def update(self, dt: int):
+        self._frame_count += 1
         self.time_elapsed += dt
         self.landing_dialog_box.update(dt)
 
@@ -143,6 +144,11 @@ class GameScreen(State):
                 self.overspeed_channel.play(self.sounds.overspeed, loops=-1)
         else:
             self.overspeed_channel.stop()
+
+        print(f"\033[32mFrame {self._frame_count:,}\033[0m")
+        print(f"Plane Velocity: {_prettyvec(self.plane.vel)}")
+        print(f"Plane Position: {_prettyvec(self.plane.pos)}")
+        print(f"Ground Alt:     {self.ground.get_height(self.plane.pos.x, self.plane.pos.z):.4f}")
 
     def _draw_text(self, x: RealNumber, y: RealNumber, text: str,
                   colour: AColour = (255, 255, 255, 255), bg_colour: AColour | None = None):
@@ -242,7 +248,7 @@ class GameScreen(State):
 
         # Rudder
         RUDDER_SPEED = 2.5
-        RUDDER_SNAPBACK = 1
+        RUDDER_SNAPBACK = 3
         if keys[pg.K_a]:
             self.plane.rudder -= RUDDER_SPEED * dt/1000
         if keys[pg.K_d]:
@@ -340,7 +346,7 @@ class GameScreen(State):
         # VSI (below altimeter)
         vsi_centre = (alt_centre[0], alt_centre[1]+15)
         vs_ft_per_min = self.plane.vel.y * 196.85
-        text_colour: Colour = BLUE if vs_ft_per_min > 0 else WHITE if vs_ft_per_min == 0 else BROWN
+        text_colour: Colour = cols.BLUE if vs_ft_per_min > 0 else cols.WHITE if vs_ft_per_min == 0 else cols.BROWN
         draw_text(
             hud_surface,
             vsi_centre,
@@ -406,14 +412,14 @@ class GameScreen(State):
         # Sky (above horizon)
         pg.draw.rect(
             ai_surface,
-            DARK_BLUE,
+            cols.DARK_BLUE,
             (0, 0, inner_ai_rect.width, horizon_y)
         )
 
         # Ground (below horizon)
         pg.draw.rect(
             ai_surface,
-            DARK_BROWN,
+            cols.DARK_BROWN,
             (0, horizon_y, inner_ai_rect.width, inner_ai_rect.height - horizon_y)
         )
 
@@ -431,7 +437,7 @@ class GameScreen(State):
             if 0 <= y <= inner_ai_rect.height:
                 pg.draw.line(
                     ai_surface,
-                    WHITE,
+                    cols.WHITE,
                     (inner_ai_rect.width//2 - width, y),
                     (inner_ai_rect.width//2 + width, y),
                     3
@@ -446,7 +452,7 @@ class GameScreen(State):
         # Nose too low -> point up
         if pitch >= C.CHEVRON_ANGLE:
             pg.draw.polygon(
-                ai_surface, WHITE,
+                ai_surface, cols.WHITE,
                 [
                     (cx - (chev_w+7), bot_y+2),
                     (cx + (chev_w+7), bot_y+2),
@@ -464,7 +470,7 @@ class GameScreen(State):
         # Nose too high -> point down
         elif pitch <= -C.CHEVRON_ANGLE:
             pg.draw.polygon(
-                ai_surface, WHITE,
+                ai_surface, cols.WHITE,
                 [
                     (cx - (chev_w+7), top_y-2),
                     (cx + (chev_w+7), top_y-2),
@@ -502,12 +508,15 @@ class GameScreen(State):
         pg.draw.circle(hud_surface, (51, 43, 37), (warning_x, C.WN_H*0.96), 12)
         pg.draw.circle(hud_surface, (warning_col), (warning_x, C.WN_H*0.96), 10)
 
-
         warning_x = C.WN_W//2+145  # Overspeed
         draw_text(hud_surface, (warning_x, C.WN_H*0.92), 'centre', 'centre', "OVERSPEED", (25, 20, 18), 20, self.fonts.monospaced)
         warning_col = (255, 0, 0) if self.show_overspeed_warning else (0, 0, 0)
         pg.draw.circle(hud_surface, (51, 43, 37), (warning_x, C.WN_H*0.96), 12)
         pg.draw.circle(hud_surface, (warning_col), (warning_x, C.WN_H*0.96), 10)
+
+        # DEBUG: show ground altitude directly below plane
+        ground_alt = self.ground.get_height(self.plane.pos.x, self.plane.pos.z)
+        draw_text(hud_surface, (C.WN_W*0.5, C.WN_H*0.6), 'centre', 'centre', f"Ground Alt: {metres_to_ft(ground_alt):,.0f} ft", cols.WHITE, 30, self.fonts.monospaced)
 
         # Show landing feedback
         if self.landing_dialog_box.active_time:
@@ -582,7 +591,7 @@ class GameScreen(State):
         gl.glDisable(gl.GL_TEXTURE_2D)
 
     def draw(self, wn: Surface):
-        colour_scheme = SKY_COLOUR_SCHEMES[self.time_of_day]
+        colour_scheme = cols.SKY_COLOUR_SCHEMES[self.time_of_day]
 
         gl.glClear(cast(int, gl.GL_COLOR_BUFFER_BIT) | cast(int, gl.GL_DEPTH_BUFFER_BIT))
 
@@ -598,7 +607,9 @@ class GameScreen(State):
         gl.glRotatef(self.plane.rot.z, 0, 0, 1) # 3. Roll
         gl.glRotatef(self.plane.rot.x, 1, 0, 0) # 2. Pitch
         gl.glRotatef(self.plane.rot.y, 0, 1, 0) # 1. Yaw
-        gl.glTranslatef(-self.plane.pos.x, -(self.plane.pos.y+C.CAMERA_OFFSET_Y), -self.plane.pos.z)
+
+        ground_height = self.ground.get_height(self.plane.pos.x, self.plane.pos.z) # DEBUG to test interpolation
+        gl.glTranslatef(-self.plane.pos.x, -ground_height + C.CAMERA_OFFSET_Y, -self.plane.pos.z)
 
         self.sun.draw()
         self.ground.draw()

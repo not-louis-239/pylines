@@ -23,6 +23,8 @@ from pylines.game.screens.game_screen import GameScreen
 
 from pylines.game.screens.title import TitleScreen
 from pylines.game.screens.settings import SettingsScreen
+from pylines.core.heightmap import Heightmap
+from pylines.core.constants import WORLD_SIZE
 
 if TYPE_CHECKING:
     from pylines.core.custom_types import ScancodeWrapper, Surface, EventList
@@ -41,6 +43,14 @@ class Game:
 
         # Set up keys and states
         self.prev_keys: ScancodeWrapper = pg.key.get_pressed()
+
+        heightmap = self.assets.map
+        self.heightmap = Heightmap(
+            heightmap.height_array,
+            heightmap.MIN_H,
+            heightmap.MAX_H,
+            WORLD_SIZE
+        )
         self.states: dict[Game.States, State] = {
             Game.States.TITLE: TitleScreen(self),
             Game.States.GAME: GameScreen(self),

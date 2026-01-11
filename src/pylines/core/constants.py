@@ -47,9 +47,9 @@ WN_W = 1350
 WN_H = 850
 
 # Ground size
-GROUND_SIZE = 100_000  # distance from origin, metres
+WORLD_SIZE = 100_000  # distance from origin, metres, so the world is actually 200,000m wide
 
-PRACTISE_LIMIT = GROUND_SIZE * 0.99  # The user is "unauthorised" to go further
+PRACTISE_LIMIT = WORLD_SIZE * 0.99  # The user is "unauthorised" to go further
 
 # Rendering
 INNER_RENDER_LIMIT = 0.05
@@ -86,7 +86,7 @@ AIR_DENSITY = 1.225  # kg/m³
 GRAVITY = 9.8        # m/s²
 
 # Mathematical
-EPSILON = 0.001  # Treat anything smaller than this as zero
+EPSILON = 0.0001  # Treat anything smaller than this as zero
 
 # Visual
 CHEVRON_ANGLE = 40

@@ -17,7 +17,7 @@ import ctypes
 import numpy as np
 
 from pylines.core.asset_manager import MapData
-from pylines.core.constants import GROUND_SIZE, WN_H, WN_W
+from pylines.core.constants import WORLD_SIZE, WN_H, WN_W
 from pylines.core.custom_types import Coord3, Surface
 from pylines.objects.objects import Entity
 
@@ -32,10 +32,10 @@ class LargeSceneryObject(SceneryObject):
     def __init__(self, x, y, z):
         super().__init__(x, y, z)
         self.vertices: list[Coord3] = [
-            (-GROUND_SIZE, 0, -GROUND_SIZE),
-            (-GROUND_SIZE, 0, GROUND_SIZE),
-            (GROUND_SIZE, 0, -GROUND_SIZE),
-            (GROUND_SIZE, 0, GROUND_SIZE)
+            (-WORLD_SIZE, 0, -WORLD_SIZE),
+            (-WORLD_SIZE, 0, WORLD_SIZE),
+            (WORLD_SIZE, 0, -WORLD_SIZE),
+            (WORLD_SIZE, 0, WORLD_SIZE)
         ]
 
     def draw(self):
@@ -118,7 +118,7 @@ class Ground(LargeSceneryObject):
         self.vbo = None
         self.ebo = None
         self.grid_resolution = 200 # Number of vertices along one edge
-        self.vertices = self._create_vertex_grid()
+        self.vertices = self._create_vertex_grid()  # type: ignore[arg-type]
         self.indices = self._create_index_buffer()
         self._setup_vbo()
         self._setup_ebo()
@@ -127,21 +127,21 @@ class Ground(LargeSceneryObject):
         # We need to store vertices and texture coordinates
         # Each vertex will have (x, y, z, u, v)
         data = []
-        step = GROUND_SIZE * 2 / self.grid_resolution
+        step = WORLD_SIZE * 2 / self.grid_resolution
         # The texture_repeat_count from the old draw method implies 200 repeats over GROUND_SIZE*2 extent
         # So one repeat covers (GROUND_SIZE * 2) / 200 = GROUND_SIZE / 100
         # The U, V coordinates should reflect this
-        texture_scale_factor = 200.0 / (GROUND_SIZE * 2) # How many texture repeats per world unit
+        texture_scale_factor = 200.0 / (WORLD_SIZE * 2) # How many texture repeats per world unit
 
         for i in range(self.grid_resolution + 1):
             for j in range(self.grid_resolution + 1):
-                x = -GROUND_SIZE + j * step
-                z = -GROUND_SIZE + i * step
+                x = -WORLD_SIZE + j * step
+                z = -WORLD_SIZE + i * step
                 y = self.map_data.get_height(x, z)
 
                 # Calculate texture coordinates (u, v)
-                u = (x + GROUND_SIZE) * texture_scale_factor
-                v = (z + GROUND_SIZE) * texture_scale_factor
+                u = (x + WORLD_SIZE) * texture_scale_factor
+                v = (z + WORLD_SIZE) * texture_scale_factor
 
                 data.extend([x, y, z, u, v])
         return np.array(data, dtype=np.float32)
@@ -169,7 +169,7 @@ class Ground(LargeSceneryObject):
         # Bind the buffer
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.vbo)
         # Upload the data
-        gl.glBufferData(gl.GL_ARRAY_BUFFER, self.vertices.nbytes, self.vertices, gl.GL_STATIC_DRAW)
+        gl.glBufferData(gl.GL_ARRAY_BUFFER, self.vertices.nbytes, self.vertices, gl.GL_STATIC_DRAW)  # type: ignore[arg-type]
         # Unbind the buffer
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
 
@@ -223,9 +223,9 @@ class Ground(LargeSceneryObject):
 
         # Stride is 5 * sizeof(float) because each vertex has x,y,z,u,v
         # Vertex position is at offset 0
-        gl.glVertexPointer(3, gl.GL_FLOAT, self.vertices.itemsize * 5, ctypes.c_void_p(0))
+        gl.glVertexPointer(3, gl.GL_FLOAT, self.vertices.itemsize * 5, ctypes.c_void_p(0))  # type: ignore[arg-type]
         # Texture coordinates are at offset 3 * sizeof(float)
-        gl.glTexCoordPointer(2, gl.GL_FLOAT, self.vertices.itemsize * 5, ctypes.c_void_p(self.vertices.itemsize * 3))
+        gl.glTexCoordPointer(2, gl.GL_FLOAT, self.vertices.itemsize * 5, ctypes.c_void_p(self.vertices.itemsize * 3))  # type: ignore[arg-type]
 
         gl.glDrawElements(gl.GL_TRIANGLE_STRIP, len(self.indices), gl.GL_UNSIGNED_INT, None)
 

@@ -84,7 +84,6 @@ class Plane(Entity):
 
         self.aoa = 0  # degrees
         self.on_ground = True
-        self._prev_on_ground = True
         self.crash_reason = None
         self.damage_level = 0
 
@@ -257,7 +256,8 @@ class Plane(Entity):
         # Yaw torque from rudder
         yaw_torque = self.rudder * self.model.rudder_sensitivity * dt/1000
         self.rot_rate.y += yaw_torque
-        self.rot_rate.y *= (1 - 0.8 * dt/1000)
+        YAW_FRICTION = 1.5
+        self.rot_rate.y *= (1 - YAW_FRICTION * dt/1000)
 
         factor = clamp(1 - abs(self.rot.z)/self.model.max_bank_angle, (0, 1))
         effective_rudder_roll = self.model.rudder_roll_effect * factor  # extra roll from rudder
@@ -301,16 +301,13 @@ class Plane(Entity):
         # Collision detection
         ground_height = self.ground.get_height(self.pos.x, self.pos.z)
 
-        # Update _prev_on_ground before current on_ground is determined
-        self._prev_on_ground = self.on_ground
-
         # TODO: for now it's the ground height, but runways should be a factor as well, as well as ocean
         if self.pos.y <= ground_height:
             self.pos.y = ground_height  # Snap to ground
             self.vel.y = 0              # Stop vertical movement
 
             # Only process landing if just touched down
-            if not self._prev_on_ground:
+            if not self.on_ground:
                 self.process_landing()
             self.on_ground = True
         else:
