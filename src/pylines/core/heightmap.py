@@ -15,11 +15,15 @@ from .utils import map_value
 from .constants import EPSILON
 
 class Heightmap:
-    def __init__(self, height_array: np.ndarray, min_h: float, max_h: float, world_size: float) -> None:
+    def __init__(self, height_array: np.ndarray, min_h: float, max_h: float, world_size: float, diagonal_split: str = 'AD') -> None:
         self.h_array = height_array
         self.min_h = min_h
         self.max_h = max_h
         self.world_size = world_size
+        self.diagonal_split = diagonal_split
+
+        if self.diagonal_split not in ['AD', 'BC']:
+            raise ValueError("diagonal_split must be either 'AD' or 'BC'")
 
         self.h, self.w = height_array.shape
         self.max_val = np.max(height_array)
@@ -48,31 +52,37 @@ class Heightmap:
         h01 = self.h_array[y2, x1] # C
         h11 = self.h_array[y2, x2] # D
 
-        # Point P=(fx, fy) relative to (x1, y1)
-
-        # Line AD' (from A'=(0,0) to D'=(1,1)) is y=x.
-        # If fy < fx, P is below line AD', in triangle ABD (A'=(0,0), B'=(1,0), D'=(1,1))
-        # If fy >= fx, P is above or on line AD', in triangle ACD (A'=(0,0), C'=(0,1), D'=(1,1))
-
-        if fy < fx:
-            # Triangle ABD. Vertices A'(0,0), B'(1,0), D'(1,1)
-            # Barycentric coordinates:
-            # P = (1-u-v)A' + uB' + vD'
-            # (fx, fy) = (1-u-v)(0,0) + u(1,0) + v(1,1)
-            # fx = u + v
-            # fy = v
-            # So v = fy, u = fx - fy
-            # 1-u-v = 1 - (fx - fy) - fy = 1 - fx
-            interp = (1 - fx) * h00 + (fx - fy) * h10 + fy * h11
-        else:
-            # Triangle ACD. Vertices A'(0,0), C'(0,1), D'(1,1)
-            # Barycentric coordinates:
-            # P = (1-u-v)A' + uC' + vD'
-            # (fx, fy) = (1-u-v)(0,0) + u(0,1) + v(1,1)
-            # fx = v
-            # fy = u + v
-            # So v = fx, u = fy - fx
-            # 1-u-v = 1 - (fy - fx) - fx = 1 - fy
-            interp = (1 - fy) * h00 + (fy - fx) * h01 + fx * h11
+        if self.diagonal_split == 'AD':
+            # Diagonal AD splits the quad into triangles ABD and ACD
+            if fy < fx:
+                # Point is in triangle ABD
+                # Vertices A(0,0), B(1,0), D(1,1)
+                u = 1 - fx
+                v = fx - fy
+                w = fy
+                interp = u * h00 + v * h10 + w * h11
+            else:
+                # Point is in triangle ACD
+                # Vertices A(0,0), C(0,1), D(1,1)
+                u = 1 - fy
+                v = fy - fx
+                w = fx
+                interp = u * h00 + v * h01 + w * h11
+        else: # BC diagonal
+            # Diagonal BC splits the quad into triangles ABC and BCD
+            if 1 - fx > fy:
+                # Point is in triangle ABC
+                # Vertices A(0,0), B(1,0), C(0,1)
+                u = 1 - fx - fy
+                v = fx
+                w = fy
+                interp = u * h00 + v * h10 + w * h01
+            else:
+                # Point is in triangle BCD
+                # Vertices B(1,0), C(0,1), D(1,1)
+                u = 1 - fy
+                v = 1 - fx
+                w = fx + fy - 1
+                interp = u * h10 + v * h01 + w * h11
 
         return map_value(interp, 0, self.max_val, self.min_h, self.max_h)

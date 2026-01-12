@@ -624,7 +624,7 @@ class GameScreen(State):
 
             infront_ground_y = self.ground.heightmap.height_at(infront_pos.x, infront_pos.z)
             # The y-position of the camera at that in-front location
-            infront_camera_y = max(infront_pos.y + C.CAMERA_RADIUS, infront_ground_y + C.CAMERA_RADIUS)
+            infront_camera_y = infront_ground_y + C.CAMERA_RADIUS
 
             gl.glVertex3f(infront_pos.x, infront_ground_y - 100, infront_pos.z)  # Draw the line extending downward
             gl.glVertex3f(infront_pos.x, infront_camera_y, infront_pos.z)
@@ -632,7 +632,16 @@ class GameScreen(State):
 
             quadric = glu.gluNewQuadric()
 
+            # Draw measurement spheres at intervals
+            MEASUREMENT_INTERVAL = 1  # m
+            for i in range(int(-C.CAMERA_RADIUS)+1, 25, 1):
+                gl.glPushMatrix()
+                gl.glTranslatef(infront_pos.x, infront_ground_y + i*-MEASUREMENT_INTERVAL, infront_pos.z)
+                glu.gluSphere(quadric, 0.2 if i%5 == 0 else 0.1, 20, 20)
+                gl.glPopMatrix()
+
             # Draw lower sphere (at ground level)
+            gl.glColor3f(0, 0, 0.75)
             gl.glPushMatrix()
             gl.glTranslatef(infront_pos.x, infront_ground_y, infront_pos.z)
             glu.gluSphere(quadric, 0.3, 20, 20)
