@@ -292,19 +292,19 @@ class Plane(Entity):
         self.pos.z = clamp(self.pos.z, (-TRAVEL_LIMIT, TRAVEL_LIMIT))
 
         # Damage update - damage is proportional to square of excess velocity
-        DAMAGE_FACTOR = 0.002
+        DAMAGE_FACTOR = 0.0008
         dp_excess = max(0, self.vel.length()**2 - self.model.v_ne**2)  # represents excess dynamic pressure
         self.damage_level += dt/1000 * DAMAGE_FACTOR * dp_excess
 
         # TODO: Add damage when not on runway (once runways are added)
 
         # Collision detection with ground
-        # FIXME: stepping behaviour causes landing feedback / damage spam and eventual crash
+        # FIXME: Stepping behaviour causes landing feedback / damage spam and eventual crash
         # This is because the Plane's velocity is being hard-zeroed every time it lands,
         # before gravity pulls it down again, causing a cycle
         ground_height = self.ground.heightmap.height_at(self.pos.x, self.pos.z)
 
-        # TODO: for now it's the ground height, but in future the plane shouldn't
+        # TODO: For now it's the ground height, but in future the plane shouldn't
         # be able to go below sea level due to the ocean plane
         if self.pos.y <= ground_height:
             self.pos.y = ground_height  # Snap to ground
