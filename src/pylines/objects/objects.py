@@ -21,7 +21,7 @@ from OpenGL import GL as gl
 import pygame as pg
 
 from pylines.core.asset_manager import Sounds
-from pylines.core.constants import (AIR_DENSITY, EPSILON, GRAVITY, PLANE_MODELS, PRACTISE_LIMIT, PlaneModel)
+from pylines.core.constants import (AIR_DENSITY, EPSILON, GRAVITY, PLANE_MODELS, TRAVEL_LIMIT, PlaneModel)
 from pylines.core.custom_types import Surface
 from pylines.core.utils import clamp
 
@@ -288,8 +288,8 @@ class Plane(Entity):
         self.rot.x = clamp(self.rot.x, (-90, 90))
 
         # Clamp position to prevent going off the map
-        self.pos.x = clamp(self.pos.x, (-PRACTISE_LIMIT, PRACTISE_LIMIT))
-        self.pos.z = clamp(self.pos.z, (-PRACTISE_LIMIT, PRACTISE_LIMIT))
+        self.pos.x = clamp(self.pos.x, (-TRAVEL_LIMIT, TRAVEL_LIMIT))
+        self.pos.z = clamp(self.pos.z, (-TRAVEL_LIMIT, TRAVEL_LIMIT))
 
         # Damage update - damage is proportional to square of excess velocity
         DAMAGE_FACTOR = 0.002
