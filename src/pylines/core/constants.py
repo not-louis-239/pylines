@@ -16,7 +16,9 @@ from dataclasses import dataclass
 from enum import Enum
 
 class DebugMode(Enum):
-    SHOW_TERRAIN_DIAGONALS = False
+    SHOW_TERRAIN_DIAGONALS = True
+    SHOW_CAMERA_CLEARANCE = True
+    SUPPRESS_LANDING_FEEDBACK = True
 
 @dataclass
 class PlaneModel:

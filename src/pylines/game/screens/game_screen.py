@@ -17,11 +17,13 @@ from __future__ import annotations
 import math
 from typing import TYPE_CHECKING, cast
 from dataclasses import dataclass
+from math import sin, cos
 
 from OpenGL import GL as gl, GLU as glu
 import pygame as pg
 
 import pylines.core.constants as C
+from pylines.core.constants import DebugMode
 import pylines.core.colours as cols
 from pylines.core.custom_types import AColour, Colour, RealNumber, EventList
 from pylines.core.utils import clamp, draw_needle, draw_text, draw_transparent_rect, metres_to_ft, _prettyvec
@@ -510,14 +512,15 @@ class GameScreen(State):
         pg.draw.circle(hud_surface, (warning_col), (warning_x, C.WN_H*0.96), 10)
 
         # Show landing feedback
-        if self.landing_dialog_box.active_time:
-            draw_transparent_rect(
-                self.hud_surface, (C.WN_W//2-300, C.WN_H*0.15), (600, C.WN_H*0.1), (0, 0, 0, 180), 2
-            )
-            draw_text(
-                self.hud_surface, (C.WN_W//2, C.WN_H*0.2), 'centre', 'centre',
-                self.landing_dialog_box.msg, self.landing_dialog_box.colour, 30, self.fonts.monospaced
-            )
+        if not DebugMode.SUPPRESS_LANDING_FEEDBACK.value:
+            if self.landing_dialog_box.active_time:
+                draw_transparent_rect(
+                    self.hud_surface, (C.WN_W//2-300, C.WN_H*0.15), (600, C.WN_H*0.1), (0, 0, 0, 180), 2
+                )
+                draw_text(
+                    self.hud_surface, (C.WN_W//2, C.WN_H*0.2), 'centre', 'centre',
+                    self.landing_dialog_box.msg, self.landing_dialog_box.colour, 30, self.fonts.monospaced
+                )
 
         # Show crash reason on screen
         if self.plane.crash_reason == 'ground':
@@ -600,12 +603,51 @@ class GameScreen(State):
         gl.glRotatef(self.plane.rot.y, 0, 1, 0) # 1. Yaw
 
         ground_y = self.ground.heightmap.height_at(self.plane.pos.x, self.plane.pos.z)
-        camera_y = max(
-            self.plane.pos.y + C.CAMERA_RADIUS,
-            ground_y + C.CAMERA_RADIUS
-        )
+        camera_y = max(self.plane.pos.y + C.CAMERA_RADIUS, ground_y + C.CAMERA_RADIUS)
 
         gl.glTranslatef(-self.plane.pos.x, -camera_y, -self.plane.pos.z)
+
+        # START DEBUG: Show camera clearance
+        if DebugMode.SHOW_CAMERA_CLEARANCE.value:
+            gl.glDisable(gl.GL_TEXTURE_2D)
+            gl.glLineWidth(3.5)
+            gl.glBegin(gl.GL_LINES)
+            gl.glColor3f(0.0, 0.0, 1.0)  # Blue color for the debug line
+
+            # Show line slightly infront of camera otherwise it is not visible
+            plane = self.plane
+            yaw_rad = math.radians(plane.rot.y)
+
+            # Calculate the yaw vector
+            facing = pg.Vector3(sin(yaw_rad), 0, -cos(yaw_rad)).normalize()
+            infront_pos = self.plane.pos + facing * 20  # 20m in front
+
+            infront_ground_y = self.ground.heightmap.height_at(infront_pos.x, infront_pos.z)
+            # The y-position of the camera at that in-front location
+            infront_camera_y = max(infront_pos.y + C.CAMERA_RADIUS, infront_ground_y + C.CAMERA_RADIUS)
+
+            gl.glVertex3f(infront_pos.x, infront_ground_y - 100, infront_pos.z)  # Draw the line extending downward
+            gl.glVertex3f(infront_pos.x, infront_camera_y, infront_pos.z)
+            gl.glEnd()
+
+            quadric = glu.gluNewQuadric()
+
+            # Draw lower sphere (at ground level)
+            gl.glPushMatrix()
+            gl.glTranslatef(infront_pos.x, infront_ground_y, infront_pos.z)
+            glu.gluSphere(quadric, 0.3, 20, 20)
+            gl.glPopMatrix()
+
+            # Draw upper sphere (at camera level)
+            gl.glPushMatrix()
+            gl.glTranslatef(infront_pos.x, infront_camera_y, infront_pos.z)
+            glu.gluSphere(quadric, 0.3, 20, 20)
+            gl.glPopMatrix()
+
+            gl.glLineWidth(1.0)
+            gl.glEnable(gl.GL_TEXTURE_2D)
+        # END DEBUG
+
 
         self.sun.draw()
         self.ground.draw(self.plane.pos)
