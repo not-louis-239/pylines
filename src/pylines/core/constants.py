@@ -13,6 +13,10 @@
 """Program constants"""
 
 from dataclasses import dataclass
+from enum import Enum
+
+class DebugMode(Enum):
+    SHOW_TERRAIN_DIAGONALS = False
 
 @dataclass
 class PlaneModel:
@@ -52,12 +56,10 @@ PRACTISE_LIMIT = WORLD_SIZE * 0.99  # The user is "unauthorised" to go further
 
 # Rendering
 INNER_RENDER_LIMIT = 0.05
-OUTER_RENDER_LIMIT = 5_000
-CAMERA_OFFSET_Y: float = 15  # metres
+OUTER_RENDER_LIMIT = 10_000
 
-# TODO: Make the height_at function use triangle-based interpolation instead
-# of bilinear interpolation. This will solve the camera going underground. The large
-# CAMERA_OFFSET_Y will work for now.
+EYE_LEVEL = 1.8  # metres above ground level
+CAMERA_OFFSET_Y: float = EYE_LEVEL
 
 # Physics
 PLANE_MODELS: dict[str, PlaneModel] = {

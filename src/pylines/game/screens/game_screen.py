@@ -618,6 +618,6 @@ class GameScreen(State):
         gl.glTranslatef(-self.plane.pos.x, -camera_y, -self.plane.pos.z)
 
         self.sun.draw()
-        self.ground.draw()
+        self.ground.draw(self.plane.pos)
         self.runway.draw()
         self.draw_hud()

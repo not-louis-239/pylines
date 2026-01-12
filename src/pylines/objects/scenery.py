@@ -18,8 +18,7 @@ import numpy as np
 import ctypes
 import numpy as np
 
-from pylines.core.asset_manager import MapData
-from pylines.core.constants import WORLD_SIZE, WN_H, WN_W
+from pylines.core.constants import WORLD_SIZE, WN_H, WN_W, DebugMode
 from pylines.core.custom_types import Coord3, Surface
 from pylines.objects.objects import Entity
 
@@ -154,19 +153,29 @@ class Ground(LargeSceneryObject):
 
     def _create_index_buffer(self):
         indices = []
-        # Loop through rows of the grid
-        for i in range(self.grid_resolution):
-            # For each row, loop through columns
-            for j in range(self.grid_resolution + 1):
-                # Add vertex from current row
-                indices.append(i * (self.grid_resolution + 1) + j)
-                # Add vertex from next row
-                indices.append((i + 1) * (self.grid_resolution + 1) + j)
-            # Add degenerate triangles to connect strips
-            # if it's not the last row
-            if i != self.grid_resolution - 1:
-                indices.append((i + 1) * (self.grid_resolution + 1) + self.grid_resolution)
-                indices.append((i + 1) * (self.grid_resolution + 1))
+        rows = self.grid_resolution
+        cols = self.grid_resolution
+        for r in range(rows):
+            for c in range(cols):
+                # Get indices for the four corners of the quad
+                # A: top-left (r, c)
+                # B: top-right (r, c+1)
+                # C: bottom-left (r+1, c)
+                # D: bottom-right (r+1, c+1)
+                A = r * (cols + 1) + c
+                B = r * (cols + 1) + c + 1
+                C = (r + 1) * (cols + 1) + c
+                D = (r + 1) * (cols + 1) + c + 1
+
+                # Triangle 1: ABD (split along AD)
+                indices.append(A)
+                indices.append(B)
+                indices.append(D)
+
+                # Triangle 2: ACD (split along AD)
+                indices.append(A)
+                indices.append(D)
+                indices.append(C)
         return np.array(indices, dtype=np.uint32)
 
     def _setup_vbo(self):
@@ -208,7 +217,7 @@ class Ground(LargeSceneryObject):
         gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGBA, image_surface.get_width(), image_surface.get_height(), 0, gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, image_data)
         gl.glBindTexture(gl.GL_TEXTURE_2D, 0) # Unbind texture
 
-    def draw(self):
+    def draw(self, plane_pos: pg.Vector3 | None = None):
         gl.glPushMatrix()
 
         gl.glEnable(gl.GL_POLYGON_OFFSET_FILL)
@@ -230,7 +239,46 @@ class Ground(LargeSceneryObject):
         # Texture coordinates are at offset 3 * sizeof(float)
         gl.glTexCoordPointer(2, gl.GL_FLOAT, self.vertices.itemsize * 5, ctypes.c_void_p(self.vertices.itemsize * 3))  # type: ignore[arg-type]
 
-        gl.glDrawElements(gl.GL_TRIANGLE_STRIP, len(self.indices), gl.GL_UNSIGNED_INT, None)
+        gl.glDrawElements(gl.GL_TRIANGLES, len(self.indices), gl.GL_UNSIGNED_INT, None)
+
+        # START DEBUG: Confirm AD diagonal rendering
+        if DebugMode.SHOW_TERRAIN_DIAGONALS.value and plane_pos is not None:
+            gl.glDisable(gl.GL_TEXTURE_2D)
+            gl.glLineWidth(10.0)
+            gl.glBegin(gl.GL_LINES)
+            gl.glColor3f(1.0, 0.0, 0.0) # Red color for the debug line
+
+            rows = self.grid_resolution
+            cols = self.grid_resolution
+
+            # Calculate plane's cell position
+            plane_c = int((plane_pos.x + WORLD_SIZE) / (WORLD_SIZE * 2) * cols)
+            plane_r = int((plane_pos.z + WORLD_SIZE) / (WORLD_SIZE * 2) * rows)
+
+            radius = 5
+
+            # Clamp loop bounds to grid boundaries
+            r_start = max(0, plane_r - radius)
+            r_end = min(rows, plane_r + radius)
+            c_start = max(0, plane_c - radius)
+            c_end = min(cols, plane_c + radius)
+
+            for r in range(r_start, r_end):
+                for c in range(c_start, c_end):
+                    # Get indices for the four corners of the quad
+                    A_idx = r * (cols + 1) + c
+                    D_idx = (r + 1) * (cols + 1) + c + 1
+
+                    # Extract coordinates for A and D
+                    Ax, Ay, Az = self.vertices[A_idx*5], self.vertices[A_idx*5+1], self.vertices[A_idx*5+2]
+                    Dx, Dy, Dz = self.vertices[D_idx*5], self.vertices[D_idx*5+1], self.vertices[D_idx*5+2]
+
+                    gl.glVertex3f(Ax, Ay, Az)
+                    gl.glVertex3f(Dx, Dy, Dz)
+            gl.glEnd()
+            gl.glLineWidth(1.0)
+            gl.glEnable(gl.GL_TEXTURE_2D)
+        # END DEBUG
 
         gl.glDisableClientState(gl.GL_VERTEX_ARRAY)
         gl.glDisableClientState(gl.GL_TEXTURE_COORD_ARRAY)

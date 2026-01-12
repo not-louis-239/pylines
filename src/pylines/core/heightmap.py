@@ -12,7 +12,7 @@
 
 import numpy as np
 from .utils import map_value
-from .constants import WORLD_SIZE, EPSILON
+from .constants import EPSILON
 
 class Heightmap:
     def __init__(self, height_array: np.ndarray, min_h: float, max_h: float, world_size: float) -> None:
@@ -43,16 +43,36 @@ class Heightmap:
 
         fx, fy = ix - x1, iz - y1
 
-        h00 = self.h_array[y1, x1]
-        h10 = self.h_array[y1, x2]
-        h01 = self.h_array[y2, x1]
-        h11 = self.h_array[y2, x2]
+        h00 = self.h_array[y1, x1] # A
+        h10 = self.h_array[y1, x2] # B
+        h01 = self.h_array[y2, x1] # C
+        h11 = self.h_array[y2, x2] # D
 
-        interp = (
-            h00 * (1 - fx) * (1 - fy) +
-            h10 * fx * (1 - fy) +
-            h01 * (1 - fx) * fy +
-            h11 * fx * fy
-        )
+        # Point P=(fx, fy) relative to (x1, y1)
+
+        # Line AD' (from A'=(0,0) to D'=(1,1)) is y=x.
+        # If fy < fx, P is below line AD', in triangle ABD (A'=(0,0), B'=(1,0), D'=(1,1))
+        # If fy >= fx, P is above or on line AD', in triangle ACD (A'=(0,0), C'=(0,1), D'=(1,1))
+
+        if fy < fx:
+            # Triangle ABD. Vertices A'(0,0), B'(1,0), D'(1,1)
+            # Barycentric coordinates:
+            # P = (1-u-v)A' + uB' + vD'
+            # (fx, fy) = (1-u-v)(0,0) + u(1,0) + v(1,1)
+            # fx = u + v
+            # fy = v
+            # So v = fy, u = fx - fy
+            # 1-u-v = 1 - (fx - fy) - fy = 1 - fx
+            interp = (1 - fx) * h00 + (fx - fy) * h10 + fy * h11
+        else:
+            # Triangle ACD. Vertices A'(0,0), C'(0,1), D'(1,1)
+            # Barycentric coordinates:
+            # P = (1-u-v)A' + uC' + vD'
+            # (fx, fy) = (1-u-v)(0,0) + u(0,1) + v(1,1)
+            # fx = v
+            # fy = u + v
+            # So v = fx, u = fy - fx
+            # 1-u-v = 1 - (fy - fx) - fx = 1 - fy
+            interp = (1 - fy) * h00 + (fy - fx) * h01 + fx * h11
 
         return map_value(interp, 0, self.max_val, self.min_h, self.max_h)
