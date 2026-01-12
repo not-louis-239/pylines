@@ -601,8 +601,8 @@ class GameScreen(State):
 
         ground_y = self.ground.heightmap.height_at(self.plane.pos.x, self.plane.pos.z)
         camera_y = max(
-            self.plane.pos.y + C.CAMERA_OFFSET_Y,
-            ground_y + C.CAMERA_OFFSET_Y
+            self.plane.pos.y + C.CAMERA_RADIUS,
+            ground_y + C.CAMERA_RADIUS
         )
 
         gl.glTranslatef(-self.plane.pos.x, -camera_y, -self.plane.pos.z)

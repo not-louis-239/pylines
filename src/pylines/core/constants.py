@@ -55,10 +55,9 @@ TRAVEL_LIMIT = WORLD_SIZE * 0.99  # The user is "unauthorised" to go further
 
 # Rendering
 INNER_RENDER_LIMIT = 0.05
-OUTER_RENDER_LIMIT = 10_000
+OUTER_RENDER_LIMIT = 25_000
 
-EYE_LEVEL = 1.8  # metres above ground level
-CAMERA_OFFSET_Y: float = EYE_LEVEL
+CAMERA_RADIUS: float = 5  # The camera is a sphere collider now
 
 # Physics
 PLANE_MODELS: dict[str, PlaneModel] = {
