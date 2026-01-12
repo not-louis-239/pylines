@@ -23,7 +23,6 @@ from OpenGL import GL as gl, GLU as glu
 import pygame as pg
 
 import pylines.core.constants as C
-from pylines.core.constants import DebugMode
 import pylines.core.colours as cols
 from pylines.core.custom_types import AColour, Colour, RealNumber, EventList
 from pylines.core.utils import clamp, draw_needle, draw_text, draw_transparent_rect, metres_to_ft, _prettyvec
@@ -31,6 +30,8 @@ from pylines.game.engine_sound import SoundManager
 from pylines.game.states import State
 from pylines.objects.objects import Plane, Runway
 from pylines.objects.scenery import Ground, Sky, Sun
+
+import pylines.core.debug as debug
 
 if TYPE_CHECKING:
     from pylines.core.custom_types import ScancodeWrapper, Surface
@@ -512,7 +513,7 @@ class GameScreen(State):
         pg.draw.circle(hud_surface, (warning_col), (warning_x, C.WN_H*0.96), 10)
 
         # Show landing feedback
-        if not DebugMode.SUPPRESS_LANDING_FEEDBACK.value:
+        if not debug.SUPPRESS_LANDING_FEEDBACK:
             if self.landing_dialog_box.active_time:
                 draw_transparent_rect(
                     self.hud_surface, (C.WN_W//2-300, C.WN_H*0.15), (600, C.WN_H*0.1), (0, 0, 0, 180), 2
@@ -608,7 +609,7 @@ class GameScreen(State):
         gl.glTranslatef(-self.plane.pos.x, -camera_y, -self.plane.pos.z)
 
         # START DEBUG: Show camera clearance
-        if DebugMode.SHOW_CAMERA_CLEARANCE.value:
+        if debug.SHOW_CAMERA_CLEARANCE:
             gl.glDisable(gl.GL_TEXTURE_2D)
             gl.glLineWidth(3.5)
             gl.glBegin(gl.GL_LINES)

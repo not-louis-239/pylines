@@ -18,7 +18,8 @@ import numpy as np
 import ctypes
 import numpy as np
 
-from pylines.core.constants import WORLD_SIZE, WN_H, WN_W, DebugMode
+import pylines.core.debug as debug
+from pylines.core.constants import WORLD_SIZE, WN_H, WN_W
 from pylines.core.custom_types import Coord3, Surface
 from pylines.objects.objects import Entity
 
@@ -127,7 +128,7 @@ class Ground(LargeSceneryObject):
         self._setup_vbo()
         self._setup_ebo()
 
-    def _create_vertex_grid(self):
+    def _create_vertex_grid(self) -> list[Coord3] | np.ndarray:
         # We need to store vertices and texture coordinates
         # Each vertex will have (x, y, z, u, v)
         data = []
@@ -242,7 +243,7 @@ class Ground(LargeSceneryObject):
         gl.glDrawElements(gl.GL_TRIANGLES, len(self.indices), gl.GL_UNSIGNED_INT, None)
 
         # START DEBUG: Confirm AD diagonal rendering
-        if DebugMode.SHOW_TERRAIN_DIAGONALS.value and plane_pos is not None:
+        if debug.SHOW_TERRAIN_DIAGONALS and plane_pos is not None:
             gl.glDisable(gl.GL_TEXTURE_2D)
             gl.glLineWidth(10.0)
             gl.glBegin(gl.GL_LINES)
