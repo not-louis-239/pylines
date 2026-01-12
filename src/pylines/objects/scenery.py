@@ -276,10 +276,78 @@ class Ground(LargeSceneryObject):
 
                     gl.glVertex3f(Ax, Ay, Az)
                     gl.glVertex3f(Dx, Dy, Dz)
+
             gl.glEnd()
             gl.glLineWidth(1.0)
             gl.glEnable(gl.GL_TEXTURE_2D)
         # END DEBUG
+
+        # START DEBUG: Ground height overlay
+        if debug.SHOW_GROUND_HEIGHT_OVERLAY and plane_pos is not None:
+            gl.glDisable(gl.GL_TEXTURE_2D)
+            gl.glLineWidth(10.0)
+            gl.glColor3f(1.0, 1.0, 0.0)  # Yellow
+
+            quadric = glu.gluNewQuadric()
+
+            rows = self.grid_resolution
+            cols = self.grid_resolution
+            step = WORLD_SIZE * 2 / self.grid_resolution
+            radius = 5
+
+            # Calculate plane's cell position
+            plane_c = int((plane_pos.x + WORLD_SIZE) / (WORLD_SIZE * 2) * cols)
+            plane_r = int((plane_pos.z + WORLD_SIZE) / (WORLD_SIZE * 2) * rows)
+
+            # Clamp loop bounds to grid boundaries
+            r_start = max(0, plane_r - radius)
+            r_end = min(rows, plane_r + radius)
+            c_start = max(0, plane_c - radius)
+            c_end = min(cols, plane_c + radius)
+
+            grid_points = {}
+
+            for r in range(r_start, r_end + 1):
+                for c in range(c_start, c_end + 1):
+                    x = -WORLD_SIZE + c * step
+                    z = -WORLD_SIZE + r * step
+                    y = self.heightmap.height_at(x, z)
+
+                    grid_points[(r,c)] = (x, y, z)
+
+                    # Draw sphere at each vertex
+                    gl.glPushMatrix()
+                    gl.glTranslatef(x, y, z)
+                    glu.gluSphere(quadric, 1, 10, 10)
+                    gl.glPopMatrix()
+
+            # Draw lines connecting the spheres
+            gl.glBegin(gl.GL_LINES)
+            for r in range(r_start, r_end):
+                for c in range(c_start, c_end):
+                    p1 = grid_points.get((r,c))
+                    p2 = grid_points.get((r,c+1))
+                    p3 = grid_points.get((r+1,c))
+                    p4 = grid_points.get((r+1, c+1))
+
+                    if p1 and p2:
+                        gl.glVertex3f(*p1)
+                        gl.glVertex3f(*p2)
+                    if p1 and p3:
+                        gl.glVertex3f(*p1)
+                        gl.glVertex3f(*p3)
+                    # Also draw the last row and column lines
+                    if r == r_end -1 and p3 and p4:
+                        gl.glVertex3f(*p3)
+                        gl.glVertex3f(*p4)
+                    if c == c_end -1 and p2 and p4:
+                        gl.glVertex3f(*p2)
+                        gl.glVertex3f(*p4)
+
+            gl.glEnd()
+
+            gl.glLineWidth(1.0)
+            gl.glEnable(gl.GL_TEXTURE_2D)
 
         gl.glDisableClientState(gl.GL_VERTEX_ARRAY)
         gl.glDisableClientState(gl.GL_TEXTURE_COORD_ARRAY)

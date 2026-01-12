@@ -12,14 +12,13 @@
 
 import numpy as np
 from .utils import map_value
-from .constants import EPSILON
+from .constants import EPSILON, WORLD_SIZE
 
 class Heightmap:
-    def __init__(self, height_array: np.ndarray, min_h: float, max_h: float, world_size: float, diagonal_split: str = 'AD') -> None:
+    def __init__(self, height_array: np.ndarray, min_h: float, max_h: float, diagonal_split: str = 'AD') -> None:
         self.h_array = height_array
         self.min_h = min_h
         self.max_h = max_h
-        self.world_size = world_size
         self.diagonal_split = diagonal_split
 
         if self.diagonal_split not in ['AD', 'BC']:
@@ -32,8 +31,11 @@ class Heightmap:
             raise ValueError("Heightmap is empty or invalid")
 
     def _world_to_map(self, x: float, z: float) -> tuple[float, float]:
-        image_x = map_value(x, -self.world_size, self.world_size, 0, self.w - 1)
-        image_z = map_value(z, -self.world_size, self.world_size, 0, self.h - 1)
+        # Must map to 0 - w or height or else causes camera to go underground
+        # This is because mapping to 0-w/h makes _world_to_map sample exactly
+        # from the correct pixel
+        image_x = map_value(x, -WORLD_SIZE, WORLD_SIZE, 0, self.w)
+        image_z = map_value(z, -WORLD_SIZE, WORLD_SIZE, 0, self.h)
         return image_x, image_z
 
     def height_at(self, x: float, z: float) -> float:

@@ -658,7 +658,6 @@ class GameScreen(State):
             gl.glEnable(gl.GL_TEXTURE_2D)
         # END DEBUG
 
-
         self.sun.draw()
         self.ground.draw(self.plane.pos)
         self.runway.draw()

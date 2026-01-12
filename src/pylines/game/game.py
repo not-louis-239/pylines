@@ -51,7 +51,6 @@ class Game:
             heightmap.height_array,
             heightmap.MIN_H,
             heightmap.MAX_H,
-            WORLD_SIZE,
             diagonal_split='AD'
         )
         self.states: dict[Game.States, State] = {
