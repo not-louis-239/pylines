@@ -10,10 +10,9 @@
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
-from dataclasses import dataclass
-from pathlib import Path
-
 """Program constants"""
+
+from dataclasses import dataclass
 
 @dataclass
 class PlaneModel:
@@ -54,7 +53,11 @@ PRACTISE_LIMIT = WORLD_SIZE * 0.99  # The user is "unauthorised" to go further
 # Rendering
 INNER_RENDER_LIMIT = 0.05
 OUTER_RENDER_LIMIT = 5_000
-CAMERA_OFFSET_Y: float = 3  # metres, if this is not present camera will go underground
+CAMERA_OFFSET_Y: float = 15  # metres
+
+# TODO: Make the height_at function use triangle-based interpolation instead
+# of bilinear interpolation. This will solve the camera going underground. The large
+# CAMERA_OFFSET_Y will work for now.
 
 # Physics
 PLANE_MODELS: dict[str, PlaneModel] = {
