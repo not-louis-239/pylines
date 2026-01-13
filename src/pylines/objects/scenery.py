@@ -22,6 +22,7 @@ import pylines.core.debug as debug
 from pylines.core.constants import WORLD_SIZE, WN_H, WN_W
 from pylines.core.custom_types import Coord3, Surface, RealNumber
 from pylines.objects.objects import Entity
+from pylines.shaders.shader_manager import load_shader_script
 
 if TYPE_CHECKING:
     from pylines.core.heightmap import Heightmap
@@ -118,21 +119,29 @@ class CelestialObject(SceneryObject):
         gl.glPopMatrix()
 
 class Ground(LargeSceneryObject):
-    def __init__(self, image_surface: Surface, heightmap: Heightmap) -> None:
+    def __init__(self, textures: dict[str, Surface], heightmap: Heightmap) -> None:
         super().__init__(0, 0, 0)
-        self.texture_id = None
-        self._load_texture(image_surface)
+        self.textures = {
+            name: self._load_texture(surface)
+            for name, surface in textures.items()
+        }
+
+        # Load and compile the shader program
+        self.shader = load_shader_script(
+            "src/pylines/shaders/terrain.vert",
+            "src/pylines/shaders/terrain.frag"
+        )
 
         self.vbo = None
         self.ebo = None
         self.grid_resolution = 400  # Number of vertices along one edge
         self.heightmap = heightmap
-        self.vertices = self._create_vertex_grid()  # type: ignore[arg-type]
+        self.vertices: np.ndarray = self._create_vertex_grid()
         self.indices = self._create_index_buffer()
         self._setup_vbo()
         self._setup_ebo()
 
-    def _create_vertex_grid(self) -> list[Coord3] | np.ndarray:
+    def _create_vertex_grid(self) -> np.ndarray:
         # We need to store vertices and texture coordinates
         # Each vertex will have (x, y, z, u, v)
         data = []
@@ -203,14 +212,14 @@ class Ground(LargeSceneryObject):
         # Unbind the buffer
         gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, 0)
 
-    def _load_texture(self, image_surface: Surface):
+    def _load_texture(self, image_surface: Surface) -> int:
         # OpenGL textures are Y-flipped compared to Pygame
         image_surface = pg.transform.flip(image_surface, False, True)
         image_data = pg.image.tostring(image_surface, "RGBA", True)  # Get pixel data
 
         # Generate OpenGL texture ID
-        self.texture_id = gl.glGenTextures(1)
-        gl.glBindTexture(gl.GL_TEXTURE_2D, self.texture_id)
+        texture_id = gl.glGenTextures(1)
+        gl.glBindTexture(gl.GL_TEXTURE_2D, texture_id)
 
         # Texture parameters
         gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR)
@@ -221,6 +230,7 @@ class Ground(LargeSceneryObject):
         # Upload texture data to OpenGL
         gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGBA, image_surface.get_width(), image_surface.get_height(), 0, gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, image_data)
         gl.glBindTexture(gl.GL_TEXTURE_2D, 0) # Unbind texture
+        return texture_id
 
     def draw(self, plane_pos: pg.Vector3 | None = None):
         gl.glPushMatrix()
