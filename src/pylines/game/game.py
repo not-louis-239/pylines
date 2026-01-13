@@ -46,11 +46,12 @@ class Game:
 
         # The MapData instance should be garbage collected
         # after Game has derived its height, size and data
-        heightmap: MapData = self.assets.map
+        map_data: MapData = self.assets.map
         self.heightmap: Heightmap = Heightmap(
-            heightmap.height_array,
-            heightmap.MIN_H,
-            heightmap.MAX_H,
+            map_data.height_array,
+            map_data.MIN_H,
+            map_data.MAX_H,
+            map_data.SEA_LEVEL,
             diagonal_split='AD'
         )
         self.states: dict[Game.States, State] = {

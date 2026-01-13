@@ -30,7 +30,8 @@ from .paths import ROOT_DIR
 from .custom_types import Sound
 
 class AssetBank:
-    """Base class to store assets."""
+    """Base class to store assets. Objects of this type should be
+    purely used for asset loading and should not contain any logic."""
 
     def __init__(self) -> None:
         """Base method to set assets."""
@@ -46,7 +47,8 @@ class AssetBank:
 
 class Fonts(AssetBank):
     def __init__(self) -> None:
-        self.monospaced: Path = self._load("Inconsolata-VariableFont_wdth,wght.ttf")
+        p = "Inconsolata-VariableFont_wdth,wght.ttf"
+        self.monospaced: Path = self._load(p)
         self.augment()
 
     def _load(self, name: str) -> Path:
@@ -55,6 +57,8 @@ class Fonts(AssetBank):
 class Images(AssetBank):
     def __init__(self):
         self.grass = self._load("grass.png")
+        self.ocean = self._load("ocean.png")
+        
         self.cockpit = self._load("cockpit_base.png")
         self.compass = self._load("compass.png")
         self.speed_dial = self._load("speed_dial.png")

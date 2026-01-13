@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from pylines.objects.scenery import Ground
 
 class Entity:
-    """Mental basis for all in-game physical objects"""
+    """Base class for all in-game physical objects"""
 
     def __init__(self, x: float, y: float, z: float) -> None:
         self.pos: pg.Vector3 = pg.Vector3(x, y, z)
@@ -69,7 +69,11 @@ class Plane(Entity):
         return self.aoa > self.model.stall_angle
 
     def reset(self) -> None:
-        self.pos = pg.Vector3(0, self.ground.heightmap.height_at(0, 0), 0)
+        STARTING_POS = (0, -3000)
+        STARTING_YAW = 270
+
+        sx, sz = STARTING_POS
+        self.pos = pg.Vector3(sx, self.ground.heightmap.height_at(sx, sz), sz)
         self.vel = pg.Vector3(0, 0, 0)
         self.acc = pg.Vector3(0, 0, 0)
 
@@ -78,7 +82,7 @@ class Plane(Entity):
         self.rudder: float = 0  # from -1 to 1 (deflection)
         self.braking = False
 
-        self.rot = pg.Vector3(0, 0, 0)  # pitch, yaw, roll
+        self.rot = pg.Vector3(0, STARTING_YAW, 0)  # pitch, yaw, roll
         self.rot_rate = pg.Vector3(0, 0, 0)
         self.show_stall_warning: bool = False
 
@@ -299,10 +303,11 @@ class Plane(Entity):
         # TODO: Add damage when not on runway (once runways are added)
 
         # Collision detection with ground
+
         # FIXME: Stepping behaviour causes landing feedback / damage spam and eventual crash
         # This is because the Plane's velocity is being hard-zeroed every time it lands,
         # before gravity pulls it down again, causing a cycle
-        ground_height = self.ground.heightmap.height_at(self.pos.x, self.pos.z)
+        ground_height = max(self.ground.heightmap.height_at(self.pos.x, self.pos.z), self.ground.heightmap.sea_level)
 
         # TODO: For now it's the ground height, but in future the plane shouldn't
         # be able to go below sea level due to the ocean plane
