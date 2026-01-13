@@ -232,64 +232,41 @@ class Ground(LargeSceneryObject):
         gl.glBindTexture(gl.GL_TEXTURE_2D, 0) # Unbind texture
         return texture_id
 
-    # THIS METHOD IS THE DEFECTIVE ONE
     def draw(self):
-        gl.glUseProgram(self.shader)
-        gl.glEnable(gl.GL_DEPTH_TEST)
-
-        texture_units = {
-            "sand_texture": 0,
-            "low_grass_texture": 1,
-            "high_grass_texture": 2,
-            "treeline_rock_texture": 3,
-            "alpine_rock_texture": 4,
-            "snow_texture": 5,
-        }
-
-        for name, unit in texture_units.items():
-            gl.glActiveTexture(gl.GL_TEXTURE0 + unit)
-            gl.glBindTexture(gl.GL_TEXTURE_2D, self.textures[name])
-            location = gl.glGetUniformLocation(self.shader, name)
-            gl.glUniform1i(location, unit)
-
         gl.glPushMatrix()
 
         gl.glEnable(gl.GL_POLYGON_OFFSET_FILL)
         gl.glPolygonOffset(-1.0, -1.0)  # or else terrain segments z-fight among themselves
 
+        gl.glEnable(gl.GL_TEXTURE_2D)
+        gl.glBindTexture(gl.GL_TEXTURE_2D, self.textures["low_grass_texture"])
+        gl.glColor3f(1.0, 1.0, 1.0)
+
+        gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
+        gl.glEnableClientState(gl.GL_TEXTURE_COORD_ARRAY)
+
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.vbo)
         gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, self.ebo)
 
-        pos_loc = gl.glGetAttribLocation(self.shader, "position")
-        uv_loc  = gl.glGetAttribLocation(self.shader, "tex_coord")
-
-        if pos_loc == -1 or uv_loc == -1:
-            raise RuntimeError("Shader attribute not found: did you declare 'position' and 'tex_coord' in the vertex shader?")
-
-        gl.glEnableVertexAttribArray(pos_loc)
-        gl.glEnableVertexAttribArray(uv_loc)
-
-        stride = self.vertices.itemsize * 5
-        gl.glVertexAttribPointer(pos_loc, 3, gl.GL_FLOAT, False, stride, ctypes.c_void_p(0))
-        gl.glVertexAttribPointer(uv_loc, 2, gl.GL_FLOAT, False, stride, ctypes.c_void_p(self.vertices.itemsize * 3))
+        # Stride is 5 * sizeof(float) because each vertex has x,y,z,u,v
+        # Vertex position is at offset 0
+        gl.glVertexPointer(3, gl.GL_FLOAT, self.vertices.itemsize * 5, ctypes.c_void_p(0))  # type: ignore[arg-type]
+        # Texture coordinates are at offset 3 * sizeof(float)
+        gl.glTexCoordPointer(2, gl.GL_FLOAT, self.vertices.itemsize * 5, ctypes.c_void_p(self.vertices.itemsize * 3))  # type: ignore[arg-type]
 
         gl.glDrawElements(gl.GL_TRIANGLES, len(self.indices), gl.GL_UNSIGNED_INT, None)
 
-        gl.glDisableVertexAttribArray(pos_loc)
-        gl.glDisableVertexAttribArray(uv_loc)
+        gl.glDisableClientState(gl.GL_VERTEX_ARRAY)
+        gl.glDisableClientState(gl.GL_TEXTURE_COORD_ARRAY)
 
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
         gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, 0)
 
-        # Unbind textures
-        for unit in range(6):
-            gl.glActiveTexture(gl.GL_TEXTURE0 + unit)
-            gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
+        gl.glDisable(gl.GL_TEXTURE_2D)
+        gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
 
-        gl.glUseProgram(0)
+        gl.glDisable(gl.GL_POLYGON_OFFSET_FILL)
 
-        gl.glDisable(gl.GL_POLYGON_OFFSET_FILL) # Disable after use
-        gl.glDisable(gl.GL_DEPTH_TEST)
         gl.glPopMatrix()
 
 class Sky(LargeSceneryObject):
