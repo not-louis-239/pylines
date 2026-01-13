@@ -131,6 +131,8 @@ class Ground(LargeSceneryObject):
             "src/pylines/shaders/terrain.vert",
             "src/pylines/shaders/terrain.frag"
         )
+        self.position_loc = gl.glGetAttribLocation(self.shader, "position")
+        self.tex_coord_loc = gl.glGetAttribLocation(self.shader, "tex_coord")
 
         self.vbo = None
         self.ebo = None
@@ -238,32 +240,43 @@ class Ground(LargeSceneryObject):
         gl.glEnable(gl.GL_POLYGON_OFFSET_FILL)
         gl.glPolygonOffset(-1.0, -1.0)  # or else terrain segments z-fight among themselves
 
-        gl.glEnable(gl.GL_TEXTURE_2D)
-        gl.glBindTexture(gl.GL_TEXTURE_2D, self.textures["low_grass_texture"])
-        gl.glColor3f(1.0, 1.0, 1.0)
+        gl.glEnable(gl.GL_TEXTURE_2D)  # Enable texturing before using shaders
+        gl.glUseProgram(self.shader)  # Activate the shader program
 
-        gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
-        gl.glEnableClientState(gl.GL_TEXTURE_COORD_ARRAY)
+        # Set up textures for the shader
+        for i, (name, texture_id) in enumerate(self.textures.items()):
+            gl.glActiveTexture(gl.GL_TEXTURE0 + i)  # type: ignore[arg-type]
+            gl.glBindTexture(gl.GL_TEXTURE_2D, texture_id)
+            location = gl.glGetUniformLocation(self.shader, name)
+            gl.glUniform1i(location, i)
 
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.vbo)
         gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, self.ebo)
 
-        # Stride is 5 * sizeof(float) because each vertex has x,y,z,u,v
-        # Vertex position is at offset 0
-        gl.glVertexPointer(3, gl.GL_FLOAT, self.vertices.itemsize * 5, ctypes.c_void_p(0))  # type: ignore[arg-type]
-        # Texture coordinates are at offset 3 * sizeof(float)
-        gl.glTexCoordPointer(2, gl.GL_FLOAT, self.vertices.itemsize * 5, ctypes.c_void_p(self.vertices.itemsize * 3))  # type: ignore[arg-type]
+        # Enable and define vertex attributes
+        stride = self.vertices.itemsize * 5
+        gl.glEnableVertexAttribArray(self.position_loc)
+        gl.glVertexAttribPointer(self.position_loc, 3, gl.GL_FLOAT, gl.GL_FALSE, stride, ctypes.c_void_p(0))
+
+        gl.glEnableVertexAttribArray(self.tex_coord_loc)
+        gl.glVertexAttribPointer(self.tex_coord_loc, 2, gl.GL_FLOAT, gl.GL_FALSE, stride, ctypes.c_void_p(self.vertices.itemsize * 3))
 
         gl.glDrawElements(gl.GL_TRIANGLES, len(self.indices), gl.GL_UNSIGNED_INT, None)
 
-        gl.glDisableClientState(gl.GL_VERTEX_ARRAY)
-        gl.glDisableClientState(gl.GL_TEXTURE_COORD_ARRAY)
+        # Disable vertex attributes
+        gl.glDisableVertexAttribArray(self.position_loc)
+        gl.glDisableVertexAttribArray(self.tex_coord_loc)
 
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
         gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, 0)
 
-        gl.glDisable(gl.GL_TEXTURE_2D)
-        gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
+        gl.glUseProgram(0) # Deactivate shader
+        # Unbind textures and reset active texture unit
+        for i in range(len(self.textures)):
+            gl.glActiveTexture(gl.GL_TEXTURE0 + i)  # type: ignore[arg-type]
+            gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
+        gl.glActiveTexture(gl.GL_TEXTURE0) # Reset to default texture unit
+        gl.glDisable(gl.GL_TEXTURE_2D) # Disable texturing after using shaders
 
         gl.glDisable(gl.GL_POLYGON_OFFSET_FILL)
 
