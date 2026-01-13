@@ -69,7 +69,11 @@ class Plane(Entity):
         return self.aoa > self.model.stall_angle
 
     def reset(self) -> None:
-        self.pos = pg.Vector3(0, self.ground.heightmap.height_at(0, 0), 0)
+        STARTING_POS = (0, -3000)
+        STARTING_YAW = 270
+
+        sx, sz = STARTING_POS
+        self.pos = pg.Vector3(sx, self.ground.heightmap.height_at(sx, sz), sz)
         self.vel = pg.Vector3(0, 0, 0)
         self.acc = pg.Vector3(0, 0, 0)
 
@@ -78,7 +82,7 @@ class Plane(Entity):
         self.rudder: float = 0  # from -1 to 1 (deflection)
         self.braking = False
 
-        self.rot = pg.Vector3(0, 0, 0)  # pitch, yaw, roll
+        self.rot = pg.Vector3(0, STARTING_YAW, 0)  # pitch, yaw, roll
         self.rot_rate = pg.Vector3(0, 0, 0)
         self.show_stall_warning: bool = False
 
