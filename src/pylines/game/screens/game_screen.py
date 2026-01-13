@@ -62,8 +62,18 @@ class GameScreen(State):
         self._frame_count = 0
         self.landing_dialog_box = DialogMessage()  # Must be before Plane otherwise causes error
         self.sound_manager = SoundManager(assets.sounds)
+
+        ground_textures = {
+            "sand": assets.images.sand,
+            "low_grass": assets.images.low_grass,
+            "high_grass": assets.images.high_grass,
+            "treeline_rock": assets.images.treeline_rock,
+            "alpine_rock": assets.images.alpine_rock,
+            "snow": assets.images.snow,
+        }
         self.ocean = Ocean(assets.images.ocean, game.heightmap.sea_level)
-        self.ground = Ground(assets.images.low_grass, game.heightmap)  # Pass the loaded image to Ground
+        self.ground = Ground(ground_textures, game.heightmap)  # Pass the loaded image to Ground
+
         self.plane = Plane(assets.sounds, self.landing_dialog_box, self.ground)
         self.sky = Sky()
         self.sun = Sun(assets.images.sun)
