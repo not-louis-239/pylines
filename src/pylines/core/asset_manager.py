@@ -56,15 +56,21 @@ class Fonts(AssetBank):
 
 class Images(AssetBank):
     def __init__(self):
-        self.grass = self._load("grass.png")
+        self.snow = self._load("snow.png")
+        self.alpine_rock = self._load("alpine_rock.png")
+        self.treeline_rock = self._load("treeline_rock.png")
+        self.high_grass = self._load("high_grass.png")
+        self.low_grass = self._load("low_grass.png")
         self.ocean = self._load("ocean.png")
-        
+
         self.cockpit = self._load("cockpit_base.png")
         self.compass = self._load("compass.png")
         self.speed_dial = self._load("speed_dial.png")
-        self.logo = self._load("logo.png")
+
         self.sun = self._load("sun.png")
         self.moon = self._load("moon.png")
+
+        self.logo = self._load("logo.png")
 
         self.damage_overlays: tuple = (
             self._load("damage_1.png"),
