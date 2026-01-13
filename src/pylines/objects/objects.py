@@ -299,10 +299,11 @@ class Plane(Entity):
         # TODO: Add damage when not on runway (once runways are added)
 
         # Collision detection with ground
+
         # FIXME: Stepping behaviour causes landing feedback / damage spam and eventual crash
         # This is because the Plane's velocity is being hard-zeroed every time it lands,
         # before gravity pulls it down again, causing a cycle
-        ground_height = self.ground.heightmap.height_at(self.pos.x, self.pos.z)
+        ground_height = max(self.ground.heightmap.height_at(self.pos.x, self.pos.z), self.ground.heightmap.sea_level)
 
         # TODO: For now it's the ground height, but in future the plane shouldn't
         # be able to go below sea level due to the ocean plane
