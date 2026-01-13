@@ -65,7 +65,6 @@ class GameScreen(State):
         self.ocean = Ocean(assets.images.ocean)
         self.ground = Ground(assets.images.grass, game.heightmap)  # Pass the loaded image to Ground
         self.plane = Plane(assets.sounds, self.landing_dialog_box, self.ground)
-        self.runway = Runway(x=0, y=0, z=0, width=50, length=1000)
         self.sky = Sky()
         self.sun = Sun(assets.images.sun)
         self.time_of_day: str = "day"
@@ -664,5 +663,4 @@ class GameScreen(State):
         self.sun.draw()
         self.ocean.draw()
         self.ground.draw(self.plane.pos)
-        self.runway.draw()
         self.draw_hud()
