@@ -2,18 +2,19 @@
 
 ## Overivew
 
-This is a lightweight, open-source flight simulator made in Python with Pygame and PyOpenGL. It uses a simplified flight model to allow users to learn about the mechanics of flight without being overwhelming.
+This is a lightweight, open-source flight simulator made in Python with Pygame and a OpenGL. It uses a simplified flight model to allow users to learn about the mechanics of flight without being overwhelming.
 
 **Author:** Louis Masarei-Boulton  
 **Version:** 0.1
 
 ## Features
 
-* Over 36,000 sq. km of flat land to fly over.
+* Over 39,000 km² of land to fly over, with vast mountain ranges and rivers.
 * A simplified Cessna 172 flight model and cockpit GUI.
-* Different time of day settings (you can only change these in the code right now)
-* Landing feedback and crash mechanics.
-* Your plane takes damage if it goes too fast.
+* Different time of day settings (only in code right now)
+* Landing feedback and (currently janky) crash mechanics.
+* A stationary sun in the sky.
+* Overspeed damage if you don't fly carefully.
 
 ## Project Status
 
@@ -22,10 +23,12 @@ This is a lightweight, open-source flight simulator made in Python with Pygame a
 
 ## Planned Features
 
-* Lore map and intricate terrain
-* Aircraft customisation
-* Unit switching
-* Simple flight exercises
+* Improved physics model to complement hilly terrain.
+* Lore landmarks, e.g. buildings, runways.
+* Aircraft customisation.
+* Unit switching.
+* Biomes
+* Simple flight exercises.
 
 ## Requirements
 
@@ -35,4 +38,4 @@ This is a lightweight, open-source flight simulator made in Python with Pygame a
 
 ## License
 
-This project is licensed under the Apache License 2.0.
+© 2025-2026 Louis Masarei-Boulton. Licensed under the Apache License, Version 2.0.
