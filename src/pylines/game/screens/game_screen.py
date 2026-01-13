@@ -525,15 +525,14 @@ class GameScreen(State):
         pg.draw.circle(hud_surface, (warning_col), (warning_x, C.WN_H*0.96), 10)
 
         # Show landing feedback
-        if not debug.SUPPRESS_LANDING_FEEDBACK:
-            if self.landing_dialog_box.active_time:
-                draw_transparent_rect(
-                    self.hud_surface, (C.WN_W//2-300, C.WN_H*0.15), (600, C.WN_H*0.1), (0, 0, 0, 180), 2
-                )
-                draw_text(
-                    self.hud_surface, (C.WN_W//2, C.WN_H*0.2), 'centre', 'centre',
-                    self.landing_dialog_box.msg, self.landing_dialog_box.colour, 30, self.fonts.monospaced
-                )
+        if self.landing_dialog_box.active_time:
+            draw_transparent_rect(
+                self.hud_surface, (C.WN_W//2-300, C.WN_H*0.15), (600, C.WN_H*0.1), (0, 0, 0, 180), 2
+            )
+            draw_text(
+                self.hud_surface, (C.WN_W//2, C.WN_H*0.2), 'centre', 'centre',
+                self.landing_dialog_box.msg, self.landing_dialog_box.colour, 30, self.fonts.monospaced
+            )
 
         # Show crash reason on screen
         if self.plane.crash_reason == 'ground':
@@ -619,60 +618,10 @@ class GameScreen(State):
 
         gl.glTranslatef(-self.plane.pos.x, -camera_y, -self.plane.pos.z)
 
-        # START DEBUG: Show camera clearance
-        if debug.SHOW_CAMERA_CLEARANCE:
-            gl.glDisable(gl.GL_TEXTURE_2D)
-            gl.glLineWidth(3.5)
-            gl.glBegin(gl.GL_LINES)
-            gl.glColor3f(0.0, 0.0, 1.0)  # Blue color for the debug line
-
-            # Show line slightly infront of camera otherwise it is not visible
-            plane = self.plane
-            yaw_rad = math.radians(plane.rot.y)
-
-            # Calculate the yaw vector
-            facing = pg.Vector3(sin(yaw_rad), 0, -cos(yaw_rad)).normalize()
-            infront_pos = self.plane.pos + facing * 20  # 20m in front
-
-            infront_ground_y = self.ground.heightmap.height_at(infront_pos.x, infront_pos.z)
-            # The y-position of the camera at that in-front location
-            infront_camera_y = infront_ground_y + C.CAMERA_RADIUS
-
-            gl.glVertex3f(infront_pos.x, infront_ground_y - 100, infront_pos.z)  # Draw the line extending downward
-            gl.glVertex3f(infront_pos.x, infront_camera_y, infront_pos.z)
-            gl.glEnd()
-
-            quadric = glu.gluNewQuadric()
-
-            # Draw measurement spheres at intervals
-            MEASUREMENT_INTERVAL = 1  # m
-            for i in range(int(-C.CAMERA_RADIUS)+1, 25, 1):
-                gl.glPushMatrix()
-                gl.glTranslatef(infront_pos.x, infront_ground_y + i*-MEASUREMENT_INTERVAL, infront_pos.z)
-                glu.gluSphere(quadric, 0.2 if i%5 == 0 else 0.1, 20, 20)
-                gl.glPopMatrix()
-
-            # Draw lower sphere (at ground level)
-            gl.glColor3f(0, 0, 0.75)
-            gl.glPushMatrix()
-            gl.glTranslatef(infront_pos.x, infront_ground_y, infront_pos.z)
-            glu.gluSphere(quadric, 0.3, 20, 20)
-            gl.glPopMatrix()
-
-            # Draw upper sphere (at camera level)
-            gl.glPushMatrix()
-            gl.glTranslatef(infront_pos.x, infront_camera_y, infront_pos.z)
-            glu.gluSphere(quadric, 0.3, 20, 20)
-            gl.glPopMatrix()
-
-            gl.glLineWidth(1.0)
-            gl.glEnable(gl.GL_TEXTURE_2D)
-        # END DEBUG
-
         self.sun.draw()
 
         # Define a clip plane to prevent z-fighting between the ground and ocean
-        clip_plane = [0.0, 1.0, 0.0, 0.0]  # Clip everything below y=0
+        clip_plane = [0.0, 1.0, 0.0, -self.game.heightmap.sea_level]  # Clip everything below sea_level
         gl.glClipPlane(gl.GL_CLIP_PLANE0, clip_plane)
         gl.glEnable(gl.GL_CLIP_PLANE0)
 
