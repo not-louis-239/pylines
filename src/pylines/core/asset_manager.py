@@ -130,8 +130,11 @@ class MapData(AssetBank):
 
         img_path = ROOT_DIR / "assets/map/heightmap.png"
         img = Image.open(img_path)
-
         self.height_array = np.array(img, dtype=np.float32)
+
+        noise_path = ROOT_DIR / "assets/map/noise.png"
+        noise_img = Image.open(noise_path)
+        self.noise_array = np.array(noise_img, dtype=np.float32)
 
     def _load(self, name: str) -> Path:
         return ROOT_DIR / "assets" / "map" / name

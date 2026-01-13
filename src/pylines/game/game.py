@@ -48,10 +48,7 @@ class Game:
         # after Game has derived its height, size and data
         map_data: MapData = self.assets.map
         self.heightmap: Heightmap = Heightmap(
-            map_data.height_array,
-            map_data.MIN_H,
-            map_data.MAX_H,
-            map_data.SEA_LEVEL,
+            map_data,
             diagonal_split='AD'
         )
         self.states: dict[Game.States, State] = {
