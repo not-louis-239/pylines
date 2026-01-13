@@ -8,3 +8,4 @@ todo.txt
 GEMINI.md
 .geminiignore
 .DS_Store
+.pylintrc

@@ -22,6 +22,7 @@ import pylines.core.debug as debug
 from pylines.core.constants import WORLD_SIZE, WN_H, WN_W
 from pylines.core.custom_types import Coord3, Surface, RealNumber
 from pylines.objects.objects import Entity
+from pylines.shaders.shader_manager import load_shader_script
 
 if TYPE_CHECKING:
     from pylines.core.heightmap import Heightmap
@@ -118,21 +119,31 @@ class CelestialObject(SceneryObject):
         gl.glPopMatrix()
 
 class Ground(LargeSceneryObject):
-    def __init__(self, image_surface: Surface, heightmap: Heightmap) -> None:
+    def __init__(self, textures: dict[str, Surface], heightmap: Heightmap) -> None:
         super().__init__(0, 0, 0)
-        self.texture_id = None
-        self._load_texture(image_surface)
+        self.textures = {
+            name: self._load_texture(surface)
+            for name, surface in textures.items()
+        }
+
+        # Load and compile the shader program
+        self.shader = load_shader_script(
+            "src/pylines/shaders/terrain.vert",
+            "src/pylines/shaders/terrain.frag"
+        )
+        self.position_loc = gl.glGetAttribLocation(self.shader, "position")
+        self.tex_coord_loc = gl.glGetAttribLocation(self.shader, "tex_coord")
 
         self.vbo = None
         self.ebo = None
         self.grid_resolution = 400  # Number of vertices along one edge
         self.heightmap = heightmap
-        self.vertices = self._create_vertex_grid()  # type: ignore[arg-type]
+        self.vertices: np.ndarray = self._create_vertex_grid()
         self.indices = self._create_index_buffer()
         self._setup_vbo()
         self._setup_ebo()
 
-    def _create_vertex_grid(self) -> list[Coord3] | np.ndarray:
+    def _create_vertex_grid(self) -> np.ndarray:
         # We need to store vertices and texture coordinates
         # Each vertex will have (x, y, z, u, v)
         data = []
@@ -203,14 +214,14 @@ class Ground(LargeSceneryObject):
         # Unbind the buffer
         gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, 0)
 
-    def _load_texture(self, image_surface: Surface):
+    def _load_texture(self, image_surface: Surface) -> int:
         # OpenGL textures are Y-flipped compared to Pygame
         image_surface = pg.transform.flip(image_surface, False, True)
         image_data = pg.image.tostring(image_surface, "RGBA", True)  # Get pixel data
 
         # Generate OpenGL texture ID
-        self.texture_id = gl.glGenTextures(1)
-        gl.glBindTexture(gl.GL_TEXTURE_2D, self.texture_id)
+        texture_id = gl.glGenTextures(1)
+        gl.glBindTexture(gl.GL_TEXTURE_2D, texture_id)
 
         # Texture parameters
         gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR)
@@ -221,146 +232,51 @@ class Ground(LargeSceneryObject):
         # Upload texture data to OpenGL
         gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGBA, image_surface.get_width(), image_surface.get_height(), 0, gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, image_data)
         gl.glBindTexture(gl.GL_TEXTURE_2D, 0) # Unbind texture
+        return texture_id
 
-    def draw(self, plane_pos: pg.Vector3 | None = None):
+    def draw(self):
         gl.glPushMatrix()
 
         gl.glEnable(gl.GL_POLYGON_OFFSET_FILL)
         gl.glPolygonOffset(-1.0, -1.0)  # or else terrain segments z-fight among themselves
 
-        gl.glEnable(gl.GL_TEXTURE_2D)
-        gl.glBindTexture(gl.GL_TEXTURE_2D, self.texture_id)
-        gl.glColor3f(1.0, 1.0, 1.0)
+        gl.glEnable(gl.GL_TEXTURE_2D)  # Enable texturing before using shaders
+        gl.glUseProgram(self.shader)  # Activate the shader program
 
-        gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
-        gl.glEnableClientState(gl.GL_TEXTURE_COORD_ARRAY)
+        # Set up textures for the shader
+        for i, (name, texture_id) in enumerate(self.textures.items()):
+            gl.glActiveTexture(gl.GL_TEXTURE0 + i)  # type: ignore[arg-type]
+            gl.glBindTexture(gl.GL_TEXTURE_2D, texture_id)
+            location = gl.glGetUniformLocation(self.shader, name)
+            gl.glUniform1i(location, i)
 
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.vbo)
         gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, self.ebo)
 
-        # Stride is 5 * sizeof(float) because each vertex has x,y,z,u,v
-        # Vertex position is at offset 0
-        gl.glVertexPointer(3, gl.GL_FLOAT, self.vertices.itemsize * 5, ctypes.c_void_p(0))  # type: ignore[arg-type]
-        # Texture coordinates are at offset 3 * sizeof(float)
-        gl.glTexCoordPointer(2, gl.GL_FLOAT, self.vertices.itemsize * 5, ctypes.c_void_p(self.vertices.itemsize * 3))  # type: ignore[arg-type]
+        # Enable and define vertex attributes
+        stride = self.vertices.itemsize * 5
+        gl.glEnableVertexAttribArray(self.position_loc)
+        gl.glVertexAttribPointer(self.position_loc, 3, gl.GL_FLOAT, gl.GL_FALSE, stride, ctypes.c_void_p(0))
+
+        gl.glEnableVertexAttribArray(self.tex_coord_loc)
+        gl.glVertexAttribPointer(self.tex_coord_loc, 2, gl.GL_FLOAT, gl.GL_FALSE, stride, ctypes.c_void_p(self.vertices.itemsize * 3))
 
         gl.glDrawElements(gl.GL_TRIANGLES, len(self.indices), gl.GL_UNSIGNED_INT, None)
 
-        # START DEBUG: Confirm AD diagonal rendering
-        if debug.SHOW_TERRAIN_DIAGONALS and plane_pos is not None:
-            gl.glDisable(gl.GL_TEXTURE_2D)
-            gl.glLineWidth(10.0)
-            gl.glBegin(gl.GL_LINES)
-            gl.glColor3f(1.0, 0.0, 0.0) # Red color for the debug line
-
-            rows = self.grid_resolution
-            cols = self.grid_resolution
-
-            # Calculate plane's cell position
-            plane_c = int((plane_pos.x + WORLD_SIZE) / (WORLD_SIZE * 2) * cols)
-            plane_r = int((plane_pos.z + WORLD_SIZE) / (WORLD_SIZE * 2) * rows)
-
-            radius = 5
-
-            # Clamp loop bounds to grid boundaries
-            r_start = max(0, plane_r - radius)
-            r_end = min(rows, plane_r + radius)
-            c_start = max(0, plane_c - radius)
-            c_end = min(cols, plane_c + radius)
-
-            for r in range(r_start, r_end):
-                for c in range(c_start, c_end):
-                    # Get indices for the four corners of the quad
-                    A_idx = r * (cols + 1) + c
-                    D_idx = (r + 1) * (cols + 1) + c + 1
-
-                    # Extract coordinates for A and D
-                    Ax, Ay, Az = self.vertices[A_idx*5], self.vertices[A_idx*5+1], self.vertices[A_idx*5+2]
-                    Dx, Dy, Dz = self.vertices[D_idx*5], self.vertices[D_idx*5+1], self.vertices[D_idx*5+2]
-
-                    gl.glVertex3f(Ax, Ay, Az)
-                    gl.glVertex3f(Dx, Dy, Dz)
-
-            gl.glEnd()
-            gl.glLineWidth(1.0)
-            gl.glEnable(gl.GL_TEXTURE_2D)
-        # END DEBUG
-
-        # START DEBUG: Ground height overlay
-        if debug.SHOW_GROUND_HEIGHT_OVERLAY and plane_pos is not None:
-            gl.glDisable(gl.GL_TEXTURE_2D)
-            gl.glLineWidth(10.0)
-            gl.glColor3f(1.0, 1.0, 0.0)  # Yellow
-
-            quadric = glu.gluNewQuadric()
-
-            rows = self.grid_resolution
-            cols = self.grid_resolution
-            step = WORLD_SIZE * 2 / self.grid_resolution
-            radius = 5
-
-            # Calculate plane's cell position
-            plane_c = int((plane_pos.x + WORLD_SIZE) / (WORLD_SIZE * 2) * cols)
-            plane_r = int((plane_pos.z + WORLD_SIZE) / (WORLD_SIZE * 2) * rows)
-
-            # Clamp loop bounds to grid boundaries
-            r_start = max(0, plane_r - radius)
-            r_end = min(rows, plane_r + radius)
-            c_start = max(0, plane_c - radius)
-            c_end = min(cols, plane_c + radius)
-
-            grid_points = {}
-
-            for r in range(r_start, r_end + 1):
-                for c in range(c_start, c_end + 1):
-                    x = -WORLD_SIZE + c * step
-                    z = -WORLD_SIZE + r * step
-                    y = self.heightmap.height_at(x, z)
-
-                    grid_points[(r,c)] = (x, y, z)
-
-                    # Draw sphere at each vertex
-                    gl.glPushMatrix()
-                    gl.glTranslatef(x, y, z)
-                    glu.gluSphere(quadric, 1, 10, 10)
-                    gl.glPopMatrix()
-
-            # Draw lines connecting the spheres
-            gl.glBegin(gl.GL_LINES)
-            for r in range(r_start, r_end):
-                for c in range(c_start, c_end):
-                    p1 = grid_points.get((r,c))
-                    p2 = grid_points.get((r,c+1))
-                    p3 = grid_points.get((r+1,c))
-                    p4 = grid_points.get((r+1, c+1))
-
-                    if p1 and p2:
-                        gl.glVertex3f(*p1)
-                        gl.glVertex3f(*p2)
-                    if p1 and p3:
-                        gl.glVertex3f(*p1)
-                        gl.glVertex3f(*p3)
-                    # Also draw the last row and column lines
-                    if r == r_end -1 and p3 and p4:
-                        gl.glVertex3f(*p3)
-                        gl.glVertex3f(*p4)
-                    if c == c_end -1 and p2 and p4:
-                        gl.glVertex3f(*p2)
-                        gl.glVertex3f(*p4)
-
-            gl.glEnd()
-
-            gl.glLineWidth(1.0)
-            gl.glEnable(gl.GL_TEXTURE_2D)
-
-        gl.glDisableClientState(gl.GL_VERTEX_ARRAY)
-        gl.glDisableClientState(gl.GL_TEXTURE_COORD_ARRAY)
+        # Disable vertex attributes
+        gl.glDisableVertexAttribArray(self.position_loc)
+        gl.glDisableVertexAttribArray(self.tex_coord_loc)
 
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
         gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, 0)
 
-        gl.glDisable(gl.GL_TEXTURE_2D)
-        gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
+        gl.glUseProgram(0) # Deactivate shader
+        # Unbind textures and reset active texture unit
+        for i in range(len(self.textures)):
+            gl.glActiveTexture(gl.GL_TEXTURE0 + i)  # type: ignore[arg-type]
+            gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
+        gl.glActiveTexture(gl.GL_TEXTURE0) # Reset to default texture unit
+        gl.glDisable(gl.GL_TEXTURE_2D) # Disable texturing after using shaders
 
         gl.glDisable(gl.GL_POLYGON_OFFSET_FILL)
 
@@ -431,7 +347,6 @@ class Ocean(LargeSceneryObject):
 
     def draw(self):
         gl.glPushMatrix()
-
         gl.glEnable(gl.GL_POLYGON_OFFSET_FILL)
         gl.glPolygonOffset(1.0, 1.0)  # Push ocean away, ocean should lose ties with ground
 
