@@ -61,6 +61,7 @@ class Images(AssetBank):
         self.treeline_rock = self._load("treeline_rock.png")
         self.high_grass = self._load("high_grass.png")
         self.low_grass = self._load("low_grass.png")
+        self.sand = self._load("sand.png")
         self.ocean = self._load("ocean.png")
 
         self.cockpit = self._load("cockpit_base.png")
