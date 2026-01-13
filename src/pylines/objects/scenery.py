@@ -133,6 +133,7 @@ class Ground(LargeSceneryObject):
         )
         self.position_loc = gl.glGetAttribLocation(self.shader, "position")
         self.tex_coord_loc = gl.glGetAttribLocation(self.shader, "tex_coord")
+        self.sea_level_loc = gl.glGetUniformLocation(self.shader, "sea_level")
 
         self.vbo = None
         self.ebo = None
@@ -249,6 +250,9 @@ class Ground(LargeSceneryObject):
             gl.glBindTexture(gl.GL_TEXTURE_2D, texture_id)
             location = gl.glGetUniformLocation(self.shader, name)
             gl.glUniform1i(location, i)
+        
+        # Pass sea level to shader
+        gl.glUniform1f(self.sea_level_loc, self.heightmap.sea_level)
 
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.vbo)
         gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, self.ebo)

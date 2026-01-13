@@ -11,6 +11,9 @@ uniform sampler2D treeline_rock_texture;
 uniform sampler2D alpine_rock_texture;
 uniform sampler2D snow_texture;
 
+// Clip plane
+uniform float sea_level;
+
 // Altitude thresholds (metres)
 const float low_grass_level     = 30.0;
 const float high_grass_level    = 800.0;
@@ -22,6 +25,10 @@ const float snow_level          = 5500.0;
 const float blend_range = 50.0;
 
 void main() {
+    if (v_height < sea_level) {
+        discard;
+    }
+
     // Sample all textures
     vec4 sand          = texture2D(sand_texture, v_tex_coord);
     vec4 low_grass     = texture2D(low_grass_texture, v_tex_coord);

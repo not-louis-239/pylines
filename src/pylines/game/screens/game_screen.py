@@ -619,15 +619,6 @@ class GameScreen(State):
         gl.glTranslatef(-self.plane.pos.x, -camera_y, -self.plane.pos.z)
 
         self.sun.draw()
-
-        # Define a clip plane to prevent z-fighting between the ground and ocean
-        clip_plane = [0.0, 1.0, 0.0, -self.game.heightmap.sea_level]  # Clip everything below sea_level
-        gl.glClipPlane(gl.GL_CLIP_PLANE0, clip_plane)
-        gl.glEnable(gl.GL_CLIP_PLANE0)
-
         self.ground.draw()
-
-        gl.glDisable(gl.GL_CLIP_PLANE0)
-
         self.ocean.draw()
         self.draw_hud()
