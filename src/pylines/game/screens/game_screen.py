@@ -29,7 +29,7 @@ from pylines.core.utils import clamp, draw_needle, draw_text, draw_transparent_r
 from pylines.game.engine_sound import SoundManager
 from pylines.game.states import State
 from pylines.objects.objects import Plane, Runway
-from pylines.objects.scenery import Ground, Sky, Sun
+from pylines.objects.scenery import Ground, Sky, Sun, Ocean
 
 import pylines.core.debug as debug
 
@@ -56,15 +56,18 @@ class DialogMessage:
 
 class GameScreen(State):
     def __init__(self, game: Game) -> None:
+        assets = game.assets
+
         super().__init__(game)
         self._frame_count = 0
         self.landing_dialog_box = DialogMessage()  # Must be before Plane otherwise causes error
-        self.sound_manager = SoundManager(game.assets.sounds)
-        self.ground = Ground(game.assets.images.grass, game.heightmap)  # Pass the loaded image to Ground
-        self.plane = Plane(game.assets.sounds, self.landing_dialog_box, self.ground)
+        self.sound_manager = SoundManager(assets.sounds)
+        self.ocean = Ocean(assets.images.ocean)
+        self.ground = Ground(assets.images.grass, game.heightmap)  # Pass the loaded image to Ground
+        self.plane = Plane(assets.sounds, self.landing_dialog_box, self.ground)
         self.runway = Runway(x=0, y=0, z=0, width=50, length=1000)
         self.sky = Sky()
-        self.sun = Sun(game.assets.images.sun)
+        self.sun = Sun(assets.images.sun)
         self.time_of_day: str = "day"
         self.show_stall_warning: bool = False
         self.show_overspeed_warning: bool = False
@@ -74,7 +77,7 @@ class GameScreen(State):
         self.overspeed_channel = pg.mixer.Channel(4)
 
         # Font for text rendering
-        self.font = pg.font.Font(game.assets.fonts.monospaced, 36)
+        self.font = pg.font.Font(assets.fonts.monospaced, 36)
 
         # Graphics
         self.hud_tex = gl.glGenTextures(1)
@@ -659,6 +662,7 @@ class GameScreen(State):
         # END DEBUG
 
         self.sun.draw()
+        self.ocean.draw()
         self.ground.draw(self.plane.pos)
         self.runway.draw()
         self.draw_hud()

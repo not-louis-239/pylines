@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from pylines.objects.scenery import Ground
 
 class Entity:
-    """Mental basis for all in-game physical objects"""
+    """Base class for all in-game physical objects"""
 
     def __init__(self, x: float, y: float, z: float) -> None:
         self.pos: pg.Vector3 = pg.Vector3(x, y, z)

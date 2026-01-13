@@ -57,6 +57,8 @@ class Fonts(AssetBank):
 class Images(AssetBank):
     def __init__(self):
         self.grass = self._load("grass.png")
+        self.ocean = self._load("ocean.png")
+        
         self.cockpit = self._load("cockpit_base.png")
         self.compass = self._load("compass.png")
         self.speed_dial = self._load("speed_dial.png")

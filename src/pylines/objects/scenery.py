@@ -47,6 +47,10 @@ class LargeSceneryObject(SceneryObject):
         raise NotImplementedError
 
 class CelestialObject(SceneryObject):
+    """Reserved for objects that are so far away that
+    their position virtually does not change in the sky
+    based on location, such as the sun and moon."""
+
     def __init__(self, image_surface: Surface, direction: pg.Vector3, scale: float = 1.0):
         super().__init__(0, 0, 0)
         self.direction = direction.normalize()
@@ -400,7 +404,61 @@ class Sky(LargeSceneryObject):
         gl.glMatrixMode(gl.GL_MODELVIEW)
 
 class Ocean(LargeSceneryObject):
-    ...
+    def __init__(self, image_surface: Surface) -> None:
+        super().__init__(0, 0, 0)
+        self.texture_id = None
+        self._load_texture(image_surface)
+        self.texture_repeat_count = 25.0  # Low repeat count for object
+
+    def _load_texture(self, image_surface: Surface):
+        # OpenGL textures are Y-flipped compared to Pygame
+        image_surface = pg.transform.flip(image_surface, False, True)
+        image_data = pg.image.tostring(image_surface, "RGBA", True)  # Get pixel data
+
+        # Generate OpenGL texture ID
+        self.texture_id = gl.glGenTextures(1)
+        gl.glBindTexture(gl.GL_TEXTURE_2D, self.texture_id)
+
+        # Texture parameters
+        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR)
+        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR)
+        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_S, gl.GL_REPEAT) # Repeat texture horizontally
+        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_T, gl.GL_REPEAT) # Repeat texture vertically
+
+        # Upload texture data to OpenGL
+        gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGBA, image_surface.get_width(), image_surface.get_height(), 0, gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, image_data)
+        gl.glBindTexture(gl.GL_TEXTURE_2D, 0) # Unbind texture
+
+    def draw(self):
+        gl.glPushMatrix()
+
+        gl.glEnable(gl.GL_POLYGON_OFFSET_FILL)
+        gl.glPolygonOffset(1.0, 1.0) # Push ocean behind ground
+
+        gl.glEnable(gl.GL_TEXTURE_2D)
+        gl.glBindTexture(gl.GL_TEXTURE_2D, self.texture_id)
+        gl.glColor3f(1.0, 1.0, 1.0)
+
+        gl.glBegin(gl.GL_QUADS)
+        # Using vertices from LargeSceneryObject, re-ordered
+        gl.glTexCoord2f(0, 0)
+        gl.glVertex3f(-WORLD_SIZE, 0, -WORLD_SIZE)
+
+        gl.glTexCoord2f(self.texture_repeat_count, 0)
+        gl.glVertex3f(WORLD_SIZE, 0, -WORLD_SIZE)
+
+        gl.glTexCoord2f(self.texture_repeat_count, self.texture_repeat_count)
+        gl.glVertex3f(WORLD_SIZE, 0, WORLD_SIZE)
+
+        gl.glTexCoord2f(0, self.texture_repeat_count)
+        gl.glVertex3f(-WORLD_SIZE, 0, WORLD_SIZE)
+        gl.glEnd()
+
+        gl.glDisable(gl.GL_TEXTURE_2D)
+        gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
+
+        gl.glDisable(gl.GL_POLYGON_OFFSET_FILL)
+        gl.glPopMatrix()
 
 # TODO: Expand building objects once heightmap implementation is done
 class Building(SceneryObject): ...

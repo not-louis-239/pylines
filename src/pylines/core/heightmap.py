@@ -15,10 +15,11 @@ from .utils import map_value
 from .constants import EPSILON, WORLD_SIZE
 
 class Heightmap:
-    def __init__(self, height_array: np.ndarray, min_h: float, max_h: float, diagonal_split: str = 'AD') -> None:
+    def __init__(self, height_array: np.ndarray, min_h: float, max_h: float, sea_level: float, diagonal_split: str = 'AD') -> None:
         self.h_array = height_array
         self.min_h = min_h
         self.max_h = max_h
+        self.sea_level = sea_level
         self.diagonal_split = diagonal_split
 
         if self.diagonal_split not in ['AD', 'BC']:
