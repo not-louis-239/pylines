@@ -62,7 +62,7 @@ class GameScreen(State):
         self._frame_count = 0
         self.landing_dialog_box = DialogMessage()  # Must be before Plane otherwise causes error
         self.sound_manager = SoundManager(assets.sounds)
-        self.ocean = Ocean(assets.images.ocean)
+        self.ocean = Ocean(assets.images.ocean, game.heightmap.sea_level)
         self.ground = Ground(assets.images.grass, game.heightmap)  # Pass the loaded image to Ground
         self.plane = Plane(assets.sounds, self.landing_dialog_box, self.ground)
         self.sky = Sky()
@@ -660,6 +660,15 @@ class GameScreen(State):
         # END DEBUG
 
         self.sun.draw()
-        self.ocean.draw()
+
+        # Define a clip plane to prevent z-fighting between the ground and ocean
+        clip_plane = [0.0, 1.0, 0.0, 0.0]  # Clip everything below y=0
+        gl.glClipPlane(gl.GL_CLIP_PLANE0, clip_plane)
+        gl.glEnable(gl.GL_CLIP_PLANE0)
+
         self.ground.draw(self.plane.pos)
+
+        gl.glDisable(gl.GL_CLIP_PLANE0)
+
+        self.ocean.draw()
         self.draw_hud()

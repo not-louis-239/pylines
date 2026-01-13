@@ -20,7 +20,7 @@ import numpy as np
 
 import pylines.core.debug as debug
 from pylines.core.constants import WORLD_SIZE, WN_H, WN_W
-from pylines.core.custom_types import Coord3, Surface
+from pylines.core.custom_types import Coord3, Surface, RealNumber
 from pylines.objects.objects import Entity
 
 if TYPE_CHECKING:
@@ -226,7 +226,7 @@ class Ground(LargeSceneryObject):
         gl.glPushMatrix()
 
         gl.glEnable(gl.GL_POLYGON_OFFSET_FILL)
-        gl.glPolygonOffset(-1.0, -1.0)
+        gl.glPolygonOffset(-1.0, -1.0)  # or else terrain segments z-fight among themselves
 
         gl.glEnable(gl.GL_TEXTURE_2D)
         gl.glBindTexture(gl.GL_TEXTURE_2D, self.texture_id)
@@ -404,8 +404,8 @@ class Sky(LargeSceneryObject):
         gl.glMatrixMode(gl.GL_MODELVIEW)
 
 class Ocean(LargeSceneryObject):
-    def __init__(self, image_surface: Surface) -> None:
-        super().__init__(0, 0, 0)
+    def __init__(self, image_surface: Surface, sea_level: RealNumber) -> None:
+        super().__init__(0, sea_level, 0)
         self.texture_id = None
         self._load_texture(image_surface)
         self.texture_repeat_count = 25.0  # Low repeat count for object
@@ -433,7 +433,7 @@ class Ocean(LargeSceneryObject):
         gl.glPushMatrix()
 
         gl.glEnable(gl.GL_POLYGON_OFFSET_FILL)
-        gl.glPolygonOffset(1.0, 1.0) # Push ocean behind ground
+        gl.glPolygonOffset(1.0, 1.0)  # Push ocean away, ocean should lose ties with ground
 
         gl.glEnable(gl.GL_TEXTURE_2D)
         gl.glBindTexture(gl.GL_TEXTURE_2D, self.texture_id)
