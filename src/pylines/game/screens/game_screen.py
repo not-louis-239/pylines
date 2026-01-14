@@ -129,7 +129,7 @@ class GameScreen(State):
         def height_to_colour(h: RealNumber):
             THRESHOLDS: dict[RealNumber, Colour] = {
                 5750: (207, 238, 255),
-                5300: (181, 184, 186),
+                5300: (131, 134, 136),
                 4000: (64, 64, 64),
                 2200: (110, 67, 41),
                 800: (35, 110, 35),
