@@ -20,6 +20,8 @@ import numpy as np
 
 from pylines.core.constants import WORLD_SIZE, WN_H, WN_W
 from pylines.core.custom_types import Coord3, Surface, RealNumber
+from pylines.core.time_manager import fetch_hour, terrain_brightness_from_hour
+
 from pylines.objects.objects import Entity
 
 from pylines.shaders.shader_manager import load_shader_script
@@ -134,6 +136,7 @@ class Ground(LargeSceneryObject):
         self.position_loc = gl.glGetAttribLocation(self.shader, "position")
         self.tex_coord_loc = gl.glGetAttribLocation(self.shader, "tex_coord")
         self.sea_level_loc = gl.glGetUniformLocation(self.shader, "sea_level")
+        self.brightness_loc = gl.glGetUniformLocation(self.shader, "u_brightness")
 
         self.vbo = None
         self.ebo = None
@@ -243,6 +246,9 @@ class Ground(LargeSceneryObject):
 
         gl.glEnable(gl.GL_TEXTURE_2D)  # Enable texturing before using shaders
         gl.glUseProgram(self.shader)  # Activate the shader program
+
+        brightness = terrain_brightness_from_hour(fetch_hour())
+        gl.glUniform1f(self.brightness_loc, brightness)
 
         # Set up textures for the shader
         for i, (name, texture_id) in enumerate(self.textures.items()):

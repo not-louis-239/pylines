@@ -1,8 +1,8 @@
 #version 120
 
 varying vec2 v_tex_coord;  // image coords
-varying float v_height;
-varying vec2 v_world_xz;
+varying float v_height;    // world altitude
+varying vec2 v_world_xz;   // world coords
 
 // Terrain textures
 uniform sampler2D sand_texture;
@@ -27,6 +27,9 @@ const float snow_level          = 5500.0;
 
 // Blend width
 const float blend_range = 20.0;  // metres
+
+// Time-based brightness
+uniform float u_brightness;
 
 void main() {
     if (v_height < sea_level) {
@@ -71,6 +74,9 @@ void main() {
     color = mix(color, treeline_rock, b_treeline_rock);
     color = mix(color, alpine_rock, b_alpine_rock);
     color = mix(color, snow, b_snow);
+
+    // Apply brightness multiplier
+    color.rgb *= u_brightness;
 
     gl_FragColor = color;
 }
