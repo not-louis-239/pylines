@@ -37,6 +37,7 @@ def _hex_to_rgb(hex_col: str) -> Colour:
     return (r, g, b)
 
 WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
 
 # Sky colours
 SKY_COLOUR_SCHEMES: dict[str, ColourScheme] = {

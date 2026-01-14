@@ -126,6 +126,33 @@ class GameScreen(State):
             inner_ai_rect.width//2
         )
 
+        def height_to_colour(h: RealNumber):
+            THRESHOLDS: dict[RealNumber, Colour] = {
+                5750: (207, 238, 255),
+                5300: (181, 184, 186),
+                4000: (64, 64, 64),
+                2200: (110, 67, 41),
+                800: (35, 110, 35),
+                150: (45, 170, 45),
+                0: (240, 240, 190),
+                -200: (0, 180, 240),
+            }
+
+            for th, col in THRESHOLDS.items():
+                if h > th:
+                    return col
+            return (0, 126, 199)
+
+        # Initialise minimap
+        WORLD_STEP = 2*C.WORLD_SIZE // C.MINIMAP_SIZE
+        self.minimap = pg.Surface((C.MINIMAP_SIZE, C.MINIMAP_SIZE))
+        px = pg.PixelArray(self.minimap)
+        heightmap = self.game.heightmap
+        for z_i, z in enumerate(range(-C.WORLD_SIZE, C.WORLD_SIZE, WORLD_STEP)):
+            for x_i, x in enumerate(range(-C.WORLD_SIZE, C.WORLD_SIZE, WORLD_STEP)):
+                px[x_i, z_i] = height_to_colour(heightmap.height_at(x, z))  # type: ignore[index]
+        del px
+
     def reset(self) -> None:
         self.plane.reset()
         self.sound_manager.stop()
@@ -348,7 +375,7 @@ class GameScreen(State):
         pg.draw.rect(hud_surface, (255, 255, 255), alt_rect)
         inner_alt_rect = pg.Rect(0, 0, alt_size[0]-4, alt_size[1]-4)
         inner_alt_rect.center = alt_centre
-        pg.draw.rect(hud_surface, (0, 0, 0), inner_alt_rect)
+        pg.draw.rect(hud_surface, cols.BLACK, inner_alt_rect)
         draw_text(
             hud_surface,
             (alt_centre[0], alt_centre[1]-15),
@@ -381,7 +408,7 @@ class GameScreen(State):
         pg.draw.rect(hud_surface, (255, 255, 255), loc_rect)
         inner_loc_rect = pg.Rect(0, 0, loc_size[0]-4, loc_size[1]-4)
         inner_loc_rect.center = loc_centre
-        pg.draw.rect(hud_surface, (0, 0, 0), inner_loc_rect)
+        pg.draw.rect(hud_surface, cols.BLACK, inner_loc_rect)
         draw_text(
             hud_surface,
             loc_centre,
@@ -400,7 +427,7 @@ class GameScreen(State):
         pg.draw.rect(hud_surface, (255, 255, 255), time_rect)
         inner_time_rect = pg.Rect(0, 0, time_size[0]-4, time_size[1]-4)
         inner_time_rect.center = time_centre
-        pg.draw.rect(hud_surface, (0, 0, 0), inner_time_rect)
+        pg.draw.rect(hud_surface, cols.BLACK, inner_time_rect)
 
         now = datetime.now().astimezone()
         offset_hours = int(cast(timedelta, now.utcoffset()).total_seconds() // 3600)
@@ -413,6 +440,25 @@ class GameScreen(State):
             18,
             self.fonts.monospaced
         )
+
+        # Minimap
+        mini_centre = (int(C.WN_W*0.1), int(C.WN_H*0.88))
+        outer_mini_size = C.MINIMAP_SIZE + 6
+        mini_rect = pg.Rect(0, 0, outer_mini_size, outer_mini_size)
+        mini_rect.center = mini_centre
+        pg.draw.rect(hud_surface, (51, 43, 37), mini_rect)
+        mini_top_left = (mini_centre[0]-(C.MINIMAP_SIZE)/2, mini_centre[1]-(C.MINIMAP_SIZE)/2)
+        hud_surface.blit(self.minimap, mini_top_left)
+
+        px, pz = self.plane.pos.x, self.plane.pos.z
+        cursor_coord = pg.Vector2(
+            mini_centre[0] + (C.MINIMAP_SIZE/2)*(px/C.WORLD_SIZE),
+            mini_centre[1] + (C.MINIMAP_SIZE/2)*(pz/C.WORLD_SIZE)
+        )
+
+        rotated_cursor = pg.transform.rotate(self.game.assets.images.minimap_cursor, -self.plane.rot.y)
+        cursor_rect = rotated_cursor.get_rect(center=cursor_coord)
+        hud_surface.blit(rotated_cursor, cursor_rect)
 
         # Throttle bar
         draw_text(hud_surface, (C.WN_W*0.86, C.WN_H*0.97), 'centre', 'centre', "Throttle", (25, 20, 18), 30, self.fonts.monospaced)
@@ -541,13 +587,13 @@ class GameScreen(State):
         # Cockpit warning lights
         warning_x = C.WN_W//2-145
         draw_text(hud_surface, (warning_x, C.WN_H*0.92), 'centre', 'centre', "STALL", (25, 20, 18), 20, self.fonts.monospaced)
-        warning_col = (255, 0, 0) if self.show_stall_warning else (0, 0, 0)
+        warning_col = (255, 0, 0) if self.show_stall_warning else cols.BLACK
         pg.draw.circle(hud_surface, (51, 43, 37), (warning_x, C.WN_H*0.96), 12)
         pg.draw.circle(hud_surface, (warning_col), (warning_x, C.WN_H*0.96), 10)
 
         warning_x = C.WN_W//2+145  # Overspeed
         draw_text(hud_surface, (warning_x, C.WN_H*0.92), 'centre', 'centre', "OVERSPEED", (25, 20, 18), 20, self.fonts.monospaced)
-        warning_col = (255, 0, 0) if self.show_overspeed_warning else (0, 0, 0)
+        warning_col = (255, 0, 0) if self.show_overspeed_warning else cols.BLACK
         pg.draw.circle(hud_surface, (51, 43, 37), (warning_x, C.WN_H*0.96), 12)
         pg.draw.circle(hud_surface, (warning_col), (warning_x, C.WN_H*0.96), 10)
 

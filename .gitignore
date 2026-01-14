@@ -1,11 +1,55 @@
+# Bytecode / cache
 __pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
 .venv/
-workflow/
+env/
+venv/
+ENV/
+
+# Data / temporary files
 data/
 tmp/
+*.log
+*.sqlite3
+*.db
 
-todo.txt
+# Personal workflow / notes
+workflow/
+todo.md
+*.bak
+*.swp
+
+# IDE / editor files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Config files
 GEMINI.md
 .geminiignore
-.DS_Store
 .pylintrc
+*.env
+
+# OS / system files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Game / build artifacts
+*.pyc
+*.pyo
+*.pyd
+build/
+dist/
+*.egg-info/
+*.exe
+*.app
+*.dll
+*.so
+*.dylib
+*.obj
+*.o

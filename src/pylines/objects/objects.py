@@ -69,7 +69,7 @@ class Plane(Entity):
         return self.aoa > self.model.stall_angle
 
     def reset(self) -> None:
-        STARTING_POS = (0, -3000)
+        STARTING_POS = (200, -3_000)
         STARTING_YAW = 270
 
         sx, sz = STARTING_POS
