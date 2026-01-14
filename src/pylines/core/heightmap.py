@@ -24,7 +24,6 @@ if TYPE_CHECKING:
 class Heightmap:
     def __init__(self, map_data: MapData, diagonal_split: Literal['AD', 'BC'] = 'AD') -> None:
         self.height_array: np.ndarray = map_data.height_array
-        self.noise_array: np.ndarray = map_data.noise_array
 
         self.min_h = map_data.MIN_H
         self.max_h = map_data.MAX_H
@@ -48,8 +47,8 @@ class Heightmap:
         image_z = map_value(z, -WORLD_SIZE, WORLD_SIZE, 0, self.h)
         return image_x, image_z
 
-    def height_at(self, x: float, z: float, add_tex_noise: bool = False) -> float:
-        # Noise only should be used to affect texture, not physical height
+    def height_at(self, x: float, z: float) -> float:
+        """Returns the height at world coordinates x and z, in metres."""
 
         ix, iz = self._world_to_map(x, z)
         ix = np.clip(ix, 0, self.w - (1+EPSILON))
@@ -98,36 +97,5 @@ class Heightmap:
                 w = fx + fy - 1
                 interp = u * h10 + v * h01 + w * h11
 
-        final_value = map_value(interp, 0, self.max_val, self.min_h, self.max_h)
-
-        if add_tex_noise:
-            # Doesn't need triangle interpolation as it only affects
-            # textures, not physics. If height_at is called with
-            # add_tex_noise enabled, it is not supposed to be used
-            # for physical height, only visual effects such as
-            # altitude-based textures.
-
-            noise_ix, noise_iz = self._world_to_map(x, z)
-            noise_ix = np.clip(noise_ix, 0, self.w - (1 + EPSILON))
-            noise_iz = np.clip(noise_iz, 0, self.h - (1 + EPSILON))
-
-            noise_x1, noise_y1 = int(noise_ix), int(noise_iz)
-            noise_x2, noise_y2 = noise_x1 + 1, noise_y1 + 1
-
-            noise_fx, noise_fy = noise_ix - noise_x1, noise_iz - noise_y1
-
-            n00 = self.noise_array[noise_y1, noise_x1]
-            n10 = self.noise_array[noise_y1, noise_x2]
-            n01 = self.noise_array[noise_y2, noise_x1]
-            n11 = self.noise_array[noise_y2, noise_x2]
-
-            # Bilinear interpolation
-            interp_noise = (n00 * (1 - noise_fx) * (1 - noise_fy) +
-                            n10 * noise_fx * (1 - noise_fy) +
-                            n01 * (1 - noise_fx) * noise_fy +
-                            n11 * noise_fx * noise_fy)
-
-            # The noise is mapped from [0, 65535] for a 16-bit image, to [-1, 1]
-            final_value += map_value(interp_noise, 0, 65535, -1, 1)
-
-        return final_value
+        final_height = map_value(interp, 0, self.max_val, self.min_h, self.max_h)
+        return final_height
