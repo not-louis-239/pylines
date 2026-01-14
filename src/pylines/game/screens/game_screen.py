@@ -17,7 +17,6 @@ from __future__ import annotations
 import math
 from typing import TYPE_CHECKING, cast
 from dataclasses import dataclass
-from math import sin, cos
 
 from OpenGL import GL as gl, GLU as glu
 import pygame as pg
@@ -25,13 +24,15 @@ import pygame as pg
 import pylines.core.constants as C
 import pylines.core.colours as cols
 from pylines.core.custom_types import AColour, Colour, RealNumber, EventList
-from pylines.core.utils import clamp, draw_needle, draw_text, draw_transparent_rect, metres_to_ft, _prettyvec
+from pylines.core.utils import clamp, draw_needle, draw_text, draw_transparent_rect
 from pylines.game.engine_sound import SoundManager
 from pylines.game.states import State
-from pylines.objects.objects import Plane, Runway
+from pylines.objects.objects import Plane
 from pylines.objects.scenery import Ground, Sky, Sun, Ocean
 
-import pylines.core.debug as debug
+from pylines.core.time_manager import (
+    fetch_hour, sky_colour_from_hour
+)
 
 if TYPE_CHECKING:
     from pylines.core.custom_types import ScancodeWrapper, Surface
@@ -78,7 +79,6 @@ class GameScreen(State):
         self.plane = Plane(assets.sounds, self.landing_dialog_box, self.ground)
         self.sky = Sky()
         self.sun = Sun(assets.images.sun)
-        self.time_of_day: str = "day"
         self.show_stall_warning: bool = False
         self.show_overspeed_warning: bool = False
         self.time_elapsed: int = 0  # milliseconds
@@ -598,7 +598,7 @@ class GameScreen(State):
         gl.glDisable(gl.GL_TEXTURE_2D)
 
     def draw(self, wn: Surface):
-        colour_scheme = cols.SKY_COLOUR_SCHEMES[self.time_of_day]
+        colour_scheme = sky_colour_from_hour(fetch_hour())
 
         gl.glClear(cast(int, gl.GL_COLOR_BUFFER_BIT) | cast(int, gl.GL_DEPTH_BUFFER_BIT))
 

@@ -18,10 +18,10 @@ import numpy as np
 import ctypes
 import numpy as np
 
-import pylines.core.debug as debug
 from pylines.core.constants import WORLD_SIZE, WN_H, WN_W
 from pylines.core.custom_types import Coord3, Surface, RealNumber
 from pylines.objects.objects import Entity
+
 from pylines.shaders.shader_manager import load_shader_script
 
 if TYPE_CHECKING:

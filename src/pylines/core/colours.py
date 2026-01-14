@@ -23,6 +23,8 @@ class ColourScheme:
     mid: Colour
     low: Colour
 
+# TODO: This function is messy and should be deprecated in the near future.
+# In the meantime, it should not be used for future applications.
 @overload
 def interpolate_cols(col1: Colour, col2: Colour, coeff: float) -> Colour: ...
 @overload
@@ -59,6 +61,9 @@ def interpolate_cols(col1: Colour | AColour, col2: Colour | AColour, coeff: floa
         return (r, g, b, alpha)
 
     raise TypeError("colours must be of same type")
+
+def lerp_colour(c1: Colour, c2: Colour, t: float) -> Colour:
+    return tuple(int(c1[i] + (c2[i] - c1[i]) * t) for i in range(3))  # type: ignore[arg-type]
 
 def _hex_to_rgb(hex_col: str) -> Colour:
     """Internal function to convert HEX colours to RGB."""
