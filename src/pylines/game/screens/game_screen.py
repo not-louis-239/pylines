@@ -17,6 +17,7 @@ from __future__ import annotations
 import math
 from typing import TYPE_CHECKING, cast
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 
 from OpenGL import GL as gl, GLU as glu
 import pygame as pg
@@ -381,7 +382,6 @@ class GameScreen(State):
         inner_loc_rect = pg.Rect(0, 0, loc_size[0]-4, loc_size[1]-4)
         inner_loc_rect.center = loc_centre
         pg.draw.rect(hud_surface, (0, 0, 0), inner_loc_rect)
-
         draw_text(
             hud_surface,
             loc_centre,
@@ -389,6 +389,28 @@ class GameScreen(State):
             f"({self.plane.pos.x:,.0f}m, {self.plane.pos.z:,.0f}m)",
             (255, 255, 255),
             22,
+            self.fonts.monospaced
+        )
+
+        # Time readout
+        time_centre = (C.WN_W//2 - 130, int(C.WN_H*0.81))
+        time_size = 100, 30
+        time_rect = pg.Rect(0, 0, *time_size)
+        time_rect.center = time_centre
+        pg.draw.rect(hud_surface, (255, 255, 255), time_rect)
+        inner_time_rect = pg.Rect(0, 0, time_size[0]-4, time_size[1]-4)
+        inner_time_rect.center = time_centre
+        pg.draw.rect(hud_surface, (0, 0, 0), inner_time_rect)
+
+        now = datetime.now().astimezone()
+        offset_hours = int(cast(timedelta, now.utcoffset()).total_seconds() // 3600)
+        draw_text(
+            hud_surface,
+            time_centre,
+            'centre', 'centre',
+            f"{now.hour:02d}:{now.minute:02d} ({offset_hours:+d})",
+            (255, 255, 255),
+            18,
             self.fonts.monospaced
         )
 
