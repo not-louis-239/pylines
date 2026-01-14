@@ -70,6 +70,7 @@ class GameScreen(State):
             "treeline_rock_texture": assets.images.treeline_rock,
             "alpine_rock_texture": assets.images.alpine_rock,
             "snow_texture": assets.images.snow,
+            "noise": assets.map.noise,
         }
         self.ocean = Ocean(assets.images.ocean, game.heightmap.sea_level)
         self.ground = Ground(ground_textures, game.heightmap)  # Pass the loaded image to Ground

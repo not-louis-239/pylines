@@ -130,8 +130,9 @@ class MapData(AssetBank):
 
         img_path = ROOT_DIR / "assets/map/heightmap.png"
         img = Image.open(img_path)
-
         self.height_array = np.array(img, dtype=np.float32)
+
+        self.noise = pg.image.load(ROOT_DIR / "assets" / "map" / "noise.png").convert_alpha()
 
     def _load(self, name: str) -> Path:
         return ROOT_DIR / "assets" / "map" / name

@@ -10,23 +10,31 @@
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Literal
+
 import numpy as np
 from .utils import map_value
 from .constants import EPSILON, WORLD_SIZE
 
+if TYPE_CHECKING:
+    from .asset_manager import MapData
+
 class Heightmap:
-    def __init__(self, height_array: np.ndarray, min_h: float, max_h: float, sea_level: float, diagonal_split: str = 'AD') -> None:
-        self.h_array = height_array
-        self.min_h = min_h
-        self.max_h = max_h
-        self.sea_level = sea_level
+    def __init__(self, map_data: MapData, diagonal_split: Literal['AD', 'BC'] = 'AD') -> None:
+        self.height_array: np.ndarray = map_data.height_array
+
+        self.min_h = map_data.MIN_H
+        self.max_h = map_data.MAX_H
+        self.sea_level = map_data.SEA_LEVEL
         self.diagonal_split = diagonal_split
 
         if self.diagonal_split not in ['AD', 'BC']:
             raise ValueError("diagonal_split must be either 'AD' or 'BC'")
 
-        self.h, self.w = height_array.shape
-        self.max_val = np.max(height_array)
+        self.h, self.w = self.height_array.shape
+        self.max_val = np.max(self.height_array)
 
         if self.max_val <= 0:
             raise ValueError("Heightmap is empty or invalid")
@@ -40,8 +48,9 @@ class Heightmap:
         return image_x, image_z
 
     def height_at(self, x: float, z: float) -> float:
-        ix, iz = self._world_to_map(x, z)
+        """Returns the height at world coordinates x and z, in metres."""
 
+        ix, iz = self._world_to_map(x, z)
         ix = np.clip(ix, 0, self.w - (1+EPSILON))
         iz = np.clip(iz, 0, self.h - (1+EPSILON))
 
@@ -50,10 +59,10 @@ class Heightmap:
 
         fx, fy = ix - x1, iz - y1
 
-        h00 = self.h_array[y1, x1] # A
-        h10 = self.h_array[y1, x2] # B
-        h01 = self.h_array[y2, x1] # C
-        h11 = self.h_array[y2, x2] # D
+        h00 = self.height_array[y1, x1] # A
+        h10 = self.height_array[y1, x2] # B
+        h01 = self.height_array[y2, x1] # C
+        h11 = self.height_array[y2, x2] # D
 
         if self.diagonal_split == 'AD':
             # Diagonal AD splits the quad into triangles ABD and ACD
@@ -88,4 +97,5 @@ class Heightmap:
                 w = fx + fy - 1
                 interp = u * h10 + v * h01 + w * h11
 
-        return map_value(interp, 0, self.max_val, self.min_h, self.max_h)
+        final_height = map_value(interp, 0, self.max_val, self.min_h, self.max_h)
+        return final_height

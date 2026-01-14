@@ -250,7 +250,12 @@ class Ground(LargeSceneryObject):
             gl.glBindTexture(gl.GL_TEXTURE_2D, texture_id)
             location = gl.glGetUniformLocation(self.shader, name)
             gl.glUniform1i(location, i)
-        
+
+        # Add greyscale noise texture
+        gl.glActiveTexture(gl.GL_TEXTURE6)
+        gl.glBindTexture(gl.GL_TEXTURE_2D, self.textures["noise"])
+        gl.glUniform1i(gl.glGetUniformLocation(self.shader, "noise_texture"), 6)
+
         # Pass sea level to shader
         gl.glUniform1f(self.sea_level_loc, self.heightmap.sea_level)
 
