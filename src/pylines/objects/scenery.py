@@ -362,13 +362,15 @@ class Ocean(LargeSceneryObject):
         gl.glBindTexture(gl.GL_TEXTURE_2D, 0) # Unbind texture
 
     def draw(self):
+        brightness = terrain_brightness_from_hour(fetch_hour())
+
         gl.glPushMatrix()
         gl.glEnable(gl.GL_POLYGON_OFFSET_FILL)
         gl.glPolygonOffset(1.0, 1.0)  # Push ocean away, ocean should lose ties with ground
 
         gl.glEnable(gl.GL_TEXTURE_2D)
         gl.glBindTexture(gl.GL_TEXTURE_2D, self.texture_id)
-        gl.glColor3f(1.0, 1.0, 1.0)
+        gl.glColor3f(brightness, brightness, brightness)
 
         gl.glBegin(gl.GL_QUADS)
         # Using vertices from LargeSceneryObject, re-ordered
