@@ -11,9 +11,9 @@ This is a lightweight, open-source flight simulator made in Python with Pygame a
 
 * Over 39,000 km² of land to fly over, with vast mountain ranges and rivers.
 * Time-based sky colouring and terrain darkening.
+* Sun and moon that move based on time.
 * A simplified Cessna 172 flight model and cockpit GUI.
 * Landing feedback and (currently janky) crash mechanics.
-* A stationary sun in the sky.
 * Overspeed damage if you don't fly carefully.
 
 ## Project Status
