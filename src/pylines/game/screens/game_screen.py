@@ -126,6 +126,34 @@ class GameScreen(State):
             inner_ai_rect.width//2
         )
 
+        def height_to_colour(h: RealNumber):
+            THRESHOLDS: dict[RealNumber, Colour] = {
+                5750: (207, 238, 255),
+                5300: (181, 184, 186),
+                4000: (64, 64, 64),
+                2200: (110, 67, 41),
+                800: (35, 110, 35),
+                150: (45, 170, 45),
+                0: (240, 240, 190),
+                -200: (0, 180, 240),
+            }
+
+            for th, col in THRESHOLDS.items():
+                if h > th:
+                    return col
+            return (0, 126, 199)
+
+        # Initialise minimap
+        MINIMAP_SIZE = 160
+        WORLD_STEP = 2*C.WORLD_SIZE // MINIMAP_SIZE
+        self.minimap = pg.Surface((MINIMAP_SIZE, MINIMAP_SIZE))
+        px = pg.PixelArray(self.minimap)
+        heightmap = self.game.heightmap
+        for z_i, z in enumerate(range(-C.WORLD_SIZE, C.WORLD_SIZE, WORLD_STEP)):
+            for x_i, x in enumerate(range(-C.WORLD_SIZE, C.WORLD_SIZE, WORLD_STEP)):
+                px[x_i, z_i] = height_to_colour(heightmap.height_at(x, z))  # type: ignore[index]
+        del px
+
     def reset(self) -> None:
         self.plane.reset()
         self.sound_manager.stop()
@@ -413,6 +441,15 @@ class GameScreen(State):
             18,
             self.fonts.monospaced
         )
+
+        # Square minimap
+        mini_centre = (int(C.WN_W*0.1), int(C.WN_H*0.88))
+        mini_size = 164
+        mini_rect = pg.Rect(0, 0, mini_size, mini_size)
+        mini_rect.center = mini_centre
+        pg.draw.rect(hud_surface, (51, 43, 37), mini_rect)
+        mini_top_left = (mini_centre[0]-(mini_size-4)/2, mini_centre[1]-(mini_size-4)/2)
+        hud_surface.blit(self.minimap, mini_top_left)
 
         # Throttle bar
         draw_text(hud_surface, (C.WN_W*0.86, C.WN_H*0.97), 'centre', 'centre', "Throttle", (25, 20, 18), 30, self.fonts.monospaced)
