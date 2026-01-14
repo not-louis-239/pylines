@@ -28,7 +28,7 @@ from pylines.core.utils import clamp, draw_needle, draw_text, draw_transparent_r
 from pylines.game.engine_sound import SoundManager
 from pylines.game.states import State
 from pylines.objects.objects import Plane
-from pylines.objects.scenery import Ground, Sky, Sun, Ocean
+from pylines.objects.scenery import Ground, Ocean, Sky, Sun, Moon
 
 from pylines.core.time_manager import (
     fetch_hour, sky_colour_from_hour
@@ -79,6 +79,7 @@ class GameScreen(State):
         self.plane = Plane(assets.sounds, self.landing_dialog_box, self.ground)
         self.sky = Sky()
         self.sun = Sun(assets.images.sun)
+        self.moon = Moon(assets.images.moon)
         self.show_stall_warning: bool = False
         self.show_overspeed_warning: bool = False
         self.time_elapsed: int = 0  # milliseconds
@@ -136,6 +137,9 @@ class GameScreen(State):
         self._frame_count += 1
         self.time_elapsed += dt
         self.landing_dialog_box.update(dt)
+
+        self.sun.update()
+        self.moon.update()
 
         if self.plane.crashed:
             self.landing_dialog_box.reset()
@@ -620,6 +624,8 @@ class GameScreen(State):
         gl.glTranslatef(-self.plane.pos.x, -camera_y, -self.plane.pos.z)
 
         self.sun.draw()
+        self.moon.draw()
+
         self.ground.draw()
         self.ocean.draw()
         self.draw_hud()

@@ -16,9 +16,10 @@ from OpenGL import GL as gl, GLU as glu
 import pygame as pg
 import numpy as np
 import ctypes
-import numpy as np
+import math
+from math import sin, cos
 
-from pylines.core.constants import WORLD_SIZE, WN_H, WN_W
+from pylines.core.constants import WORLD_SIZE, WN_H, WN_W, EPSILON
 from pylines.core.custom_types import Coord3, Surface, RealNumber
 from pylines.core.time_manager import fetch_hour, terrain_brightness_from_hour
 
@@ -56,7 +57,7 @@ class CelestialObject(SceneryObject):
 
     def __init__(self, image_surface: Surface, direction: pg.Vector3, scale: float = 1.0):
         super().__init__(0, 0, 0)
-        self.direction = direction.normalize()
+        self.direction = pg.Vector3(0, 0, -1) if direction.length() < EPSILON else direction.normalize()  # guard against zero length
         self.scale = scale
         self.texture_id = None
         self._load_texture(image_surface)
@@ -394,11 +395,49 @@ class Ocean(LargeSceneryObject):
 class Building(SceneryObject): ...
 
 class Sun(CelestialObject):
-    def __init__(self, image_surface: Surface):
-        direction = pg.Vector3(0.5, 0.5, -1)
-        super().__init__(image_surface, direction, scale=0.5)
+    def __init__(self, image_surface: pg.Surface):
+        super().__init__(image_surface, pg.Vector3(), scale=0.5)
+
+    def set_direction(self, hour: float) -> None:
+        """Set Sun direction based on hour (0-24).
+        0 = directly underneath, 12 = directly overhead
+        Sun rises in the east and sets in the west."""
+
+        pi = math.pi
+
+        azimuth = (-pi/2 + 2*pi * hour/24) % (2*pi)  # radians, with 0 = east
+        elevation = sin((hour - 6) * (2*pi / 24))   # -1 = directly underneath, 1 = directly overhead
+
+        h = (1 - elevation**2)**0.5
+        self.direction = pg.Vector3(
+            h * cos(azimuth),  # X
+            elevation,         # Y
+            -h * sin(azimuth)  # Z
+        )
+
+    def update(self):
+        self.set_direction(fetch_hour())
 
 class Moon(CelestialObject):
-    def __init__(self, image_surface: Surface):
-        direction = pg.Vector3(-0.5, -0.5, 1)
-        super().__init__(image_surface, direction, scale=0.5)
+    def __init__(self, image_surface: pg.Surface):
+        super().__init__(image_surface, pg.Vector3(), scale=0.5)
+
+    def set_direction(self, hour: float) -> None:
+        """Set Moon direction based on hour (0-24).
+        Moon is opposite Sun."""
+
+        pi = math.pi
+
+        azimuth = (-pi/2 + 2*pi * hour/24) % (2*pi)  # radians, with 0 = east
+        elevation = sin((hour - 6) * (2*pi / 24))   # -1 = directly underneath, 1 = directly overhead
+
+        h = (1 - elevation**2)**0.5
+        self.direction = pg.Vector3(
+            h * cos(azimuth),  # X
+            elevation,         # Y
+            -h * sin(azimuth)  # Z
+        )
+        self.direction *= -1
+
+    def update(self):
+        self.set_direction(fetch_hour())
