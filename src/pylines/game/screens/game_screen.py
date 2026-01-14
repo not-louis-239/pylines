@@ -449,10 +449,16 @@ class GameScreen(State):
         pg.draw.rect(hud_surface, (51, 43, 37), mini_rect)
         mini_top_left = (mini_centre[0]-(C.MINIMAP_SIZE)/2, mini_centre[1]-(C.MINIMAP_SIZE)/2)
         hud_surface.blit(self.minimap, mini_top_left)
+
         px, pz = self.plane.pos.x, self.plane.pos.z
-        cursor_coord = (mini_centre[0] + (C.MINIMAP_SIZE/2)*(px/C.WORLD_SIZE), mini_centre[1] + (C.MINIMAP_SIZE/2)*(pz/C.WORLD_SIZE))
-        cursor_rect = pg.Rect(cursor_coord[0]-1, cursor_coord[1]-1, 2, 2)
-        pg.draw.rect(hud_surface, (255, 255, 255), cursor_rect)
+        cursor_coord = pg.Vector2(
+            mini_centre[0] + (C.MINIMAP_SIZE/2)*(px/C.WORLD_SIZE),
+            mini_centre[1] + (C.MINIMAP_SIZE/2)*(pz/C.WORLD_SIZE)
+        )
+
+        rotated_cursor = pg.transform.rotate(self.game.assets.images.minimap_cursor, -self.plane.rot.y)
+        cursor_rect = rotated_cursor.get_rect(center=cursor_coord)
+        hud_surface.blit(rotated_cursor, cursor_rect)
 
         # Throttle bar
         draw_text(hud_surface, (C.WN_W*0.86, C.WN_H*0.97), 'centre', 'centre', "Throttle", (25, 20, 18), 30, self.fonts.monospaced)
