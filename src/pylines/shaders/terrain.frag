@@ -19,14 +19,14 @@ uniform sampler2D noise_texture;
 uniform float sea_level;
 
 // Altitude thresholds (metres)
-const float low_grass_level     = 150.0;
-const float high_grass_level    = 800.0;
+const float low_grass_level     =  150.0;
+const float high_grass_level    =  800.0;
 const float treeline_rock_level = 2200.0;
 const float alpine_rock_level   = 4000.0;
 const float snow_level          = 5500.0;
 
 // Blend width
-const float blend_range = 50.0;  // 50 metres
+const float blend_range = 20.0;  // metres
 
 void main() {
     if (v_height < sea_level) {
@@ -48,7 +48,7 @@ void main() {
     ).r;
     noise = noise * 2.0 - 1.0;  // map to [-1, 1]
 
-    float final_height = v_height * (1.0+(noise*0.2));  // multiplicative noise scales with altitude
+    float tex_height = v_height * (1.0+(noise*0.2));  // multiplicative noise scales with altitude
 
     // Warped terrain boundaries after noise
     float warped_low_grass     = low_grass_level     + noise * 40.0;
@@ -58,11 +58,11 @@ void main() {
     float warped_snow          = snow_level          + noise * 300.0;
 
     // Blend factors
-    float b_low_grass     = smoothstep(warped_low_grass     - blend_range, warped_low_grass     + blend_range, final_height);
-    float b_high_grass    = smoothstep(warped_high_grass    - blend_range, warped_high_grass    + blend_range, final_height);
-    float b_treeline_rock = smoothstep(warped_treeline_rock - blend_range, warped_treeline_rock + blend_range, final_height);
-    float b_alpine_rock   = smoothstep(warped_alpine_rock   - blend_range, warped_alpine_rock   + blend_range, final_height);
-    float b_snow          = smoothstep(warped_snow          - blend_range, warped_snow          + blend_range, final_height);
+    float b_low_grass     = smoothstep(warped_low_grass     - blend_range, warped_low_grass     + blend_range, tex_height);
+    float b_high_grass    = smoothstep(warped_high_grass    - blend_range, warped_high_grass    + blend_range, tex_height);
+    float b_treeline_rock = smoothstep(warped_treeline_rock - blend_range, warped_treeline_rock + blend_range, tex_height);
+    float b_alpine_rock   = smoothstep(warped_alpine_rock   - blend_range, warped_alpine_rock   + blend_range, tex_height);
+    float b_snow          = smoothstep(warped_snow          - blend_range, warped_snow          + blend_range, tex_height);
 
     // Sequential blending (bottom → top)
     vec4 color = sand;
