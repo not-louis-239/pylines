@@ -29,7 +29,7 @@ from pylines.objects.objects import Entity
 from pylines.shaders.shader_manager import load_shader_script
 
 if TYPE_CHECKING:
-    from pylines.core.heightmap import Heightmap
+    from pylines.core.environment import Environment
 
 class SceneryObject(Entity):
     def __init__(self, x, y, z):
@@ -123,7 +123,7 @@ class CelestialObject(SceneryObject):
         gl.glPopMatrix()
 
 class Ground(LargeSceneryObject):
-    def __init__(self, textures: dict[str, Surface], heightmap: Heightmap) -> None:
+    def __init__(self, textures: dict[str, Surface], env: Environment) -> None:
         super().__init__(0, 0, 0)
         self.textures = {
             name: self._load_texture(surface)
@@ -143,7 +143,7 @@ class Ground(LargeSceneryObject):
         self.vbo = None
         self.ebo = None
         self.grid_resolution = 400  # Number of vertices along one edge
-        self.heightmap = heightmap
+        self.env = env
         self.vertices: np.ndarray = self._create_vertex_grid()
         self.indices = self._create_index_buffer()
         self._setup_vbo()
@@ -164,7 +164,7 @@ class Ground(LargeSceneryObject):
             for j in range(self.grid_resolution + 1):
                 x = -WORLD_SIZE + j * step
                 z = -WORLD_SIZE + i * step
-                y = self.heightmap.height_at(x, z)
+                y = self.env.height_at(x, z)
 
                 # Calculate texture coordinates (u, v)
                 u = (x + WORLD_SIZE) * texture_scale_factor
@@ -265,7 +265,7 @@ class Ground(LargeSceneryObject):
         gl.glUniform1i(gl.glGetUniformLocation(self.shader, "noise_texture"), 6)
 
         # Pass sea level to shader
-        gl.glUniform1f(self.sea_level_loc, self.heightmap.sea_level)
+        gl.glUniform1f(self.sea_level_loc, self.env.sea_level)
 
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.vbo)
         gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, self.ebo)

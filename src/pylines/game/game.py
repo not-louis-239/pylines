@@ -21,10 +21,11 @@ import pygame as pg
 
 from pylines.core.asset_manager import Assets, MapData
 from pylines.core.data_manager import load_data, save_data
-from pylines.core.heightmap import Heightmap
+from pylines.core.environment import Environment
 from pylines.game.screens.game_screen import GameScreen
 from pylines.game.screens.settings import SettingsScreen
 from pylines.game.screens.title import TitleScreen
+from pylines.objects.objects import Runway
 
 if TYPE_CHECKING:
     from pylines.core.custom_types import EventList, ScancodeWrapper, Surface
@@ -44,13 +45,17 @@ class Game:
         # Set up keys and states
         self.prev_keys: ScancodeWrapper = pg.key.get_pressed()
 
-        # The MapData instance should be garbage collected
-        # after Game has derived its height, size and data
+        # The MapData instance should be garbage collected after Game
+        # has derived its height, size, data and other properties
         map_data: MapData = self.assets.map
-        self.heightmap: Heightmap = Heightmap(
+        self.env: Environment = Environment(
             map_data,
+            runways=[
+                Runway(200, 266.4, -3_000, w=50, l=1_500, heading=270)
+            ],
             diagonal_split='AD'
         )
+
         self.states: dict[Game.States, State] = {
             Game.States.TITLE: TitleScreen(self),
             Game.States.GAME: GameScreen(self),

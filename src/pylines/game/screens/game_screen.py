@@ -32,7 +32,7 @@ from pylines.core.time_manager import fetch_hour, sky_colour_from_hour
 from pylines.core.utils import clamp, draw_needle, draw_text, draw_transparent_rect
 from pylines.game.engine_sound import SoundManager
 from pylines.game.states import State
-from pylines.objects.objects import CrashReason, Plane
+from pylines.objects.objects import CrashReason, Plane, Runway
 from pylines.objects.scenery import Ground, Moon, Ocean, Sky, Sun
 
 if TYPE_CHECKING:
@@ -59,9 +59,10 @@ class DialogMessage:
 class GameScreen(State):
     def __init__(self, game: Game) -> None:
         assets = game.assets
-
         super().__init__(game)
+
         self._frame_count = 0
+        self.env = self.game.env
         self.landing_dialog_box = DialogMessage()  # Must be before Plane otherwise causes error
         self.sound_manager = SoundManager(assets.sounds)
 
@@ -74,10 +75,10 @@ class GameScreen(State):
             "snow_texture": assets.images.snow,
             "noise": assets.map.noise,
         }
-        self.ocean = Ocean(assets.images.ocean, game.heightmap.sea_level)
-        self.ground = Ground(ground_textures, game.heightmap)  # Pass the loaded image to Ground
+        self.ocean = Ocean(assets.images.ocean, game.env.sea_level)
+        self.ground = Ground(ground_textures, game.env)
 
-        self.plane = Plane(assets.sounds, self.landing_dialog_box, self.ground)
+        self.plane = Plane(assets.sounds, self.landing_dialog_box, game.env)
         self.sky = Sky()
         self.sun = Sun(assets.images.sun)
         self.moon = Moon(assets.images.moon)
@@ -147,10 +148,9 @@ class GameScreen(State):
         WORLD_STEP = 2*C.WORLD_SIZE // C.MINIMAP_SIZE
         self.minimap = pg.Surface((C.MINIMAP_SIZE, C.MINIMAP_SIZE))
         px = pg.PixelArray(self.minimap)
-        heightmap = self.game.heightmap
         for z_i, z in enumerate(range(-C.WORLD_SIZE, C.WORLD_SIZE, WORLD_STEP)):
             for x_i, x in enumerate(range(-C.WORLD_SIZE, C.WORLD_SIZE, WORLD_STEP)):
-                px[x_i, z_i] = height_to_colour(heightmap.height_at(x, z))  # type: ignore[index]
+                px[x_i, z_i] = height_to_colour(self.game.env.height_at(x, z))  # type: ignore[index]
         del px
 
     def reset(self) -> None:
@@ -702,11 +702,13 @@ class GameScreen(State):
         gl.glRotatef(self.plane.rot.y, 0, 1, 0) # 1. Yaw
 
         camera_y = self.plane.pos.y + C.CAMERA_RADIUS
-
         gl.glTranslatef(-self.plane.pos.x, -camera_y, -self.plane.pos.z)
 
         self.sun.draw()
         self.moon.draw()
+
+        for runway in self.env.runways:
+            runway.draw()
 
         self.ground.draw()
         self.ocean.draw()
