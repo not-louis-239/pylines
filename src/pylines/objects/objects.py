@@ -94,6 +94,9 @@ class Plane(Entity):
         self.damage_level = 0
 
     def process_landing(self):
+        if self.crashed:
+            return
+
         def good_landing():
             self.sounds.good_landing.play()
             self.dialog_box.set_message("Good landing!", (0, 255, 0))
@@ -119,8 +122,6 @@ class Plane(Entity):
         pitch, yaw, roll = self.rot
         roll = (roll+180)%360 - 180  # Normalise
 
-        # BUG: vs is getting zeroed before impact calculation
-
         # Safety parameters
         SAFE_VS = 1.7  # m/s
         MAX_OK_VS = 4
@@ -131,8 +132,6 @@ class Plane(Entity):
         vs = -self.vel.y
         roll_mag = abs(roll)
         pitch_mag = abs(pitch)
-
-        print(vs)
 
         # Normalised excess (0–1)
         vs_factor = max(0, ((vs - SAFE_VS) / (MAX_OK_VS - SAFE_VS))) ** 2
