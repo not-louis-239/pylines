@@ -32,6 +32,7 @@ from pylines.game.engine_sound import SoundManager
 from pylines.game.states import State
 from pylines.objects.objects import Plane
 from pylines.objects.scenery import Ground, Ocean, Sky, Sun, Moon
+from pylines.objects.objects import CrashReason
 
 from pylines.core.time_manager import (
     fetch_hour, sky_colour_from_hour
@@ -40,7 +41,6 @@ from pylines.core.time_manager import (
 if TYPE_CHECKING:
     from pylines.core.custom_types import ScancodeWrapper, Surface
     from pylines.game.game import Game
-    from pylines.objects.objects import CrashReason
 
 @dataclass
 class DialogMessage:
