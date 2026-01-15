@@ -292,7 +292,7 @@ class Plane(Entity):
             drag = -self.vel.normalize() * drag_mag
 
         if self.braking and self.on_ground:
-            drag *= 3
+            self.vel *= (1 - 0.4 * dt/1000)
 
         # Combine and integrate
         net_force = thrust + weight + lift + drag  # Force vector in Newtons
@@ -376,8 +376,8 @@ class Plane(Entity):
 class Runway(Entity):
     def __init__(self, x: float, y: float, z: float, w: float, l: float, heading: float = 0):
         super().__init__(x, y, z)
-        self.width = w
-        self.length = l
+        self.w = w
+        self.l = l
         self.heading = heading
 
     def draw(self):
@@ -393,8 +393,8 @@ class Runway(Entity):
         gl.glRotatef(self.heading, 0, 1, 0)
         gl.glColor3f(0.2*brightness, 0.2*brightness, 0.2*brightness)
 
-        half_width = self.width / 2
-        half_length = self.length / 2
+        half_width = self.w / 2
+        half_length = self.l / 2
 
         gl.glBegin(gl.GL_QUADS)
         gl.glVertex3f(-half_width, 0, -half_length)
