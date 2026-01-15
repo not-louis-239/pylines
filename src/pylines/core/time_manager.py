@@ -13,9 +13,11 @@
 # limitations under the License.
 
 from datetime import datetime
+
+from .colours import SKY_COLOUR_SCHEMES, ColourScheme, lerp_colour
 from .custom_types import RealNumber
 from .utils import map_value
-from .colours import SKY_COLOUR_SCHEMES, ColourScheme, lerp_colour
+
 
 def fetch_hour():
     """Returns a value between 0 and 24 to represent the current hour."""

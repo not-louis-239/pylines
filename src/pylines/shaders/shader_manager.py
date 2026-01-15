@@ -12,8 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import OpenGL.GL as gl
 from typing import cast
+
+import OpenGL.GL as gl
+
 
 def load_shader_script(vert_path: str, frag_path: str) -> int:
     with open(vert_path, "r", encoding="utf-8") as f:

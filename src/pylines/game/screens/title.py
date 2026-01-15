@@ -18,15 +18,16 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
-from OpenGL import GL as gl, GLU as glu
 import pygame as pg
+from OpenGL import GL as gl
+from OpenGL import GLU as glu
 
 import pylines.core.constants as C
 from pylines.core.colours import WHITE
-from pylines.core.custom_types import ScancodeWrapper, Surface, EventList
+from pylines.core.custom_types import EventList, ScancodeWrapper, Surface
 from pylines.core.utils import draw_text
-from pylines.objects.buttons import Button
 from pylines.game.states import State
+from pylines.objects.buttons import Button
 
 if TYPE_CHECKING:
     from pylines.game.game import Game

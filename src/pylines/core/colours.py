@@ -18,6 +18,7 @@ from dataclasses import dataclass
 
 from .custom_types import Colour
 
+
 @dataclass(frozen=True)
 class ColourScheme:
     high: Colour

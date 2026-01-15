@@ -12,14 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast, TYPE_CHECKING, Any, Callable
 from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, Callable, cast
 
 import pygame as pg
-from OpenGL import GL as gl, GLU as glu
+from OpenGL import GL as gl
+from OpenGL import GLU as glu
 
 import pylines.core.constants as C
-from pylines.core.custom_types import ScancodeWrapper, EventList, Surface
+from pylines.core.custom_types import EventList, ScancodeWrapper, Surface
 from pylines.core.utils import draw_text
 from pylines.game.states import State
 from pylines.objects.buttons import Button

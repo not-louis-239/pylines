@@ -14,21 +14,20 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
 from enum import Enum, auto
+from typing import TYPE_CHECKING
 
 import pygame as pg
 
 from pylines.core.asset_manager import Assets, MapData
-from pylines.core.data_manager import save_data, load_data
-from pylines.game.screens.game_screen import GameScreen
-
-from pylines.game.screens.title import TitleScreen
-from pylines.game.screens.settings import SettingsScreen
+from pylines.core.data_manager import load_data, save_data
 from pylines.core.heightmap import Heightmap
+from pylines.game.screens.game_screen import GameScreen
+from pylines.game.screens.settings import SettingsScreen
+from pylines.game.screens.title import TitleScreen
 
 if TYPE_CHECKING:
-    from pylines.core.custom_types import ScancodeWrapper, Surface, EventList
+    from pylines.core.custom_types import EventList, ScancodeWrapper, Surface
     from pylines.game.states import State
 
 class Game:

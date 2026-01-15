@@ -12,21 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING
-
-from OpenGL import GL as gl, GLU as glu
-import pygame as pg
-import numpy as np
 import ctypes
 import math
-from math import sin, cos
+from math import cos, sin
+from typing import TYPE_CHECKING
 
-from pylines.core.constants import WORLD_SIZE, WN_H, WN_W, EPSILON
-from pylines.core.custom_types import Coord3, Surface, RealNumber
+import numpy as np
+import pygame as pg
+from OpenGL import GL as gl
+from OpenGL import GLU as glu
+
+from pylines.core.constants import EPSILON, WN_H, WN_W, WORLD_SIZE
+from pylines.core.custom_types import Coord3, RealNumber, Surface
 from pylines.core.time_manager import fetch_hour, terrain_brightness_from_hour
-
 from pylines.objects.objects import Entity
-
 from pylines.shaders.shader_manager import load_shader_script
 
 if TYPE_CHECKING:

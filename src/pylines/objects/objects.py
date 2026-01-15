@@ -14,17 +14,24 @@
 
 """General purpose module in which to place simulation objects."""
 from __future__ import annotations
-from typing import TYPE_CHECKING
-from enum import Enum
-from math import asin, cos, degrees
-from math import radians as rad
-from math import sin
 
-from OpenGL import GL as gl
+from enum import Enum
+from math import asin, cos, degrees, sin
+from math import radians as rad
+from typing import TYPE_CHECKING
+
 import pygame as pg
+from OpenGL import GL as gl
 
 from pylines.core.asset_manager import Sounds
-from pylines.core.constants import (AIR_DENSITY, EPSILON, GRAVITY, PLANE_MODELS, TRAVEL_LIMIT, PlaneModel)
+from pylines.core.constants import (
+    AIR_DENSITY,
+    EPSILON,
+    GRAVITY,
+    PLANE_MODELS,
+    TRAVEL_LIMIT,
+    PlaneModel,
+)
 from pylines.core.custom_types import Surface
 from pylines.core.utils import clamp
 

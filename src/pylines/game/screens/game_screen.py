@@ -17,26 +17,23 @@
 from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING, cast
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from typing import TYPE_CHECKING, cast
 
-from OpenGL import GL as gl, GLU as glu
 import pygame as pg
+from OpenGL import GL as gl
+from OpenGL import GLU as glu
 
-import pylines.core.constants as C
 import pylines.core.colours as cols
-from pylines.core.custom_types import AColour, Colour, RealNumber, EventList
+import pylines.core.constants as C
+from pylines.core.custom_types import AColour, Colour, EventList, RealNumber
+from pylines.core.time_manager import fetch_hour, sky_colour_from_hour
 from pylines.core.utils import clamp, draw_needle, draw_text, draw_transparent_rect
 from pylines.game.engine_sound import SoundManager
 from pylines.game.states import State
-from pylines.objects.objects import Plane
-from pylines.objects.scenery import Ground, Ocean, Sky, Sun, Moon
-from pylines.objects.objects import CrashReason
-
-from pylines.core.time_manager import (
-    fetch_hour, sky_colour_from_hour
-)
+from pylines.objects.objects import CrashReason, Plane
+from pylines.objects.scenery import Ground, Moon, Ocean, Sky, Sun
 
 if TYPE_CHECKING:
     from pylines.core.custom_types import ScancodeWrapper, Surface

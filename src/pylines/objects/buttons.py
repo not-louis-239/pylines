@@ -16,8 +16,9 @@ from pathlib import Path
 
 import pygame as pg
 
-from pylines.core.custom_types import Colour, Coord2, Surface, RealNumber, EventList
+from pylines.core.custom_types import Colour, Coord2, EventList, RealNumber, Surface
 from pylines.core.utils import draw_text
+
 
 class Button:
     def __init__(self, pos: Coord2, w: RealNumber, h: RealNumber,

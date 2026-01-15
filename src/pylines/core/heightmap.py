@@ -17,8 +17,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
-from .utils import map_value
+
 from .constants import EPSILON, WORLD_SIZE
+from .utils import map_value
 
 if TYPE_CHECKING:
     from .asset_manager import MapData

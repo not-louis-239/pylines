@@ -15,9 +15,10 @@
 """Generic state management module that defines state types"""
 
 from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
-from pylines.core.custom_types import ScancodeWrapper, Surface, EventList
+from pylines.core.custom_types import EventList, ScancodeWrapper, Surface
 
 if TYPE_CHECKING:
     from pylines.game.game import Game

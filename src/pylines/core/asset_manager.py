@@ -20,16 +20,17 @@ asset_manager.py
     not be involved in computations or logic beyond asset file management.
 """
 
-from pathlib import Path
 import json
-from PIL import Image
-import numpy as np
+from pathlib import Path
 
+import numpy as np
 import pygame as pg
+from PIL import Image
 from pygame.transform import scale, scale_by
 
-from .paths import ROOT_DIR
 from .custom_types import Sound
+from .paths import ROOT_DIR
+
 
 class AssetBank:
     """Base class to store assets. Objects of this type should be

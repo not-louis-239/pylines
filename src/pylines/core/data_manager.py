@@ -15,11 +15,12 @@
 """Module for managing user data, e.g. unit settings."""
 
 from __future__ import annotations
+
 import json
-from typing import Self, TypeAlias, Literal, Mapping, Any
-from dataclasses import dataclass, asdict, fields
 from abc import ABC, abstractmethod
+from dataclasses import asdict, dataclass, fields
 from enum import Enum, auto
+from typing import Any, Literal, Mapping, Self, TypeAlias
 
 JSONValue: TypeAlias = (
     str | int | float | bool | None |
