@@ -102,3 +102,13 @@ class Heightmap:
 
         final_height = map_value(interp, 0, self.max_val, self.min_h, self.max_h)
         return final_height
+
+    def ground_height(self, x: float, z: float):
+        """Fancier version of height_at that accounts for sea level"""
+
+        # TODO: Move this function to GameScreen to account for runways when runways are added
+
+        return max(
+            self.height_at(x, z),
+            self.sea_level
+        )

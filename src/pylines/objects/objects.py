@@ -112,6 +112,11 @@ class Plane(Entity):
         if self.crashed:
             return
 
+        # Reset landing sounds
+        self.sounds.good_landing.stop()
+        self.sounds.hard_landing.stop()
+        self.sounds.crash.stop()
+
         def good_landing():
             self.sounds.good_landing.play()
             self.dialog_box.set_message("Good landing!", (0, 255, 0))
@@ -201,11 +206,32 @@ class Plane(Entity):
             -cos(rad(yaw)) * cos(rad(pitch)),
         ).normalize()
 
+        # Calculate terrain normal
+        terrain_normal = pg.Vector3(0, 1, 0)  # TODO: Use terrain normal to allow plane to roll on slopes
+        if self.on_ground:
+            px, _, pz = self.pos
+            # Sample surrounding points to calculate terrain normal
+            d = 0.5
+            h_px_pos = self.ground.heightmap.ground_height(px + d, pz)
+            h_px_neg = self.ground.heightmap.ground_height(px - d, pz)
+            h_pz_pos = self.ground.heightmap.ground_height(px, pz + d)
+            h_pz_neg = self.ground.heightmap.ground_height(px, pz - d)
+
+            # Using finite differences to find the gradient of the terrain
+            dx_grad = (h_px_pos - h_px_neg) / (2 * d)
+            dz_grad = (h_pz_pos - h_pz_neg) / (2 * d)
+
+            # The normal is perpendicular to the surface gradient
+            terrain_normal = pg.Vector3(-dx_grad, 1, -dz_grad).normalize()
+
         # Calculate thrust and weight
         thrust = pg.Vector3(0, 0, 0) if self.disabled else forward_vec * self.throttle_frac*self.model.max_throttle
         weight = pg.Vector3(0, -GRAVITY * self.model.mass, 0)
 
         # Calculate Angle of Attack (AoA)
+
+        # TODO: Improve AoA calculation
+        # AoA should not simply be the pitch difference between velocity and forward vectors
         airspeed = self.vel.length()
         if airspeed < EPSILON:
             self.aoa = 0
@@ -269,9 +295,14 @@ class Plane(Entity):
 
         # Combine and integrate
         net_force = thrust + weight + lift + drag  # Force vector in Newtons
+
         self.acc = net_force / self.model.mass
         self.vel += self.acc * dt/1000
         self.pos += self.vel * dt/1000
+
+        # Clamp height
+        ground_height = self.ground.heightmap.ground_height(self.pos.x, self.pos.z)
+        self.pos.y = max(self.pos.y, ground_height)
 
         # Clamp velocity to prevent NaNs
         if self.vel.length() > 1_000:
@@ -287,8 +318,9 @@ class Plane(Entity):
         YAW_FRICTION = 1.5
         self.rot_rate.y *= (1 - YAW_FRICTION * dt/1000)
 
+        # Extra roll from rudder
         factor = clamp(1 - abs(self.rot.z)/self.model.max_bank_angle, (0, 1))
-        effective_rudder_roll = self.model.rudder_roll_effect * factor  # extra roll from rudder
+        effective_rudder_roll = self.model.rudder_roll_effect * factor
         if self.on_ground:
             effective_rudder_roll *= 0.2  # mostly suppressed if on ground
         self.rot_rate.z += self.rudder * effective_rudder_roll * dt/1000
@@ -307,9 +339,6 @@ class Plane(Entity):
             STALL_DROOP_RATE = 5
             self.rot_rate.x += STALL_DROOP_RATE * dt/1000  # pitch down sharply
 
-        # TODO: Improve AoA calculation
-        # AoA should not simply be the pitch difference between velocity and forward vectors
-
         # Clamp/normalise rotation values
         self.rot.y %= 360
         self.rot.z %= 360
@@ -327,22 +356,16 @@ class Plane(Entity):
         # TODO: Add damage when not on runway (once runways are added)
 
         # Collision detection with ground
-
-        # FIXME: Stepping behaviour causes landing feedback / damage spam and eventual crash
-        # This is because the Plane's velocity is being hard-zeroed every time it lands,
-        # before gravity pulls it down again, causing a cycle
-        ground_height = max(self.ground.heightmap.height_at(self.pos.x, self.pos.z), self.ground.heightmap.sea_level)
-
-        # TODO: For now it's the ground height, but in future the plane shouldn't
-        # be able to go below sea level due to the ocean plane
+        ground_height = self.ground.heightmap.ground_height(self.pos.x, self.pos.z)
         if self.pos.y <= ground_height:
             # Only process landing if just touched down
             if not self.on_ground:
                 self.process_landing()
-            self.on_ground = True
 
+            self.on_ground = True
             self.pos.y = ground_height
-            if not self.crashed:  # If crashed, preserve vertical speed readout
+
+            if not self.crashed:
                 self.vel.y = 0
         else:
             self.on_ground = False
