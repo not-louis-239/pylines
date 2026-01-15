@@ -57,7 +57,7 @@ OUTER_RENDER_LIMIT = 100_000
 
 CAMERA_RADIUS: float = 1.8  # The camera is a sphere collider now
 
-# Physics
+# Plane models - these should eventually be moved to a separate file called `plane_models.py`
 PLANE_MODELS: dict[str, PlaneModel] = {
     "Cessna 172": PlaneModel(
         cl_max=1.2,

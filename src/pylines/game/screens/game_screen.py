@@ -40,6 +40,7 @@ from pylines.core.time_manager import (
 if TYPE_CHECKING:
     from pylines.core.custom_types import ScancodeWrapper, Surface
     from pylines.game.game import Game
+    from pylines.objects.objects import CrashReason
 
 @dataclass
 class DialogMessage:
@@ -181,7 +182,7 @@ class GameScreen(State):
         self.sound_manager.update(self.plane.throttle_frac)
         self.plane.update(dt)
 
-        self.show_stall_warning = self.plane.stalling
+        self.show_stall_warning = self.plane.stalled
         if self.show_stall_warning:
             if not self.stall_channel.get_busy():
                 self.stall_channel.play(self.sounds.stall_warning, loops=-1)
@@ -609,15 +610,29 @@ class GameScreen(State):
                 self.landing_dialog_box.msg, self.landing_dialog_box.colour, 30, self.fonts.monospaced
             )
 
-        # Show crash reason on screen
-        if self.plane.crash_reason == 'ground':
+        def show_crash_reason(reason: CrashReason) -> None:
+            if reason == CrashReason.TERRAIN:
+                ui_text = "COLLISION WITH TERRAIN"
+            elif reason == CrashReason.OCEAN:
+                ui_text = "COLLISION WITH OCEAN"
+            elif reason == CrashReason.BUILDING:
+                ui_text = "COLLISION WITH BUILDING"
+            elif reason == CrashReason.OBSTACLE:
+                ui_text = "COLLISION WITH OBSTACLE"
+            elif reason == CrashReason.RUNWAY:
+                ui_text = "IMPROPER LANDING ON RUNWAY"
+
             draw_transparent_rect(
                 self.hud_surface, (C.WN_W*0.28, C.WN_H*0.3), (C.WN_W*0.44, C.WN_H*0.3),
                 (0, 0, 0, 180), 2
             )
             draw_text(self.hud_surface, (C.WN_W//2, C.WN_H*0.35), 'centre', 'centre', 'CRASH', (255, 0, 0), 50, self.fonts.monospaced)
-            draw_text(self.hud_surface, (C.WN_W//2, C.WN_H*0.41), 'centre', 'centre', 'COLLISION WITH TERRAIN', (255, 255, 255), 30, self.fonts.monospaced)
+            draw_text(self.hud_surface, (C.WN_W//2, C.WN_H*0.41), 'centre', 'centre', ui_text, (255, 255, 255), 30, self.fonts.monospaced)
             draw_text(self.hud_surface, (C.WN_W//2, C.WN_H*0.54), 'centre', 'centre', 'Press P to return to menu.', (255, 255, 255), 30, self.fonts.monospaced)
+
+        # Show crash reason on screen
+        if self.plane.crash_reason is not None:
+            show_crash_reason(self.plane.crash_reason)
 
         # Upload HUD surface to OpenGL
         hud_data = pg.image.tostring(hud_surface, "RGBA", True)

@@ -15,6 +15,7 @@
 """General purpose module in which to place simulation objects."""
 from __future__ import annotations
 from typing import TYPE_CHECKING
+from enum import Enum
 from math import asin, cos, degrees
 from math import radians as rad
 from math import sin
@@ -30,6 +31,13 @@ from pylines.core.utils import clamp
 if TYPE_CHECKING:
     from pylines.game.screens.game_screen import DialogMessage
     from pylines.objects.scenery import Ground
+
+class CrashReason(Enum):
+    TERRAIN = "terrain"
+    BUILDING = "building"
+    OCEAN = "ocean"
+    OBSTACLE = "obstacle"
+    RUNWAY = "runway"  # reserved for fatal improper landing on runway, e.g. excessive sink rate, bad attitude
 
 class Entity:
     """Base class for all in-game physical objects"""
@@ -67,7 +75,7 @@ class Plane(Entity):
         )
 
     @property
-    def stalling(self) -> bool:
+    def stalled(self) -> bool:
         return self.aoa > self.model.stall_angle
 
     def reset(self) -> None:
@@ -90,7 +98,7 @@ class Plane(Entity):
 
         self.aoa = 0  # degrees
         self.on_ground = True
-        self.crash_reason = None
+        self.crash_reason: CrashReason | None = None
         self.damage_level = 0
 
     def process_landing(self):
@@ -103,12 +111,12 @@ class Plane(Entity):
 
         def hard_landing():
             self.sounds.hard_landing.play()
-            self.dialog_box.set_message("Whoops. Hard landing.", (255, 200, 0))
+            self.dialog_box.set_message("Hard landing...", (255, 200, 0))
 
         # TODO: Collision with buildings and ocean should be auto-lethal
         # (add once buildings and ocean are implemented)
 
-        def crash(*, damage_taken: float = 0.0, lethal: bool = False, reason: str = 'ground'):
+        def crash(*, damage_taken: float = 0.0, lethal: bool = False, reason: CrashReason):
             self.damage_level = 1 if lethal else min(self.damage_level + damage_taken, 1)
 
             if self.damage_level >= 1:
@@ -154,17 +162,23 @@ class Plane(Entity):
         MAX_SAFE_IMPACT = 0.25
         MAX_OK_IMPACT = 0.6
 
-        # Outcome mapping
+        # Determine reason
+        water_crash = self.pos.y < self.ground.heightmap.sea_level + EPSILON
+        if water_crash:
+            crash_reason = CrashReason.OCEAN
+        else:
+            crash_reason = CrashReason.TERRAIN
 
-        if vs > 12:  # ~2400 ft/min, extreme VS is auto-lethal
-            crash(lethal=True)
+        # Outcome mapping
+        if vs > 12 or water_crash:
+            crash(lethal=True, reason=crash_reason)
         else:
             if impact_severity <= MAX_SAFE_IMPACT:
                 good_landing()
             elif impact_severity <= MAX_OK_IMPACT:
                 hard_landing()
             else:
-                crash(damage_taken=impact_severity-MAX_OK_IMPACT)
+                crash(damage_taken=impact_severity-MAX_OK_IMPACT, reason=crash_reason)
 
     def update(self, dt: int):
         # Sideways movement - convert roll to yaw
@@ -197,7 +211,7 @@ class Plane(Entity):
             self.aoa = degrees(pitch_forward - pitch_velocity)
 
         # Calculate lift, using previously calculated airspeed
-        if not self.stalling:
+        if not self.stalled:
             cl = self.model.cl_max * self.aoa/self.model.stall_angle
         else:
             excess = self.aoa - self.model.stall_angle  # degrees
@@ -226,7 +240,7 @@ class Plane(Entity):
 
         # Calculate drag
         cd = self.model.cd_min + self.model.cd_slope*abs(self.aoa)  # Baseline
-        if self.stalling:
+        if self.stalled:
             excess = self.aoa - self.model.stall_angle  # degrees
             cd += excess**2 * 0.004  # Stall drag penalty
         if self.pos.y == 0:
@@ -282,7 +296,7 @@ class Plane(Entity):
         self.rot.z += self.rot_rate.z * dt/1000
 
         # Stalling
-        if self.stalling:
+        if self.stalled:
             STALL_DROOP_RATE = 5
             self.rot_rate.x += STALL_DROOP_RATE * dt/1000  # pitch down sharply
 
