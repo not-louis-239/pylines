@@ -21,7 +21,7 @@ import pygame as pg
 
 from pylines.core.asset_manager import Assets, MapData
 from pylines.core.data_manager import load_data, save_data
-from pylines.core.heightmap import Heightmap
+from pylines.core.environment import Environment
 from pylines.game.screens.game_screen import GameScreen
 from pylines.game.screens.settings import SettingsScreen
 from pylines.game.screens.title import TitleScreen
@@ -47,7 +47,7 @@ class Game:
         # The MapData instance should be garbage collected
         # after Game has derived its height, size and data
         map_data: MapData = self.assets.map
-        self.heightmap: Heightmap = Heightmap(
+        self.heightmap: Environment = Environment(
             map_data,
             diagonal_split='AD'
         )

@@ -23,8 +23,11 @@ from .utils import map_value
 
 if TYPE_CHECKING:
     from .asset_manager import MapData
+    from pylines.objects.objects import Runway
 
-class Heightmap:
+class Environment:
+    """A class to own terrain and buildings."""
+
     def __init__(self, map_data: MapData, diagonal_split: Literal['AD', 'BC'] = 'AD') -> None:
         self.height_array: np.ndarray = map_data.height_array
 

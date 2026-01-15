@@ -29,7 +29,7 @@ from pylines.objects.objects import Entity
 from pylines.shaders.shader_manager import load_shader_script
 
 if TYPE_CHECKING:
-    from pylines.core.heightmap import Heightmap
+    from pylines.core.environment import Environment
 
 class SceneryObject(Entity):
     def __init__(self, x, y, z):
@@ -123,7 +123,7 @@ class CelestialObject(SceneryObject):
         gl.glPopMatrix()
 
 class Ground(LargeSceneryObject):
-    def __init__(self, textures: dict[str, Surface], heightmap: Heightmap) -> None:
+    def __init__(self, textures: dict[str, Surface], heightmap: Environment) -> None:
         super().__init__(0, 0, 0)
         self.textures = {
             name: self._load_texture(surface)

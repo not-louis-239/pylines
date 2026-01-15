@@ -32,7 +32,7 @@ from pylines.core.time_manager import fetch_hour, sky_colour_from_hour
 from pylines.core.utils import clamp, draw_needle, draw_text, draw_transparent_rect
 from pylines.game.engine_sound import SoundManager
 from pylines.game.states import State
-from pylines.objects.objects import CrashReason, Plane
+from pylines.objects.objects import CrashReason, Plane, Runway
 from pylines.objects.scenery import Ground, Moon, Ocean, Sky, Sun
 
 if TYPE_CHECKING:
@@ -87,6 +87,11 @@ class GameScreen(State):
 
         self.stall_channel = pg.mixer.Channel(3)
         self.overspeed_channel = pg.mixer.Channel(4)
+
+        # Runways
+        self.runways: list[Runway] = [
+            Runway(200, 266.4, -3_000, w=50, l=1_500, heading=270)
+        ]
 
         # Font for text rendering
         self.font = pg.font.Font(assets.fonts.monospaced, 36)
@@ -707,6 +712,9 @@ class GameScreen(State):
 
         self.sun.draw()
         self.moon.draw()
+
+        for runway in self.runways:
+            runway.draw()
 
         self.ground.draw()
         self.ocean.draw()
