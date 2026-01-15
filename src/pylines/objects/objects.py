@@ -201,6 +201,23 @@ class Plane(Entity):
             -cos(rad(yaw)) * cos(rad(pitch)),
         ).normalize()
 
+        terrain_normal = pg.Vector3(0, 1, 0)
+        if self.on_ground:
+            px, _, pz = self.pos
+            # Sample surrounding points to calculate terrain normal
+            d = 0.5
+            h_px_pos = self.ground.heightmap.ground_height(px + d, pz)
+            h_px_neg = self.ground.heightmap.ground_height(px - d, pz)
+            h_pz_pos = self.ground.heightmap.ground_height(px, pz + d)
+            h_pz_neg = self.ground.heightmap.ground_height(px, pz - d)
+
+            # Using finite differences to find the gradient of the terrain
+            dx_grad = (h_px_pos - h_px_neg) / (2 * d)
+            dz_grad = (h_pz_pos - h_pz_neg) / (2 * d)
+
+            # The normal is perpendicular to the surface gradient
+            terrain_normal = pg.Vector3(-dx_grad, 1, -dz_grad).normalize()
+
         # Calculate thrust and weight
         thrust = pg.Vector3(0, 0, 0) if self.disabled else forward_vec * self.throttle_frac*self.model.max_throttle
         weight = pg.Vector3(0, -GRAVITY * self.model.mass, 0)
@@ -269,9 +286,19 @@ class Plane(Entity):
 
         # Combine and integrate
         net_force = thrust + weight + lift + drag  # Force vector in Newtons
+        if self.on_ground:
+            # If on the ground, project net force onto the terrain plane
+            # This allows for sliding on slopes
+            if net_force.dot(terrain_normal) < 0:
+                net_force -= net_force.dot(terrain_normal) * terrain_normal
+
         self.acc = net_force / self.model.mass
         self.vel += self.acc * dt/1000
         self.pos += self.vel * dt/1000
+
+        # Clamp height
+        ground_height = self.ground.heightmap.ground_height(self.pos.x, self.pos.z)
+        self.pos.y = max(self.pos.y, ground_height)
 
         # Clamp velocity to prevent NaNs
         if self.vel.length() > 1_000:
@@ -327,14 +354,6 @@ class Plane(Entity):
         # TODO: Add damage when not on runway (once runways are added)
 
         # Collision detection with ground
-
-        # FIXME: Stepping behaviour causes landing feedback / damage spam and eventual crash
-        # This is because the Plane's velocity is being hard-zeroed every time it lands,
-        # before gravity pulls it down again, causing a cycle
-        ground_height = max(self.ground.heightmap.height_at(self.pos.x, self.pos.z), self.ground.heightmap.sea_level)
-
-        # TODO: For now it's the ground height, but in future the plane shouldn't
-        # be able to go below sea level due to the ocean plane
         if self.pos.y <= ground_height:
             # Only process landing if just touched down
             if not self.on_ground:
@@ -342,8 +361,12 @@ class Plane(Entity):
             self.on_ground = True
 
             self.pos.y = ground_height
-            if not self.crashed:  # If crashed, preserve vertical speed readout
-                self.vel.y = 0
+            if not self.crashed:
+                # Project velocity onto the terrain plane to prevent sinking
+                # and to allow for sliding along the surface.
+                vel_dot_normal = self.vel.dot(terrain_normal)
+                if vel_dot_normal < 0:
+                    self.vel -= vel_dot_normal * terrain_normal
         else:
             self.on_ground = False
 
