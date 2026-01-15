@@ -90,7 +90,7 @@ class Images(AssetBank):
         self.speed_dial = scale(self.speed_dial, (250, 250))
         self.compass = scale(self.compass, (250, 250))
         self.logo = scale_by(self.logo, 0.2)
-        self.minimap_cursor = scale(self.minimap_cursor, (12, 12))
+        self.minimap_cursor = scale(self.minimap_cursor, (20, 20))
 
     def _load(self, name: str):
         return pg.image.load(ROOT_DIR / "assets" / "images" / name).convert_alpha()
