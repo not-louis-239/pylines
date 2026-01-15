@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast, TYPE_CHECKING, Any, Callable, Literal
+from typing import cast, TYPE_CHECKING, Any, Callable
 from dataclasses import dataclass
 
 import pygame as pg

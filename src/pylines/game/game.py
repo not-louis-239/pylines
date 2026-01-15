@@ -26,7 +26,6 @@ from pylines.game.screens.game_screen import GameScreen
 from pylines.game.screens.title import TitleScreen
 from pylines.game.screens.settings import SettingsScreen
 from pylines.core.heightmap import Heightmap
-from pylines.core.constants import WORLD_SIZE
 
 if TYPE_CHECKING:
     from pylines.core.custom_types import ScancodeWrapper, Surface, EventList
