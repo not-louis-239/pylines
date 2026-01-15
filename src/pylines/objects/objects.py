@@ -111,18 +111,19 @@ class Plane(Entity):
             if self.damage_level >= 1:
                 self.sounds.crash.play()
                 self.crash_reason = reason
-                return
-
-            self.sounds.hard_landing.play()
-            self.dialog_box.set_message("Hard landing. Damage sustained.", (255, 80, 0))
+            else:
+                self.sounds.hard_landing.play()
+                self.dialog_box.set_message("Hard landing. Damage sustained.", (255, 80, 0))
 
         # Check landing for quality
         pitch, yaw, roll = self.rot
         roll = (roll+180)%360 - 180  # Normalise
 
+        # BUG: vs is getting zeroed before impact calculation
+
         # Safety parameters
-        SAFE_VS = -1.7  # m/s
-        MAX_OK_VS = -4
+        SAFE_VS = 1.7  # m/s
+        MAX_OK_VS = 4
         MAX_SAFE_PITCH = 12
         MAX_SAFE_ROLL = 8
 
@@ -130,6 +131,8 @@ class Plane(Entity):
         vs = -self.vel.y
         roll_mag = abs(roll)
         pitch_mag = abs(pitch)
+
+        print(vs)
 
         # Normalised excess (0–1)
         vs_factor = max(0, ((vs - SAFE_VS) / (MAX_OK_VS - SAFE_VS))) ** 2
@@ -156,14 +159,13 @@ class Plane(Entity):
 
         if vs > 12:  # ~2400 ft/min, extreme VS is auto-lethal
             crash(lethal=True)
-            return
-
-        if impact_severity <= MAX_SAFE_IMPACT:
-            good_landing()
-        elif impact_severity <= MAX_OK_IMPACT:
-            hard_landing()
         else:
-            crash(damage_taken=impact_severity-MAX_OK_IMPACT)
+            if impact_severity <= MAX_SAFE_IMPACT:
+                good_landing()
+            elif impact_severity <= MAX_OK_IMPACT:
+                hard_landing()
+            else:
+                crash(damage_taken=impact_severity-MAX_OK_IMPACT)
 
     def update(self, dt: int):
         # Sideways movement - convert roll to yaw
@@ -314,13 +316,14 @@ class Plane(Entity):
         # TODO: For now it's the ground height, but in future the plane shouldn't
         # be able to go below sea level due to the ocean plane
         if self.pos.y <= ground_height:
-            self.pos.y = ground_height  # Snap to ground
-            self.vel.y = 0              # Stop vertical movement
-
             # Only process landing if just touched down
             if not self.on_ground:
                 self.process_landing()
             self.on_ground = True
+
+            self.pos.y = ground_height
+            if not self.crashed:  # If crashed, preserve vertical speed readout
+                self.vel.y = 0
         else:
             self.on_ground = False
 
