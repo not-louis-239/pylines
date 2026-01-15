@@ -29,7 +29,7 @@ from pylines.objects.objects import Entity
 from pylines.shaders.shader_manager import load_shader_script
 
 if TYPE_CHECKING:
-    from pylines.core.environment import Environment
+    from pylines.game.environment import Environment
 
 class SceneryObject(Entity):
     def __init__(self, x, y, z):

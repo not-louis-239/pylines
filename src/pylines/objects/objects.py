@@ -37,7 +37,7 @@ from pylines.core.utils import clamp
 
 if TYPE_CHECKING:
     from pylines.game.screens.game_screen import DialogMessage
-    from pylines.core.environment import Environment
+    from pylines.game.environment import Environment
 
 class CrashReason(Enum):
     TERRAIN = "terrain"

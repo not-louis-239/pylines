@@ -18,11 +18,11 @@ from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 
-from .constants import EPSILON, WORLD_SIZE
-from .utils import map_value
+from ..core.constants import EPSILON, WORLD_SIZE
+from ..core.utils import map_value
 
 if TYPE_CHECKING:
-    from .asset_manager import MapData
+    from ..core.asset_manager import MapData
     from pylines.objects.objects import Runway
 
 class Environment:
