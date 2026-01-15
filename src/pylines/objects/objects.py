@@ -37,7 +37,7 @@ from pylines.core.utils import clamp
 
 if TYPE_CHECKING:
     from pylines.game.screens.game_screen import DialogMessage
-    from pylines.objects.scenery import Ground
+    from pylines.core.environment import Environment
 
 class CrashReason(Enum):
     TERRAIN = "terrain"
@@ -59,12 +59,12 @@ class Entity:
         pass
 
 class Plane(Entity):
-    def __init__(self, sounds: Sounds, dialog_box: DialogMessage, ground: Ground):
+    def __init__(self, sounds: Sounds, dialog_box: DialogMessage, env: Environment):
         super().__init__(0, 0, 0)
         self.model: PlaneModel = PLANE_MODELS["Cessna 172"]
         self.sounds = sounds
         self.dialog_box = dialog_box
-        self.ground = ground
+        self.env = env
         self.reset()
 
     @property
@@ -90,7 +90,7 @@ class Plane(Entity):
         STARTING_YAW = 270
 
         sx, sz = STARTING_POS
-        self.pos = pg.Vector3(sx, self.ground.heightmap.height_at(sx, sz), sz)
+        self.pos = pg.Vector3(sx, self.env.height_at(sx, sz), sz)
         self.vel = pg.Vector3(0, 0, 0)
         self.acc = pg.Vector3(0, 0, 0)
 
@@ -175,7 +175,7 @@ class Plane(Entity):
         MAX_OK_IMPACT = 0.6
 
         # Determine reason
-        water_crash = self.pos.y < self.ground.heightmap.sea_level + EPSILON
+        water_crash = self.pos.y < self.env.sea_level + EPSILON
         if water_crash:
             crash_reason = CrashReason.OCEAN
         else:
@@ -212,10 +212,10 @@ class Plane(Entity):
             px, _, pz = self.pos
             # Sample surrounding points to calculate terrain normal
             d = 0.5
-            h_px_pos = self.ground.heightmap.ground_height(px + d, pz)
-            h_px_neg = self.ground.heightmap.ground_height(px - d, pz)
-            h_pz_pos = self.ground.heightmap.ground_height(px, pz + d)
-            h_pz_neg = self.ground.heightmap.ground_height(px, pz - d)
+            h_px_pos = self.env.ground_height(px + d, pz)
+            h_px_neg = self.env.ground_height(px - d, pz)
+            h_pz_pos = self.env.ground_height(px, pz + d)
+            h_pz_neg = self.env.ground_height(px, pz - d)
 
             # Using finite differences to find the gradient of the terrain
             dx_grad = (h_px_pos - h_px_neg) / (2 * d)
@@ -301,7 +301,7 @@ class Plane(Entity):
         self.pos += self.vel * dt/1000
 
         # Clamp height
-        ground_height = self.ground.heightmap.ground_height(self.pos.x, self.pos.z)
+        ground_height = self.env.ground_height(self.pos.x, self.pos.z)
         self.pos.y = max(self.pos.y, ground_height)
 
         # Clamp velocity to prevent NaNs
@@ -356,7 +356,7 @@ class Plane(Entity):
         # TODO: Add damage when not on runway (once runways are added)
 
         # Collision detection with ground
-        ground_height = self.ground.heightmap.ground_height(self.pos.x, self.pos.z)
+        ground_height = self.env.ground_height(self.pos.x, self.pos.z)
         if self.pos.y <= ground_height:
             # Only process landing if just touched down
             if not self.on_ground:

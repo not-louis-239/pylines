@@ -26,15 +26,21 @@ if TYPE_CHECKING:
     from pylines.objects.objects import Runway
 
 class Environment:
-    """A class to own terrain and buildings."""
+    """A class to own terrain, structures and buildings."""
 
-    def __init__(self, map_data: MapData, diagonal_split: Literal['AD', 'BC'] = 'AD') -> None:
+    def __init__(
+            self,
+            map_data: MapData,
+            runways: list[Runway],
+            diagonal_split: Literal['AD', 'BC'] = 'AD',
+        ) -> None:
         self.height_array: np.ndarray = map_data.height_array
 
         self.min_h = map_data.MIN_H
         self.max_h = map_data.MAX_H
         self.sea_level = map_data.SEA_LEVEL
         self.diagonal_split = diagonal_split
+        self.runways = runways
 
         if self.diagonal_split not in ['AD', 'BC']:
             raise ValueError("diagonal_split must be either 'AD' or 'BC'")
