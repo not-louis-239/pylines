@@ -34,6 +34,7 @@ from pylines.core.constants import (
 )
 from pylines.core.custom_types import Surface
 from pylines.core.utils import clamp
+from pylines.core.time_manager import fetch_hour, terrain_brightness_from_hour
 
 if TYPE_CHECKING:
     from pylines.game.screens.game_screen import DialogMessage
@@ -380,6 +381,7 @@ class Runway(Entity):
         self.heading = heading
 
     def draw(self):
+        brightness = terrain_brightness_from_hour(fetch_hour())
         gl.glPushMatrix()
 
         # Enable polygon offset to "pull" the runway towards the camera
@@ -389,7 +391,7 @@ class Runway(Entity):
         # Translate and rotate to runway's position and heading
         gl.glTranslatef(self.pos.x, 0.1 + self.pos.y, self.pos.z)
         gl.glRotatef(self.heading, 0, 1, 0)
-        gl.glColor3f(0.2, 0.2, 0.2)
+        gl.glColor3f(0.2*brightness, 0.2*brightness, 0.2*brightness)
 
         half_width = self.width / 2
         half_length = self.length / 2
