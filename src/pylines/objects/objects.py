@@ -138,14 +138,14 @@ class Plane(Entity):
             self.sounds.good_landing.play()
             self.dialog_box.set_message("Good landing!", (0, 255, 0))
 
-        def hard_landing():
+        def hard_landing(*, suppress_dialog: bool = False):
             self.sounds.hard_landing.play()
-            self.dialog_box.set_message("Hard landing...", (255, 200, 0))
+            if not suppress_dialog: self.dialog_box.set_message("Hard landing...", (255, 200, 0))
 
         # TODO: Collision with buildings and ocean should be auto-lethal
         # (add once buildings and ocean are implemented)
 
-        def crash(*, damage_taken: float = 0.0, lethal: bool = False, reason: CrashReason):
+        def crash(*, suppress_dialog: bool = False, damage_taken: float = 0.0, lethal: bool = False, reason: CrashReason):
             self.damage_level = 1 if lethal else min(self.damage_level + damage_taken, 1)
 
             if self.damage_level >= 1:
@@ -153,7 +153,7 @@ class Plane(Entity):
                 self.crash_reason = reason
             else:
                 self.sounds.hard_landing.play()
-                self.dialog_box.set_message("Hard landing. Damage sustained.", (255, 80, 0))
+                if not suppress_dialog: self.dialog_box.set_message("Hard landing. Damage sustained.", (255, 80, 0))
 
         # Check landing for quality
         pitch, yaw, roll = self.rot
@@ -201,13 +201,17 @@ class Plane(Entity):
         # Outcome mapping
         if vs > 12 or water_crash:
             crash(lethal=True, reason=crash_reason)
-        else:
-            if impact_severity <= MAX_SAFE_IMPACT:
+            return
+
+        if impact_severity <= MAX_SAFE_IMPACT:
+            if self.over_runway:
                 good_landing()
-            elif impact_severity <= MAX_OK_IMPACT:
-                hard_landing()
             else:
-                crash(damage_taken=impact_severity-MAX_OK_IMPACT, reason=crash_reason)
+                hard_landing(suppress_dialog=True)
+        elif impact_severity <= MAX_OK_IMPACT:
+            hard_landing(suppress_dialog=(not self.over_runway))
+        else:
+            crash(damage_taken=impact_severity-MAX_OK_IMPACT, reason=crash_reason)
 
     def update(self, dt: int):
         print(self.over_runway)
