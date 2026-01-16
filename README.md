@@ -1,20 +1,18 @@
 # Pylines Flight Sim
 
-## Overivew
+## Overview
 
-This is a lightweight, open-source flight simulator made in Python with Pygame and a OpenGL. It uses a simplified flight model to allow users to learn about the mechanics of flight without being overwhelming.
+This is a lightweight, open-source flight simulator made in Python with Pygame and OpenGL. With over 39,000 km² of terrain to explore, including vast mountain ranges and rivers, it uses a simplified flight model to allow users to explore the mechanics of aviation without being overwhelmed.
 
 **Author:** Louis Masarei-Boulton  
-**Version:** 0.7.4
+**Version:** 0.8.1
 
 ## Features
 
-* Over 39,000 km² of land to fly over, with vast mountain ranges and rivers.
-* Time-based sky colouring and terrain darkening.
-* Sun and moon that move based on time.
-* A simplified Cessna 172 flight model and cockpit GUI.
-* Landing feedback and (currently janky) crash mechanics.
-* Overspeed damage if you don't fly carefully.
+* Dynamic sky and terrain lighting.
+* Sun and moon that update in real time, in your local time zone.
+* Simplified Cessna 172 flight physics model and cockpit GUI.
+* Runways, landing feedback, crash and damage mechanics.
 
 ## Project Status
 
@@ -23,11 +21,15 @@ This is a lightweight, open-source flight simulator made in Python with Pygame a
 
 ## Planned Features
 
-* Improved physics model to complement hilly terrain.
-* Lore landmarks, e.g. buildings, runways.
-* Aircraft customisation.
-* Unit switching.
-* Simple flight exercises.
+* Improved cockpit GUI layout
+* GPS for selecting flight destinations
+* Glidescope and PAPI lights for landing assistance
+* More lore landmarks, e.g. city blocks, runways, airports
+* Aircraft customisation
+* Unit switching
+* Simple flight exercises and guides
+* Prohibited zones and cutscenes
+* Improved sound effects
 
 ## Requirements
 
