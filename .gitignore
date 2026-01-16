@@ -54,3 +54,6 @@ dist/
 *.dylib
 *.obj
 *.o
+
+# Python helpers
+scripts/
