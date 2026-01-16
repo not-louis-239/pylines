@@ -44,7 +44,6 @@ class CrashReason(Enum):
     TERRAIN = "terrain"
     BUILDING = "building"
     OCEAN = "ocean"
-    OBSTACLE = "obstacle"
     RUNWAY = "runway"  # reserved for fatal improper landing on runway, e.g. excessive sink rate, bad attitude
 
 class Entity:
@@ -195,6 +194,8 @@ class Plane(Entity):
         water_crash = self.pos.y < self.env.sea_level + EPSILON
         if water_crash:
             crash_reason = CrashReason.OCEAN
+        elif self.over_runway:
+            crash_reason = CrashReason.RUNWAY
         else:
             crash_reason = CrashReason.TERRAIN
 
