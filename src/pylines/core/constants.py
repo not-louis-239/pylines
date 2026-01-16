@@ -55,6 +55,7 @@ TRAVEL_LIMIT = WORLD_SIZE * 0.99  # The user is "unauthorised" to go further
 # Rendering
 INNER_RENDER_LIMIT = 0.05
 OUTER_RENDER_LIMIT = 100_000
+RUNWAY_SMOOTHING_DISTANCE = 150
 
 CAMERA_RADIUS: float = 4  # The camera is a sphere collider now
 

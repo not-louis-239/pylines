@@ -142,8 +142,8 @@ class Ground(LargeSceneryObject):
 
         self.vbo = None
         self.ebo = None
-        self.grid_resolution = 400  # Number of vertices along one edge
         self.env = env
+        self.grid_resolution = 400  # Number of vertices along one edge
         self.vertices: np.ndarray = self._create_vertex_grid()
         self.indices = self._create_index_buffer()
         self._setup_vbo()
@@ -171,6 +171,7 @@ class Ground(LargeSceneryObject):
                 v = (z + WORLD_SIZE) * texture_scale_factor
 
                 data.extend([x, y, z, u, v])
+                
         return np.array(data, dtype=np.float32)
 
     def _create_index_buffer(self):

@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 
-from pylines.core.constants import EPSILON, WORLD_SIZE
+from pylines.core.constants import EPSILON, WORLD_SIZE, RUNWAY_SMOOTHING_DISTANCE
 from pylines.core.utils import map_value, point_in_aabb, lerp
 
 if TYPE_CHECKING:
@@ -113,7 +113,6 @@ class Environment:
 
         final_height = raw_height
 
-        SMOOTHING_DISTANCE = 120
         for runway in self.runways:
             inside, (dx, dz) = point_in_aabb(
                 x, z, runway.pos.x, runway.pos.z, runway.w, runway.l, runway.heading
@@ -128,9 +127,9 @@ class Environment:
             dz_edge = max(abs(dz) - runway.l / 2, 0)
             distance_to_edge = (dx_edge**2 + dz_edge**2) ** 0.5
 
-            if distance_to_edge < SMOOTHING_DISTANCE:
+            if distance_to_edge < RUNWAY_SMOOTHING_DISTANCE:
                 # smooth blend: closer to runway => more runway height
-                t = 1 - (distance_to_edge / SMOOTHING_DISTANCE)
+                t = 1 - (distance_to_edge / RUNWAY_SMOOTHING_DISTANCE)
                 runway_height = runway.pos.y - 0.1
                 final_height = lerp(final_height, runway_height, t)
 
