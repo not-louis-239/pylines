@@ -324,8 +324,8 @@ class Plane(Entity):
         self.pos.y = max(self.pos.y, ground_height)
 
         # Clamp velocity to prevent NaNs
-        if self.vel.length() > 300:
-            self.vel.scale_to_length(300)
+        if self.vel.length() > 1000:
+            self.vel.scale_to_length(1000)
 
         # Roll stabilisation
         roll_stability_torque = -roll * self.model.roll_stability_factor
@@ -377,8 +377,8 @@ class Plane(Entity):
         # Collision detection with ground
         ground_height = self.env.ground_height(self.pos.x, self.pos.z)
         if self.pos.y <= ground_height:
-            # Only process landing if just touched down and over runway
-            if not self.on_ground and self.over_runway:
+            # Only process landing if just touched down
+            if not self.on_ground:
                 self.process_landing()
 
             self.on_ground = True
