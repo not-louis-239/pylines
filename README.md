@@ -5,7 +5,7 @@
 This is a lightweight, open-source flight simulator made in Python with Pygame and a OpenGL. It uses a simplified flight model to allow users to learn about the mechanics of flight without being overwhelming.
 
 **Author:** Louis Masarei-Boulton  
-**Version:** 0.1
+**Version:** 0.7.4
 
 ## Features
 

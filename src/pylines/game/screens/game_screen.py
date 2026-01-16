@@ -29,10 +29,10 @@ import pylines.core.colours as cols
 import pylines.core.constants as C
 from pylines.core.custom_types import AColour, Colour, EventList, RealNumber
 from pylines.core.time_manager import fetch_hour, sky_colour_from_hour
-from pylines.core.utils import clamp, draw_needle, draw_text, draw_transparent_rect
+from pylines.core.utils import clamp, draw_needle, draw_text, draw_transparent_rect, metres_to_ft
 from pylines.game.engine_sound import SoundManager
 from pylines.game.states import State
-from pylines.objects.objects import CrashReason, Plane, Runway
+from pylines.objects.objects import CrashReason, Plane
 from pylines.objects.scenery import Ground, Moon, Ocean, Sky, Sun
 
 if TYPE_CHECKING:
@@ -436,6 +436,37 @@ class GameScreen(State):
             time_centre,
             'centre', 'centre',
             f"{now.hour:02d}:{now.minute:02d} ({offset_hours:+d})",
+            (255, 255, 255),
+            18,
+            self.fonts.monospaced
+        )
+
+        # AGL readout
+        agl_centre = (C.WN_W//2 + 130, int(C.WN_H*0.81))
+        agl_size = 100, 30
+        agl_rect = pg.Rect(0, 0, *agl_size)
+        agl_rect.center = agl_centre
+        pg.draw.rect(hud_surface, (255, 255, 255), agl_rect)
+        inner_agl_rect = pg.Rect(0, 0, agl_size[0]-4, agl_size[1]-4)
+        inner_agl_rect.center = agl_centre
+        pg.draw.rect(hud_surface, cols.BLACK, inner_agl_rect)
+
+        x, z = self.plane.pos.x, self.plane.pos.z
+        altitude_agl = self.plane.pos.y - self.env.ground_height(x, z)
+        draw_text(
+            hud_surface,
+            (agl_centre[0] - 45, agl_centre[1]),
+            'left', 'centre',
+            f"AGL",
+            (255, 255, 255),
+            12,
+            self.fonts.monospaced
+        )
+        draw_text(
+            hud_surface,
+            (agl_centre[0] + 45, agl_centre[1]),
+            'right', 'centre',
+            f"{metres_to_ft(altitude_agl):,.0f} ft",
             (255, 255, 255),
             18,
             self.fonts.monospaced

@@ -33,7 +33,7 @@ from pylines.core.constants import (
     PlaneModel,
 )
 from pylines.core.custom_types import Surface
-from pylines.core.utils import clamp
+from pylines.core.utils import clamp, point_in_aabb
 from pylines.core.time_manager import fetch_hour, terrain_brightness_from_hour
 
 if TYPE_CHECKING:
@@ -108,6 +108,22 @@ class Plane(Entity):
         self.on_ground = True
         self.crash_reason: CrashReason | None = None
         self.damage_level = 0
+
+    @property
+    def over_runway(self) -> bool:
+        x, _, z = self.pos
+
+        for runway in self.env.runways:
+            rx, _, rz = runway.pos
+            rl, rw = runway.l, runway.w
+
+            # FIXME: don't ask me why I have to swap the length and width around
+
+            inside, _ = point_in_aabb(x, z, rx, rz, rw, rl, runway.heading)
+            if inside:
+                return True
+
+        return False
 
     def process_landing(self):
         if self.crashed:
@@ -194,6 +210,8 @@ class Plane(Entity):
                 crash(damage_taken=impact_severity-MAX_OK_IMPACT, reason=crash_reason)
 
     def update(self, dt: int):
+        print(self.over_runway)
+
         # Sideways movement - convert roll to yaw
         CONVERSION_FACTOR = 30
         self.rot.y += sin(rad(self.rot.z)) * clamp(self.vel.length()/30.87, (0, 1)) * CONVERSION_FACTOR * dt/1000
@@ -359,12 +377,15 @@ class Plane(Entity):
         # Collision detection with ground
         ground_height = self.env.ground_height(self.pos.x, self.pos.z)
         if self.pos.y <= ground_height:
-            # Only process landing if just touched down
-            if not self.on_ground:
+            # Only process landing if just touched down and over runway
+            if not self.on_ground and self.over_runway:
                 self.process_landing()
 
             self.on_ground = True
             self.pos.y = ground_height
+
+            if not self.over_runway:
+                self.damage_level += 0.25 * dt/1000
 
             if not self.crashed:
                 self.vel.y = 0
