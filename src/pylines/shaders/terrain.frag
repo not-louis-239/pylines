@@ -14,6 +14,15 @@
 
 #version 120
 
+#define MAX_RUNWAYS 8
+
+uniform int runway_count;
+uniform vec2 runway_pos[MAX_RUNWAYS];
+uniform vec2 runway_dir[MAX_RUNWAYS];
+uniform float runway_length[MAX_RUNWAYS];
+uniform float runway_width[MAX_RUNWAYS];
+uniform float runway_height[MAX_RUNWAYS];
+
 varying vec2 v_tex_coord;  // image coords
 varying float v_height;    // world altitude
 varying vec2 v_world_xz;   // world coords
@@ -45,8 +54,58 @@ const float blend_range = 20.0;  // metres
 // Time-based brightness
 uniform float u_brightness;
 
+float distance_to_runway(
+    vec2 p,
+    vec2 pos,
+    vec2 dir,
+    float length
+) {
+    vec2 rel = p - pos;
+
+    float along  = dot(rel, dir);
+    float across = dot(rel, vec2(-dir.y, dir.x));
+
+    if (abs(along) > length * 0.5)
+        return 1e6;
+
+    return abs(across);
+}
+
 void main() {
-    if (v_height < sea_level) {
+    float blended_height = v_height;
+    float best_blend = 1.0;   // 1 = no runway influence
+
+    for (int i = 0; i < MAX_RUNWAYS; i++) {
+        if (i >= runway_count)
+            break;
+
+        float d = distance_to_runway(
+            v_world_xz,
+            runway_pos[i],
+            runway_dir[i],
+            runway_length[i]
+        );
+
+        float blend = smoothstep(
+            runway_width[i] * 0.5,
+            runway_width[i],
+            d
+        );
+
+        // Take the strongest influence (smallest blend)
+        if (blend < best_blend) {
+            best_blend = blend;
+            blended_height = mix(
+                runway_height[i],
+                v_height,
+                blend
+            );
+        }
+    }
+
+    float final_height = blended_height;
+
+    if (final_height < sea_level) {
         discard;
     }
 
@@ -65,7 +124,7 @@ void main() {
     ).r;
     noise = noise * 2.0 - 1.0;  // map to [-1, 1]
 
-    float tex_height = v_height * (1.0+(noise*0.2));  // multiplicative noise scales with altitude
+    float tex_height = final_height * (1.0+(noise*0.2));  // multiplicative noise scales with altitude
 
     // Warped terrain boundaries after noise
     float warped_low_grass     = low_grass_level     + noise * 40.0;

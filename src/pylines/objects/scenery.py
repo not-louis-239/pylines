@@ -140,6 +140,14 @@ class Ground(LargeSceneryObject):
         self.sea_level_loc = gl.glGetUniformLocation(self.shader, "sea_level")
         self.brightness_loc = gl.glGetUniformLocation(self.shader, "u_brightness")
 
+        # Runway uniforms
+        self.runway_count_loc = gl.glGetUniformLocation(self.shader, "runway_count")
+        self.runway_pos_loc = [gl.glGetUniformLocation(self.shader, f"runway_pos[{i}]") for i in range(8)]
+        self.runway_dir_loc = [gl.glGetUniformLocation(self.shader, f"runway_dir[{i}]") for i in range(8)]
+        self.runway_length_loc = [gl.glGetUniformLocation(self.shader, f"runway_length[{i}]") for i in range(8)]
+        self.runway_width_loc = [gl.glGetUniformLocation(self.shader, f"runway_width[{i}]") for i in range(8)]
+        self.runway_height_loc = [gl.glGetUniformLocation(self.shader, f"runway_height[{i}]") for i in range(8)]
+
         self.vbo = None
         self.ebo = None
         self.env = env
@@ -255,6 +263,18 @@ class Ground(LargeSceneryObject):
 
         # Pass sea level to shader
         gl.glUniform1f(self.sea_level_loc, self.env.sea_level)
+
+        # Pass runway data to shader
+        runways = self.env.runways
+        gl.glUniform1i(self.runway_count_loc, len(runways))
+        for i, r in enumerate(runways):
+            gl.glUniform2f(self.runway_pos_loc[i], r.pos.x, r.pos.z)
+            dir_x = sin(math.radians(r.heading))
+            dir_z = -cos(math.radians(r.heading))
+            gl.glUniform2f(self.runway_dir_loc[i], dir_x, dir_z)
+            gl.glUniform1f(self.runway_length_loc[i], r.l)
+            gl.glUniform1f(self.runway_width_loc[i], r.w)
+            gl.glUniform1f(self.runway_height_loc[i], r.pos.y)
 
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.vbo)
         gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, self.ebo)
