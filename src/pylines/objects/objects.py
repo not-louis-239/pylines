@@ -306,8 +306,8 @@ class Plane(Entity):
         self.pos.y = max(self.pos.y, ground_height)
 
         # Clamp velocity to prevent NaNs
-        if self.vel.length() > 1_000:
-            self.vel.scale_to_length(1_000)
+        if self.vel.length() > 300:
+            self.vel.scale_to_length(300)
 
         # Roll stabilisation
         roll_stability_torque = -roll * self.model.roll_stability_factor
