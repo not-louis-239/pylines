@@ -18,11 +18,11 @@ from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 
-from .constants import EPSILON, WORLD_SIZE
-from .utils import map_value
+from pylines.core.constants import EPSILON, WORLD_SIZE
+from pylines.core.utils import map_value
 
 if TYPE_CHECKING:
-    from .asset_manager import MapData
+    from ..core.asset_manager import MapData
     from pylines.objects.objects import Runway
 
 class Environment:
@@ -109,13 +109,13 @@ class Environment:
                 w = fx + fy - 1
                 interp = u * h10 + v * h01 + w * h11
 
-        final_height = map_value(interp, 0, self.max_val, self.min_h, self.max_h)
+        raw_height = map_value(interp, 0, 65535, self.min_h, self.max_h)
+        final_height = raw_height
+
         return final_height
 
     def ground_height(self, x: float, z: float):
         """Fancier version of height_at that accounts for sea level"""
-
-        # TODO: Move this function to GameScreen to account for runways when runways are added
 
         return max(
             self.height_at(x, z),

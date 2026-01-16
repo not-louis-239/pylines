@@ -133,6 +133,59 @@ def metres_to_ft(value: RealNumber) -> RealNumber:
     """Convert a distance in metres to feet"""
     return value * 3.280839895
 
+def point_in_aabb(
+        x: float, z: float,
+        rx: float, rz: float, rl: float, rw: float, rotation_deg: float
+    ) -> tuple[bool, tuple[float, float]]:
+
+    # XXX: length and width may be swapped around in this func
+    #      it might be faulty
+    """
+    Check if point (x, z) is inside a rotated rectangle (AABB in local space).
+
+    Args:
+        x, z: coordinates of the point
+        rx, rz: rectangle centre coordinates
+        rl, rw: rectangle length (along local x), width (along local z)
+        rotation_deg: clockwise rotation of rectangle in degrees (0 = aligned with world axes)
+
+    Returns:
+        True if point is inside the rectangle, False otherwise
+        distance in rectangle's local space
+    """
+    # Translate point to rectangle centre
+    dx = x - rx
+    dz = z - rz
+    theta = math.radians(rotation_deg)
+    cos_t = math.cos(theta)
+    sin_t = math.sin(theta)
+
+    # Convert rotation to radians, clockwise
+    theta = math.radians(rotation_deg)
+
+    local_x = dx * cos_t + dz * sin_t
+    local_z = -dx * sin_t + dz * cos_t
+    half_length = rl / 2
+    half_width = rw / 2
+
+    inside = abs(local_x) <= half_length and abs(local_z) <= half_width
+    return inside, (local_x, local_z)
+
 # For debug only
 def _prettyvec(vec: pg.Vector3, dp: int = 3) -> str:
     return f"({vec.x:,.{dp}f}, {vec.y:,.{dp}f}, {vec.z:,.{dp}f})"
+
+def lerp(start: float, end: float, t: float):
+    """
+    Linear interpolation between a and b.
+
+    Args:
+        a: start value
+        b: end value
+        t: fraction [0, 1]
+
+    Returns:
+        interpolated value
+    """
+
+    return start + (end - start) * t

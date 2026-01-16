@@ -34,10 +34,11 @@ from pylines.core.constants import (
 )
 from pylines.core.custom_types import Surface
 from pylines.core.utils import clamp
+from pylines.core.time_manager import fetch_hour, terrain_brightness_from_hour
 
 if TYPE_CHECKING:
     from pylines.game.screens.game_screen import DialogMessage
-    from pylines.core.environment import Environment
+    from pylines.game.environment import Environment
 
 class CrashReason(Enum):
     TERRAIN = "terrain"
@@ -291,7 +292,7 @@ class Plane(Entity):
             drag = -self.vel.normalize() * drag_mag
 
         if self.braking and self.on_ground:
-            drag *= 3
+            self.vel *= (1 - 0.4 * dt/1000)
 
         # Combine and integrate
         net_force = thrust + weight + lift + drag  # Force vector in Newtons
@@ -305,8 +306,8 @@ class Plane(Entity):
         self.pos.y = max(self.pos.y, ground_height)
 
         # Clamp velocity to prevent NaNs
-        if self.vel.length() > 1_000:
-            self.vel.scale_to_length(1_000)
+        if self.vel.length() > 300:
+            self.vel.scale_to_length(300)
 
         # Roll stabilisation
         roll_stability_torque = -roll * self.model.roll_stability_factor
@@ -375,11 +376,12 @@ class Plane(Entity):
 class Runway(Entity):
     def __init__(self, x: float, y: float, z: float, w: float, l: float, heading: float = 0):
         super().__init__(x, y, z)
-        self.width = w
-        self.length = l
+        self.w = w
+        self.l = l
         self.heading = heading
 
     def draw(self):
+        brightness = terrain_brightness_from_hour(fetch_hour())
         gl.glPushMatrix()
 
         # Enable polygon offset to "pull" the runway towards the camera
@@ -389,10 +391,10 @@ class Runway(Entity):
         # Translate and rotate to runway's position and heading
         gl.glTranslatef(self.pos.x, 0.1 + self.pos.y, self.pos.z)
         gl.glRotatef(self.heading, 0, 1, 0)
-        gl.glColor3f(0.2, 0.2, 0.2)
+        gl.glColor3f(0.2*brightness, 0.2*brightness, 0.2*brightness)
 
-        half_width = self.width / 2
-        half_length = self.length / 2
+        half_width = self.w / 2
+        half_length = self.l / 2
 
         gl.glBegin(gl.GL_QUADS)
         gl.glVertex3f(-half_width, 0, -half_length)

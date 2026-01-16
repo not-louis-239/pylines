@@ -29,7 +29,7 @@ from pylines.objects.objects import Entity
 from pylines.shaders.shader_manager import load_shader_script
 
 if TYPE_CHECKING:
-    from pylines.core.environment import Environment
+    from pylines.game.environment import Environment
 
 class SceneryObject(Entity):
     def __init__(self, x, y, z):
@@ -142,63 +142,52 @@ class Ground(LargeSceneryObject):
 
         self.vbo = None
         self.ebo = None
-        self.grid_resolution = 400  # Number of vertices along one edge
         self.env = env
-        self.vertices: np.ndarray = self._create_vertex_grid()
-        self.indices = self._create_index_buffer()
+        self.grid_resolution = 400  # Number of vertices along one edge
+
+        self.vertices: np.ndarray
+        self.vertices, self.indices = self._build_mesh()
         self._setup_vbo()
         self._setup_ebo()
 
-    def _create_vertex_grid(self) -> np.ndarray:
-        # We need to store vertices and texture coordinates
-        # Each vertex will have (x, y, z, u, v)
-        data = []
-        step = WORLD_SIZE * 2 / self.grid_resolution
+    def _build_mesh(self) -> tuple[np.ndarray, np.ndarray]:
+        vertices = []
+        indices = []
 
-        # The texture_repeat_count from the old draw method implies 200 repeats over GROUND_SIZE*2 extent
-        # So one repeat covers (GROUND_SIZE * 2) / 200 = GROUND_SIZE / 100
-        # The U, V coordinates should reflect this
-        texture_scale_factor = 200.0 / (WORLD_SIZE * 2) # How many texture repeats per world unit
+        res = self.grid_resolution
+        step = WORLD_SIZE * 2 / res
+        texture_scale = 200.0 / (WORLD_SIZE * 2)
 
-        for i in range(self.grid_resolution + 1):
-            for j in range(self.grid_resolution + 1):
-                x = -WORLD_SIZE + j * step
-                z = -WORLD_SIZE + i * step
+        def vert_index(r: int, c: int) -> int:
+            return r * (res + 1) + c
+
+        # ---- vertices ----
+        for r in range(res + 1):
+            for c in range(res + 1):
+                x = -WORLD_SIZE + c * step
+                z = -WORLD_SIZE + r * step
                 y = self.env.height_at(x, z)
 
-                # Calculate texture coordinates (u, v)
-                u = (x + WORLD_SIZE) * texture_scale_factor
-                v = (z + WORLD_SIZE) * texture_scale_factor
+                u = (x + WORLD_SIZE) * texture_scale
+                v = (z + WORLD_SIZE) * texture_scale
 
-                data.extend([x, y, z, u, v])
-        return np.array(data, dtype=np.float32)
+                vertices.extend([x, y, z, u, v])
 
-    def _create_index_buffer(self):
-        indices = []
-        rows = self.grid_resolution
-        cols = self.grid_resolution
-        for r in range(rows):
-            for c in range(cols):
-                # Get indices for the four corners of the quad
-                # A: top-left (r, c)
-                # B: top-right (r, c+1)
-                # C: bottom-left (r+1, c)
-                # D: bottom-right (r+1, c+1)
-                A = r * (cols + 1) + c
-                B = r * (cols + 1) + c + 1
-                C = (r + 1) * (cols + 1) + c
-                D = (r + 1) * (cols + 1) + c + 1
+        # ---- indices ----
+        for r in range(res):
+            for c in range(res):
+                A = vert_index(r, c)
+                B = vert_index(r, c + 1)
+                C = vert_index(r + 1, c)
+                D = vert_index(r + 1, c + 1)
 
-                # Triangle 1: ABD (split along AD)
-                indices.append(A)
-                indices.append(B)
-                indices.append(D)
+                indices.extend([A, B, D])
+                indices.extend([A, D, C])
 
-                # Triangle 2: ACD (split along AD)
-                indices.append(A)
-                indices.append(D)
-                indices.append(C)
-        return np.array(indices, dtype=np.uint32)
+        return (
+            np.array(vertices, dtype=np.float32),
+            np.array(indices, dtype=np.uint32),
+        )
 
     def _setup_vbo(self):
         # Create a buffer object

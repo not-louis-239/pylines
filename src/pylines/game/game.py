@@ -21,7 +21,7 @@ import pygame as pg
 
 from pylines.core.asset_manager import Assets, MapData
 from pylines.core.data_manager import load_data, save_data
-from pylines.core.environment import Environment
+from pylines.game.environment import Environment
 from pylines.game.screens.game_screen import GameScreen
 from pylines.game.screens.settings import SettingsScreen
 from pylines.game.screens.title import TitleScreen
@@ -51,7 +51,7 @@ class Game:
         self.env: Environment = Environment(
             map_data,
             runways=[
-                Runway(200, 266.4, -3_000, w=50, l=1_500, heading=270)
+                Runway(200, 280, -3_000, w=50, l=1_500, heading=270)
             ],
             diagonal_split='AD'
         )

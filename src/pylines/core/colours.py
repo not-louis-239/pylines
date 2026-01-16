@@ -44,9 +44,9 @@ BLACK = (0, 0, 0)
 # Sky colours
 SKY_COLOUR_SCHEMES: dict[str, ColourScheme] = {
     "night": ColourScheme(
-        _hex_to_rgb("#100B26"),
-        _hex_to_rgb("#3F1759"),
-        _hex_to_rgb("#9E3F9B")
+        _hex_to_rgb("#0A061D"),
+        _hex_to_rgb("#200831"),
+        _hex_to_rgb("#41163F")
     ),
     "sunrise": ColourScheme(
         _hex_to_rgb("#1C456E"),
@@ -60,8 +60,8 @@ SKY_COLOUR_SCHEMES: dict[str, ColourScheme] = {
     ),
     "sunset": ColourScheme(
         _hex_to_rgb("#6B496C"),
-        _hex_to_rgb("#CD6464"),
-        _hex_to_rgb("#E3B153")
+        _hex_to_rgb("#EBA442"),
+        _hex_to_rgb("#FFD68A")
     )
 }
 
