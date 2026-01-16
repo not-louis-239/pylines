@@ -109,7 +109,7 @@ class Environment:
                 w = fx + fy - 1
                 interp = u * h10 + v * h01 + w * h11
 
-        raw_height = map_value(interp, 0, self.max_val, self.min_h, self.max_h)
+        raw_height = map_value(interp, 0, 65535, self.min_h, self.max_h)
         final_height = raw_height
 
         return final_height
