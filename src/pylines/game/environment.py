@@ -110,28 +110,7 @@ class Environment:
                 interp = u * h10 + v * h01 + w * h11
 
         raw_height = map_value(interp, 0, self.max_val, self.min_h, self.max_h)
-
         final_height = raw_height
-
-        for runway in self.runways:
-            inside, (dx, dz) = point_in_aabb(
-                x, z, runway.pos.x, runway.pos.z, runway.w, runway.l, runway.heading
-            )
-
-            if inside:
-                # directly on runway
-                return runway.pos.y
-
-            # distances to runway edge along local axes
-            dx_edge = max(abs(dx) - runway.w / 2, 0)
-            dz_edge = max(abs(dz) - runway.l / 2, 0)
-            distance_to_edge = (dx_edge**2 + dz_edge**2) ** 0.5
-
-            if distance_to_edge < RUNWAY_SMOOTHING_DISTANCE:
-                # smooth blend: closer to runway => more runway height
-                t = 1 - (distance_to_edge / RUNWAY_SMOOTHING_DISTANCE)
-                runway_height = runway.pos.y - 0.1
-                final_height = lerp(final_height, runway_height, t)
 
         return final_height
 
