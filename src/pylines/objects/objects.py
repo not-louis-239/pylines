@@ -116,7 +116,11 @@ class Plane(Entity):
         for runway in self.env.runways:
             rx, _, rz = runway.pos
             rl, rw = runway.l, runway.w
-            if point_in_aabb(x, z, rx, rz, rw, rl, runway.heading):
+
+            # FIXME: don't ask me why I have to swap the length and width around
+
+            inside, _ = point_in_aabb(x, z, rx, rz, rw, rl, runway.heading)
+            if inside:
                 return True
 
         return False
