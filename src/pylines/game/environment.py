@@ -18,8 +18,8 @@ from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 
-from pylines.core.constants import EPSILON, WORLD_SIZE, RUNWAY_SMOOTHING_DISTANCE
-from pylines.core.utils import map_value, point_in_aabb, lerp
+from pylines.core.constants import EPSILON, WORLD_SIZE
+from pylines.core.utils import map_value
 
 if TYPE_CHECKING:
     from ..core.asset_manager import MapData
@@ -116,8 +116,6 @@ class Environment:
 
     def ground_height(self, x: float, z: float):
         """Fancier version of height_at that accounts for sea level"""
-
-        # TODO: Move this function to GameScreen to account for runways when runways are added
 
         return max(
             self.height_at(x, z),

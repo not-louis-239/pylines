@@ -133,8 +133,6 @@ def metres_to_ft(value: RealNumber) -> RealNumber:
     """Convert a distance in metres to feet"""
     return value * 3.280839895
 
-import math
-
 def point_in_aabb(
         x: float, z: float,
         rx: float, rz: float, rl: float, rw: float, rotation_deg: float
