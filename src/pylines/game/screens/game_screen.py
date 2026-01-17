@@ -32,7 +32,7 @@ from pylines.core.time_manager import fetch_hour, sky_colour_from_hour
 from pylines.core.utils import clamp, draw_needle, draw_text, draw_transparent_rect, metres_to_ft
 from pylines.game.engine_sound import SoundManager
 from pylines.game.states import State
-from pylines.objects.objects import CrashReason, Plane
+from pylines.objects.objects import CrashReason, Plane, Runway
 from pylines.objects.scenery import Ground, Moon, Ocean, Sky, Sun
 
 if TYPE_CHECKING:
@@ -247,6 +247,7 @@ class GameScreen(State):
             self.sound_manager.stop()
         if self.pressed(keys, pg.K_r):  # r to reset
             self.plane.reset()
+            self.gps_runway_index = 1  # reset gps waypoint
 
         # Block flight controls if crashed or disabled
         if not self.plane.flyable:
@@ -354,15 +355,29 @@ class GameScreen(State):
         rect = compass_rot.get_rect(center=centre)
         hud_surface.blit(compass_rot, rect)
 
-        vel_flat = pg.Vector2(self.plane.vel.x, self.plane.vel.z)
+        vel_flat = pg.Vector3(self.plane.vel.x, 0, self.plane.vel.z)
         ground_track_deg = math.degrees(
-            math.atan2(vel_flat.x, -vel_flat.y)
+            math.atan2(vel_flat.x, -vel_flat.z)
         ) % 360 if vel_flat.length() >= C.EPSILON else 0
+
+        selected_runway: Runway = self.env.runways[self.gps_runway_index]
+        gps_distance = selected_runway.pos - self.plane.pos
+        gps_distance_flat = pg.Vector3(gps_distance.x, 0, gps_distance.z)
+        gps_bearing = math.degrees(
+            math.atan2(gps_distance_flat.x, -gps_distance_flat.z)
+        ) % 360 if gps_distance_flat.length() >= C.EPSILON else 0
 
         # Ground track (the actual velocity vector of the plane)
         draw_needle(hud_surface, centre, 90 - (ground_track_deg-yaw), 100, (255, 190, 0))
         # Heading (where the nose points)
-        draw_needle(hud_surface, centre, 90, 100)
+        draw_needle(hud_surface, centre, 90, 100, (255, 0, 0))
+        # GPS distance (where the nose points)
+        draw_needle(hud_surface, centre, 90 - (gps_bearing-yaw), 100, (0, 255, 0))
+
+        # Show runway alignment (blue needle)
+        if gps_distance_flat.length() < 8000:
+            draw_needle(hud_surface, centre, 90 - (selected_runway.heading-yaw), 50, (0, 120, 255))
+            draw_needle(hud_surface, centre, 270 - (selected_runway.heading-yaw), 50, (0, 120, 255))
 
         # ASI (Air Speed Indicator)
         centre = (C.WN_W//2+300, C.WN_H*0.85)
@@ -476,6 +491,36 @@ class GameScreen(State):
             f"{metres_to_ft(altitude_agl):,.0f} ft",
             (255, 255, 255),
             18,
+            self.fonts.monospaced
+        )
+
+        # GPS information
+        gps_centre = (C.WN_W//2 - 135, int(C.WN_H*0.87))
+        gps_size = 80, 60
+        gps_rect = pg.Rect(0, 0, *gps_size)
+        gps_rect.center = gps_centre
+        pg.draw.rect(hud_surface, (255, 255, 255), gps_rect)
+        inner_gps_rect = pg.Rect(0, 0, gps_size[0]-4, gps_size[1]-4)
+        inner_gps_rect.center = gps_centre
+        pg.draw.rect(hud_surface, cols.BLACK, inner_gps_rect)
+
+        draw_text(
+            hud_surface,
+            (gps_centre[0] - 35, gps_centre[1] - 14),
+            'left', 'centre',
+            selected_runway.name,
+            (0, 120, 255),
+            20,
+            self.fonts.monospaced
+        )
+
+        draw_text(
+            hud_surface,
+            (gps_centre[0] - 35, gps_centre[1] + 14),
+            'left', 'centre',
+            f"{gps_distance_flat.length() / 1000:,.2f}km",
+            (255, 255, 255),
+            20,
             self.fonts.monospaced
         )
 
@@ -623,17 +668,17 @@ class GameScreen(State):
         pg.draw.line(hud_surface, (255, 255, 0), ai_centre, (ai_centre[0]+10, ai_centre[1]+5), 3)
 
         # Cockpit warning lights
-        warning_x = C.WN_W//2-145
-        draw_text(hud_surface, (warning_x, C.WN_H*0.92), 'centre', 'centre', "STALL", (25, 20, 18), 20, self.fonts.monospaced)
+        warning_x = C.WN_W//2-180
+        draw_text(hud_surface, (warning_x +20, C.WN_H*0.93), 'left', 'centre', "STALL", (25, 20, 18), 20, self.fonts.monospaced)
         warning_col = (255, 0, 0) if self.show_stall_warning else cols.BLACK
-        pg.draw.circle(hud_surface, (51, 43, 37), (warning_x, C.WN_H*0.96), 12)
-        pg.draw.circle(hud_surface, (warning_col), (warning_x, C.WN_H*0.96), 10)
+        pg.draw.circle(hud_surface, (51, 43, 37), (warning_x, C.WN_H*0.93), 10)
+        pg.draw.circle(hud_surface, (warning_col), (warning_x, C.WN_H*0.93), 8)
 
-        warning_x = C.WN_W//2+145  # Overspeed
-        draw_text(hud_surface, (warning_x, C.WN_H*0.92), 'centre', 'centre', "OVERSPEED", (25, 20, 18), 20, self.fonts.monospaced)
+        warning_x = C.WN_W//2-190  # Overspeed
+        draw_text(hud_surface, (warning_x + 20, C.WN_H*0.965), 'left', 'centre', "OVERSPEED", (25, 20, 18), 20, self.fonts.monospaced)
         warning_col = (255, 0, 0) if self.show_overspeed_warning else cols.BLACK
-        pg.draw.circle(hud_surface, (51, 43, 37), (warning_x, C.WN_H*0.96), 12)
-        pg.draw.circle(hud_surface, (warning_col), (warning_x, C.WN_H*0.96), 10)
+        pg.draw.circle(hud_surface, (51, 43, 37), (warning_x, C.WN_H*0.965), 10)
+        pg.draw.circle(hud_surface, (warning_col), (warning_x, C.WN_H*0.965), 8)
 
         # Show landing feedback
         if self.landing_dialog_box.active_time:
@@ -651,7 +696,7 @@ class GameScreen(State):
             elif reason == CrashReason.OCEAN:
                 ui_text = "COLLISION WITH OCEAN"
             elif reason == CrashReason.BUILDING:
-                ui_text = "COLLISION WITH BUILDING"
+                ui_text = "COLLISION WITH OBSTACLE"
             elif reason == CrashReason.RUNWAY:
                 ui_text = "IMPROPER LANDING ON RUNWAY"
 

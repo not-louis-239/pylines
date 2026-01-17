@@ -400,6 +400,7 @@ class Plane(Entity):
 class Runway(Entity):
     def __init__(self, name: str, x: float, y: float, z: float, w: float, l: float, heading: float = 0):
         super().__init__(x, y, z)
+        self.name = name
         self.w = w
         self.l = l
         self.heading = heading
