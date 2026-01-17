@@ -5,7 +5,7 @@
 This is a lightweight, open-source flight simulator made in Python with Pygame and OpenGL. With over 39,000 km² of terrain to explore, including vast mountain ranges and rivers, it uses a simplified flight model to allow users to explore the mechanics of aviation without being overwhelmed.
 
 **Author:** Louis Masarei-Boulton  
-**Version:** 0.8.1
+**Version:** 0.8.5
 
 ## Features
 
