@@ -645,8 +645,6 @@ class GameScreen(State):
                 ui_text = "COLLISION WITH OCEAN"
             elif reason == CrashReason.BUILDING:
                 ui_text = "COLLISION WITH BUILDING"
-            elif reason == CrashReason.OBSTACLE:
-                ui_text = "COLLISION WITH OBSTACLE"
             elif reason == CrashReason.RUNWAY:
                 ui_text = "IMPROPER LANDING ON RUNWAY"
 
