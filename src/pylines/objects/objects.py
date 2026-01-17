@@ -414,7 +414,7 @@ class Runway(Entity):
 
         # Translate and rotate to runway's position and heading
         gl.glTranslatef(self.pos.x, 0.1 + self.pos.y, self.pos.z)
-        gl.glRotatef(self.heading, 0, 1, 0)
+        gl.glRotatef(-self.heading, 0, 1, 0)  # rotation flipped in OpenGL
         gl.glColor3f(0.2*brightness, 0.2*brightness, 0.2*brightness)
 
         half_width = self.w / 2
