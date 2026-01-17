@@ -87,7 +87,7 @@ class Plane(Entity):
 
     def reset(self) -> None:
         STARTING_POS = (200, -3_000)
-        STARTING_YAW = 270
+        STARTING_YAW = 130
 
         sx, sz = STARTING_POS
         self.pos = pg.Vector3(sx, self.env.height_at(sx, sz), sz)
@@ -215,8 +215,6 @@ class Plane(Entity):
             crash(damage_taken=impact_severity-MAX_OK_IMPACT, reason=crash_reason)
 
     def update(self, dt: int):
-        print(self.over_runway)
-
         # Sideways movement - convert roll to yaw
         CONVERSION_FACTOR = 30
         self.rot.y += sin(rad(self.rot.z)) * clamp(self.vel.length()/30.87, (0, 1)) * CONVERSION_FACTOR * dt/1000
