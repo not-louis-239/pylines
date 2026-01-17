@@ -65,7 +65,7 @@ void main() {
     ).r;
     noise = noise * 2.0 - 1.0;  // map to [-1, 1]
 
-    float tex_height = v_height * (1.0+(noise*0.2));  // multiplicative noise scales with altitude
+    float tex_height = v_height * (1.0+(noise*0.2)) + 50*noise;  // multiplicative noise scales with altitude
 
     // Warped terrain boundaries after noise
     float warped_low_grass     = low_grass_level     + noise * 40.0;
