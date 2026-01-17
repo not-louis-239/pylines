@@ -398,7 +398,7 @@ class Plane(Entity):
         self.damage_level = clamp(self.damage_level, (0, 1))
 
 class Runway(Entity):
-    def __init__(self, x: float, y: float, z: float, w: float, l: float, heading: float = 0):
+    def __init__(self, name: str, x: float, y: float, z: float, w: float, l: float, heading: float = 0):
         super().__init__(x, y, z)
         self.w = w
         self.l = l

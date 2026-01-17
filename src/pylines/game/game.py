@@ -51,9 +51,9 @@ class Game:
         self.env: Environment = Environment(
             map_data,
             runways=[
-                Runway(200, 280, -3_000, w=50, l=1_500, heading=130),
-                Runway(2_250, 800, -17_500, w=50, l=1_500, heading=35),
-                Runway(26_250, 970, 2_500, w=50, l=1_500, heading=108)
+                Runway('DCM', 200, 280, -3_000, w=50, l=1_500, heading=130),
+                Runway('CRF', 2_250, 800, -17_500, w=50, l=1_500, heading=35),
+                Runway('RDS', 26_250, 970, 2_500, w=50, l=1_500, heading=108)
             ],
             diagonal_split='AD'
         )

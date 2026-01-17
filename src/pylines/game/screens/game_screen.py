@@ -92,6 +92,9 @@ class GameScreen(State):
         # Font for text rendering
         self.font = pg.font.Font(assets.fonts.monospaced, 36)
 
+        # GPS destination
+        self.gps_runway_index: int = 1
+
         # Graphics
         self.hud_tex = gl.glGenTextures(1)
         gl.glBindTexture(gl.GL_TEXTURE_2D, self.hud_tex)
@@ -249,6 +252,10 @@ class GameScreen(State):
         if not self.plane.flyable:
             self.update_prev_keys(keys)
             return
+
+        # Cycle GPS waypoint
+        if self.pressed(keys, pg.K_g):
+            self.gps_runway_index = (self.gps_runway_index + 1) % len(self.env.runways)
 
         # Throttle controls
         throttle_speed = 0.4 * dt/1000
