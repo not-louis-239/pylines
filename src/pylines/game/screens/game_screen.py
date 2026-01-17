@@ -524,6 +524,40 @@ class GameScreen(State):
             self.fonts.monospaced
         )
 
+        # Glidescope
+        glide_centre = (C.WN_W//2 + 105, int(C.WN_H*0.91))
+        glide_size = 18, 125
+        glide_rect = pg.Rect(0, 0, *glide_size)
+        glide_rect.center = glide_centre
+        pg.draw.rect(hud_surface, (255, 255, 255), glide_rect)
+        inner_glide_rect = pg.Rect(0, 0, glide_size[0]-4, glide_size[1]-4)
+        inner_glide_rect.center = glide_centre
+        pg.draw.rect(hud_surface, cols.BLACK, inner_glide_rect)
+
+        # Compute comparison for glidescope
+        GLIDEPATH_SLOPE = math.tan(math.radians(3.0))  # glidescope is 3°
+        expected_height_agl = gps_distance_flat.length() * GLIDEPATH_SLOPE
+        expected_height_msl = expected_height_agl + selected_runway.pos.y
+        deviation = self.plane.pos.y - expected_height_msl
+
+        # Display glidescope
+        show_glidescope = (
+            gps_distance_flat.length() < 8_000 and
+            (abs(self.plane.rot.y - selected_runway.heading) or abs(self.plane.rot.y - (selected_runway.heading+180)%360)) < 30 and
+            self.plane.pos.y > self.env.ground_height(self.plane.pos.x, self.plane.pos.z)
+        )
+
+        if show_glidescope:
+            glide_centre_x, glide_centre_y = glide_centre
+
+            pg.draw.line(hud_surface, (140, 140, 140), (glide_centre_x-7, glide_centre_y + 26), (glide_centre_x+6, glide_centre_y + 26), 2)
+            pg.draw.line(hud_surface, (140, 140, 140), (glide_centre_x-7, glide_centre_y + 52), (glide_centre_x+6, glide_centre_y + 52), 2)
+            pg.draw.line(hud_surface, (140, 140, 140), (glide_centre_x-7, glide_centre_y - 26), (glide_centre_x+6, glide_centre_y - 26), 2)
+            pg.draw.line(hud_surface, (140, 140, 140), (glide_centre_x-7, glide_centre_y - 52), (glide_centre_x+6, glide_centre_y - 52), 2)
+            pg.draw.circle(hud_surface, (0, 255, 0), (glide_centre_x, glide_centre_y - clamp(deviation, (-10, 10)) * 52/10), 5)  # TODO: 52/10 converts metres to pixels, make this a constant or something
+
+            pg.draw.line(hud_surface, (255, 255, 255), (glide_centre_x-7, glide_centre_y), (glide_centre_x+6, glide_centre_y), 2)
+
         # Minimap
         mini_centre = (int(C.WN_W*0.1), int(C.WN_H*0.88))
         outer_mini_size = C.MINIMAP_SIZE + 6
