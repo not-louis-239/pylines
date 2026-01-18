@@ -29,7 +29,8 @@ import pylines.core.colours as cols
 import pylines.core.constants as C
 from pylines.core.custom_types import AColour, Colour, EventList, RealNumber
 from pylines.core.time_manager import fetch_hour, sky_colour_from_hour
-from pylines.core.utils import clamp, draw_needle, draw_text, draw_transparent_rect, metres_to_ft
+from pylines.core.utils import clamp, draw_needle, draw_text, draw_transparent_rect
+from pylines.core.units import METRES, FEET, convert_units
 from pylines.game.engine_sound import SoundManager
 from pylines.game.states import State
 from pylines.objects.objects import CrashReason, Plane, Runway
@@ -488,7 +489,7 @@ class GameScreen(State):
             hud_surface,
             (agl_centre[0] + 45, agl_centre[1]),
             'right', 'centre',
-            f"{metres_to_ft(altitude_agl):,.0f} ft",
+            f"{convert_units(altitude_agl, METRES, FEET):,.0f} ft",
             (255, 255, 255),
             18,
             self.fonts.monospaced
