@@ -379,14 +379,14 @@ class GameScreen(State):
             draw_needle(hud_surface, centre, 90 - (selected_runway.heading-yaw), 50, (0, 120, 255))
             draw_needle(hud_surface, centre, 270 - (selected_runway.heading-yaw), 50, (0, 120, 255))
 
-        # ASI (Air Speed Indicator)
+        # ASI (Airspeed Indicator)
         centre = (C.WN_W//2+300, C.WN_H*0.85)
         rect = self.images.speed_dial.get_rect(center=centre)
         hud_surface.blit(self.images.speed_dial, rect)
 
         speed_knots = self.plane.vel.length() * 1.94384  # Convert to knots
         angle = 90 - min(336, 270 * speed_knots/160)
-        draw_text(hud_surface, (C.WN_W//2+300, C.WN_H*0.85 - 20), 'centre', 'centre', f"{int(self.plane.vel.length() * 1.94384):03d}", (192, 192, 192), 25, self.font)
+        draw_text(hud_surface, (C.WN_W//2+300, C.WN_H*0.85 + 30), 'centre', 'centre', f"{int(self.plane.vel.length() * 1.94384):03d}", (192, 192, 192), 25, self.font)
         draw_needle(hud_surface, centre, angle, 100)
 
         # Altimeter (left)
