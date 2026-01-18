@@ -221,24 +221,6 @@ class Plane(Entity):
             -cos(rad(yaw)) * cos(rad(pitch)),
         ).normalize()
 
-        # Calculate terrain normal
-        terrain_normal = pg.Vector3(0, 1, 0)  # TODO: Use terrain normal to allow plane to roll on slopes
-        if self.on_ground:
-            px, _, pz = self.pos
-            # Sample surrounding points to calculate terrain normal
-            d = 0.5
-            h_px_pos = self.env.ground_height(px + d, pz)
-            h_px_neg = self.env.ground_height(px - d, pz)
-            h_pz_pos = self.env.ground_height(px, pz + d)
-            h_pz_neg = self.env.ground_height(px, pz - d)
-
-            # Using finite differences to find the gradient of the terrain
-            dx_grad = (h_px_pos - h_px_neg) / (2 * d)
-            dz_grad = (h_pz_pos - h_pz_neg) / (2 * d)
-
-            # The normal is perpendicular to the surface gradient
-            terrain_normal = pg.Vector3(-dx_grad, 1, -dz_grad).normalize()
-
         # Calculate thrust and weight
         thrust = pg.Vector3(0, 0, 0) if self.disabled else forward_vec * self.throttle_frac*self.model.max_throttle
         weight = pg.Vector3(0, -C.GRAVITY * self.model.mass, 0)

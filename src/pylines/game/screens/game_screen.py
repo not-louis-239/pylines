@@ -272,8 +272,6 @@ class GameScreen(State):
         speed_authority_factor = clamp((self.plane.vel.length()/30.87)**2, (0.01, 1))  # based on vel in m/s
         rot_accel = control_authority * base_rot_accel * speed_authority_factor * (0.2 if self.plane.on_ground else 1)
 
-        # TODO: Move rotation controls to the Plane object
-
         # Pitch
         if keys[pg.K_UP]:
             self.plane.rot_rate.x += rot_accel * (1 - (self.plane.rot.x / 90))
@@ -557,7 +555,7 @@ class GameScreen(State):
             pg.draw.line(hud_surface, (140, 140, 140), (glide_centre_x-7, glide_centre_y - 52), (glide_centre_x+6, glide_centre_y - 52), 2)
 
             # Green circle
-            pg.draw.circle(hud_surface, (0, 255, 0), (glide_centre_x, glide_centre_y + clamp(deviation, (-10, 10)) * 52/10), 5)  # TODO: 52/10 converts metres to pixels, make this a constant or something
+            pg.draw.circle(hud_surface, (0, 255, 0), (glide_centre_x, glide_centre_y + clamp(deviation, (-10, 10)) * 52/10), 5)
 
             # White line
             pg.draw.line(hud_surface, (255, 255, 255), (glide_centre_x-7, glide_centre_y), (glide_centre_x+6, glide_centre_y), 2)
