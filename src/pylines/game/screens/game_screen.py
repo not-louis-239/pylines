@@ -542,7 +542,7 @@ class GameScreen(State):
 
         # Display glidescope
         show_glidescope = (
-            gps_distance_flat.length() < 8_000 and  # runway is less than 8km away
+            gps_distance_flat.length() < 5_000 and  # runway is close
             self.plane.pos.y > self.env.ground_height(self.plane.pos.x, self.plane.pos.z)  # plane is still in the air
         )
 

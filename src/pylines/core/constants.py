@@ -50,11 +50,12 @@ WN_H = 850
 
 # Ground size
 WORLD_SIZE = 100_000  # distance from origin, metres, so the world is actually 200,000m wide
-TRAVEL_LIMIT = WORLD_SIZE * 0.99  # The user is "unauthorised" to go further
+HARD_TRAVEL_LIMIT = WORLD_SIZE * 0.99  # invisible wall
+SOFT_TRAVEL_LIMIT = WORLD_SIZE * 0.95  # past this, forces push the user back into the centre
 
 # Rendering
 INNER_RENDER_LIMIT = 0.05
-OUTER_RENDER_LIMIT = 100_000
+OUTER_RENDER_LIMIT = 50_000
 
 CAMERA_RADIUS: float = 4  # The camera is a sphere collider now
 
