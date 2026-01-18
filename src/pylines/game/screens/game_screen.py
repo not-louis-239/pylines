@@ -549,12 +549,16 @@ class GameScreen(State):
         if show_glidescope:
             glide_centre_x, glide_centre_y = glide_centre
 
+            # Tick marks
             pg.draw.line(hud_surface, (140, 140, 140), (glide_centre_x-7, glide_centre_y + 26), (glide_centre_x+6, glide_centre_y + 26), 2)
             pg.draw.line(hud_surface, (140, 140, 140), (glide_centre_x-7, glide_centre_y + 52), (glide_centre_x+6, glide_centre_y + 52), 2)
             pg.draw.line(hud_surface, (140, 140, 140), (glide_centre_x-7, glide_centre_y - 26), (glide_centre_x+6, glide_centre_y - 26), 2)
             pg.draw.line(hud_surface, (140, 140, 140), (glide_centre_x-7, glide_centre_y - 52), (glide_centre_x+6, glide_centre_y - 52), 2)
-            pg.draw.circle(hud_surface, (0, 255, 0), (glide_centre_x, glide_centre_y - clamp(deviation, (-10, 10)) * 52/10), 5)  # TODO: 52/10 converts metres to pixels, make this a constant or something
 
+            # Green circle
+            pg.draw.circle(hud_surface, (0, 255, 0), (glide_centre_x, glide_centre_y + clamp(deviation, (-10, 10)) * 52/10), 5)  # TODO: 52/10 converts metres to pixels, make this a constant or something
+
+            # White line
             pg.draw.line(hud_surface, (255, 255, 255), (glide_centre_x-7, glide_centre_y), (glide_centre_x+6, glide_centre_y), 2)
 
         # Minimap
