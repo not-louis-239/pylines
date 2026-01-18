@@ -95,7 +95,7 @@ class Plane(Entity):
         self.acc = pg.Vector3(0, 0, 0)
 
         self.throttle_frac: float = 0  # from 0 to 1
-        self.flaps: float = 0  # 0 = down, 1 = up
+        self.flaps: float = 0.7  # 0 = down, 1 = up, flaps start slightly down for takeoff
         self.rudder: float = 0  # from -1 to 1 (deflection)
         self.braking = False
 
@@ -274,6 +274,8 @@ class Plane(Entity):
         lift_mag = 0.5 * AIR_DENSITY * airspeed**2 * self.model.wing_area * cl
 
         airflow = -self.vel
+        flaps_def = 1 - self.flaps  # flap deflection
+
         if airflow.length_squared() < EPSILON:
             lift = pg.Vector3(0, 0, 0)
         else:
@@ -288,7 +290,7 @@ class Plane(Entity):
             lift_dir = airflow_dir.cross(right).normalize()
 
             # Lift increase from flaps
-            lift_mag *= 1 + (1 - self.flaps) * self.model.flap_lift_bonus
+            lift_mag *= 1 + (flaps_def**0.7) * self.model.flap_lift_bonus
 
             # Lift vector
             lift = lift_dir * lift_mag
@@ -305,7 +307,7 @@ class Plane(Entity):
         drag_mag = 0.5 * AIR_DENSITY * airspeed**2 * self.model.wing_area * cd
 
         # Drag increase from flaps
-        drag_mag *= 1 + (1 - self.flaps) * self.model.flap_drag_penalty
+        drag_mag *= 1 + (flaps_def**1.8) * self.model.flap_drag_penalty
 
         if airspeed < EPSILON:
             drag = pg.Vector3(0, 0, 0)
@@ -398,8 +400,9 @@ class Plane(Entity):
         self.damage_level = clamp(self.damage_level, (0, 1))
 
 class Runway(Entity):
-    def __init__(self, x: float, y: float, z: float, w: float, l: float, heading: float = 0):
+    def __init__(self, name: str, x: float, y: float, z: float, w: float, l: float, heading: float = 0):
         super().__init__(x, y, z)
+        self.name = name
         self.w = w
         self.l = l
         self.heading = heading
