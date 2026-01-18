@@ -24,15 +24,7 @@ import pygame as pg
 from OpenGL import GL as gl
 
 from pylines.core.asset_manager import Sounds
-from pylines.core.constants import (
-    AIR_DENSITY,
-    EPSILON,
-    GRAVITY,
-    PLANE_MODELS,
-    HARD_TRAVEL_LIMIT,
-    SOFT_TRAVEL_LIMIT,
-    PlaneModel
-)
+import pylines.core.constants as C
 from pylines.core.custom_types import Surface
 from pylines.core.utils import clamp, point_in_aabb
 from pylines.core.time_manager import fetch_hour, terrain_brightness_from_hour
@@ -62,7 +54,7 @@ class Entity:
 class Plane(Entity):
     def __init__(self, sounds: Sounds, dialog_box: DialogMessage, env: Environment):
         super().__init__(0, 0, 0)
-        self.model: PlaneModel = PLANE_MODELS["Cessna 172"]
+        self.model: C.PlaneModel = C.PLANE_MODELS["Cessna 172"]
         self.sounds = sounds
         self.dialog_box = dialog_box
         self.env = env
@@ -192,7 +184,7 @@ class Plane(Entity):
         MAX_OK_IMPACT = 0.6
 
         # Determine reason
-        water_crash = self.pos.y < self.env.sea_level + EPSILON
+        water_crash = self.pos.y < self.env.sea_level + C.EPSILON
         if water_crash:
             crash_reason = CrashReason.OCEAN
         elif self.over_runway:
@@ -249,14 +241,14 @@ class Plane(Entity):
 
         # Calculate thrust and weight
         thrust = pg.Vector3(0, 0, 0) if self.disabled else forward_vec * self.throttle_frac*self.model.max_throttle
-        weight = pg.Vector3(0, -GRAVITY * self.model.mass, 0)
+        weight = pg.Vector3(0, -C.GRAVITY * self.model.mass, 0)
 
         # Calculate Angle of Attack (AoA)
 
         # TODO: Improve AoA calculation
         # AoA should not simply be the pitch difference between velocity and forward vectors
         airspeed = self.vel.length()
-        if airspeed < EPSILON:
+        if airspeed < C.EPSILON:
             self.aoa = 0
         else:
             vel_unit_vec = self.vel.normalize()
@@ -272,12 +264,12 @@ class Plane(Entity):
         else:
             excess = self.aoa - self.model.stall_angle  # degrees
             cl = max(0.125, self.model.cl_max * (1 - 0.1*excess))
-        lift_mag = 0.5 * AIR_DENSITY * airspeed**2 * self.model.wing_area * cl
+        lift_mag = 0.5 * C.AIR_DENSITY * airspeed**2 * self.model.wing_area * cl
 
         airflow = -self.vel
         flaps_def = 1 - self.flaps  # flap deflection
 
-        if airflow.length_squared() < EPSILON:
+        if airflow.length_squared() < C.EPSILON:
             lift = pg.Vector3(0, 0, 0)
         else:
             airflow_dir = airflow.normalize()
@@ -305,12 +297,12 @@ class Plane(Entity):
             cd *= 1.5  # Extra drag from friction with ground
         cd = min(cd, 1)
 
-        drag_mag = 0.5 * AIR_DENSITY * airspeed**2 * self.model.wing_area * cd
+        drag_mag = 0.5 * C.AIR_DENSITY * airspeed**2 * self.model.wing_area * cd
 
         # Drag increase from flaps
         drag_mag *= 1 + (flaps_def**1.8) * self.model.flap_drag_penalty
 
-        if airspeed < EPSILON:
+        if airspeed < C.EPSILON:
             drag = pg.Vector3(0, 0, 0)
         else:
             drag = -self.vel.normalize() * drag_mag
@@ -320,8 +312,8 @@ class Plane(Entity):
 
         # World edge boundary
         cheb_dist = max(abs(self.pos.x), abs(self.pos.z))  # Chebyshev distance of plane from origin
-        if cheb_dist > SOFT_TRAVEL_LIMIT:
-            strength_frac = (cheb_dist - SOFT_TRAVEL_LIMIT) / (HARD_TRAVEL_LIMIT - SOFT_TRAVEL_LIMIT)  # 0 to 1, no clamping needed as hard wall exists anyway
+        if cheb_dist > C.SOFT_TRAVEL_LIMIT:
+            strength_frac = (cheb_dist - C.SOFT_TRAVEL_LIMIT) / (C.HARD_TRAVEL_LIMIT - C.SOFT_TRAVEL_LIMIT)  # 0 to 1, no clamping needed as hard wall exists anyway
 
             FULL_STRENGTH_ACCEL = self.model.max_throttle/self.model.mass  # m/s² acceleration, cancels out throttle fully at world boundary
             full_strength_force_mag: float = self.model.mass * FULL_STRENGTH_ACCEL  # F = ma
@@ -385,8 +377,8 @@ class Plane(Entity):
         self.rot.x = clamp(self.rot.x, (-90, 90))
 
         # Clamp position to prevent going off the map
-        self.pos.x = clamp(self.pos.x, (-HARD_TRAVEL_LIMIT, HARD_TRAVEL_LIMIT))
-        self.pos.z = clamp(self.pos.z, (-HARD_TRAVEL_LIMIT, HARD_TRAVEL_LIMIT))
+        self.pos.x = clamp(self.pos.x, (-C.HARD_TRAVEL_LIMIT, C.HARD_TRAVEL_LIMIT))
+        self.pos.z = clamp(self.pos.z, (-C.HARD_TRAVEL_LIMIT, C.HARD_TRAVEL_LIMIT))
 
         # Damage update - damage is proportional to square of excess velocity
         DAMAGE_FACTOR = 0.0008
