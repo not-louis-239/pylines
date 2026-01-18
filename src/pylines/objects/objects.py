@@ -29,8 +29,9 @@ from pylines.core.constants import (
     EPSILON,
     GRAVITY,
     PLANE_MODELS,
-    TRAVEL_LIMIT,
-    PlaneModel,
+    HARD_TRAVEL_LIMIT,
+    SOFT_TRAVEL_LIMIT,
+    PlaneModel
 )
 from pylines.core.custom_types import Surface
 from pylines.core.utils import clamp, point_in_aabb
@@ -317,8 +318,23 @@ class Plane(Entity):
         if self.braking and self.on_ground:
             self.vel *= (1 - 0.4 * dt/1000)
 
+        # World edge boundary
+        cheb_dist = max(abs(self.pos.x), abs(self.pos.z))  # Chebyshev distance of plane from origin
+        if cheb_dist > SOFT_TRAVEL_LIMIT:
+            strength_frac = (cheb_dist - SOFT_TRAVEL_LIMIT) / (HARD_TRAVEL_LIMIT - SOFT_TRAVEL_LIMIT)  # 0 to 1, no clamping needed as hard wall exists anyway
+
+            FULL_STRENGTH_ACCEL = self.model.max_throttle/self.model.mass  # m/s² acceleration, cancels out throttle fully at world boundary
+            full_strength_force_mag: float = self.model.mass * FULL_STRENGTH_ACCEL  # F = ma
+            boundary_bias_mag = full_strength_force_mag * strength_frac ** 2  # superlinear scaling
+
+            vec_to_origin = pg.Vector3(-self.pos.x, 0, -self.pos.z).normalize()  # vector pointing to map origin from plane pos
+
+            boundary_bias = vec_to_origin * boundary_bias_mag
+        else:
+            boundary_bias = pg.Vector3(0, 0, 0)
+
         # Combine and integrate
-        net_force = thrust + weight + lift + drag  # Force vector in Newtons
+        net_force = thrust + weight + lift + drag + boundary_bias  # Force vector in Newtons
 
         self.acc = net_force / self.model.mass
         self.vel += self.acc * dt/1000
@@ -369,15 +385,13 @@ class Plane(Entity):
         self.rot.x = clamp(self.rot.x, (-90, 90))
 
         # Clamp position to prevent going off the map
-        self.pos.x = clamp(self.pos.x, (-TRAVEL_LIMIT, TRAVEL_LIMIT))
-        self.pos.z = clamp(self.pos.z, (-TRAVEL_LIMIT, TRAVEL_LIMIT))
+        self.pos.x = clamp(self.pos.x, (-HARD_TRAVEL_LIMIT, HARD_TRAVEL_LIMIT))
+        self.pos.z = clamp(self.pos.z, (-HARD_TRAVEL_LIMIT, HARD_TRAVEL_LIMIT))
 
         # Damage update - damage is proportional to square of excess velocity
         DAMAGE_FACTOR = 0.0008
         dp_excess = max(0, self.vel.length()**2 - self.model.v_ne**2)  # represents excess dynamic pressure
         self.damage_level += dt/1000 * DAMAGE_FACTOR * dp_excess
-
-        # TODO: Add damage when not on runway (once runways are added)
 
         # Collision detection with ground
         ground_height = self.env.ground_height(self.pos.x, self.pos.z)
@@ -390,7 +404,8 @@ class Plane(Entity):
             self.pos.y = ground_height
 
             if not self.over_runway:
-                self.damage_level += 0.25 * dt/1000
+                self.vel *= 0.85 ** (dt/1000)
+                self.damage_level += clamp(self.vel.length() / 30, (0, 1))**2 * 0.2 * dt/1000  # 30 m/s - max terrain scrape damage
 
             if not self.crashed:
                 self.vel.y = 0
