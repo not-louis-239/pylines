@@ -291,9 +291,9 @@ class GameScreen(State):
 
         # Flaps
         FLAPS_SPEED = 2
-        if keys[pg.K_z]:
+        if keys[pg.K_z]:  # Flaps up
             self.plane.flaps += FLAPS_SPEED * dt/1000
-        if keys[pg.K_x]:
+        if keys[pg.K_x]:  # Flaps down
             self.plane.flaps -= FLAPS_SPEED * dt/1000
         self.plane.flaps = clamp(self.plane.flaps, (0, 1))
 
