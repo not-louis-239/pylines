@@ -40,7 +40,7 @@ class CrashReason(Enum):
     RUNWAY = "runway"  # reserved for fatal improper landing on runway, e.g. excessive sink rate, bad attitude
 
 class Entity:
-    """Base class for all in-game physical objects"""
+    """Base class for all in-game physical or contrallable objects."""
 
     def __init__(self, x: float, y: float, z: float) -> None:
         self.pos: pg.Vector3 = pg.Vector3(x, y, z)
@@ -388,6 +388,9 @@ class Plane(Entity):
 
         self.damage_level = clamp(self.damage_level, (0, 1))
 
+# XXX: The Runway class should be moved to scenery.py as it
+#      is a scenery object for all practical purposes.
+#      It is not a living entity.
 class Runway(Entity):
     def __init__(self, name: str, x: float, y: float, z: float, w: float, l: float, heading: float = 0):
         super().__init__(x, y, z)

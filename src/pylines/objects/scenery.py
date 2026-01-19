@@ -24,13 +24,11 @@ from OpenGL import GLU as glu
 
 from pylines.core.constants import (
     EPSILON,
-    INNER_RENDER_LIMIT,
-    OUTER_RENDER_LIMIT,
     WN_H,
     WN_W,
     WORLD_SIZE,
 )
-from pylines.core.custom_types import Coord3, RealNumber, Surface
+from pylines.core.custom_types import Coord3, Surface
 from pylines.core.time_manager import fetch_hour, terrain_brightness_from_hour
 from pylines.objects.objects import Entity
 from pylines.shaders.shader_manager import load_shader_script
@@ -39,13 +37,33 @@ if TYPE_CHECKING:
     from pylines.game.environment import Environment
 
 class SceneryObject(Entity):
+    """Base class for all scenery objects. Visual or structural
+    elements of the world that do not represent living entities."""
+
     def __init__(self, x, y, z):
         super().__init__(x, y, z)
 
     def draw(self):
         raise NotImplementedError
 
+# TODO: Finish small scenery object class body
+class SmallSceneryObject(SceneryObject):
+    """Base class for interactive scenery objects. Represents discrete,
+    mostly decorative or functional structures.
+
+    Examples include buildings (houses, ATC towers, airports),
+    lights (streetlights, fairy lights, lamp posts) and city blocks.
+
+    Compared to LargeSceneryObjects, they are relatively small,
+    and interactable/collideable, and may be spawned in groups."""
+
+    ...
+
 class LargeSceneryObject(SceneryObject):
+    """Represents large, static elements forming the base world. Includes
+    terrain and oceans. They typically cover large areas, are immovable,
+    and can affect core gameplay, e.g. terrain height or GPWSs."""
+
     def __init__(self, x, y, z):
         super().__init__(x, y, z)
         self.vertices: list[Coord3] | np.ndarray = [
@@ -90,7 +108,7 @@ class CelestialObject(SceneryObject):
 
         gl.glPushMatrix()
 
-        # --- Save state ---
+        # Save state
         was_blend_enabled = gl.glIsEnabled(gl.GL_BLEND)
         was_depth_mask_enabled = gl.glGetIntegerv(gl.GL_DEPTH_WRITEMASK)
         gl.glTranslatef(pos.x, pos.y, pos.z)
@@ -120,7 +138,7 @@ class CelestialObject(SceneryObject):
         gl.glTexCoord2f(0, 1); gl.glVertex3f(-size, size, 0)
         gl.glEnd()
 
-        # --- Restore state ---
+        # Restore state
         gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
         gl.glDepthMask(was_depth_mask_enabled)
         gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA) # Restore default blend func
@@ -128,6 +146,43 @@ class CelestialObject(SceneryObject):
             gl.glDisable(gl.GL_BLEND)
 
         gl.glPopMatrix()
+
+class Sky(LargeSceneryObject):
+    def __init__(self) -> None:
+        super().__init__(0, 0, 0)  # Sky placed at origin
+
+    def draw(self, colour_scheme) -> None:
+        gl.glMatrixMode(gl.GL_PROJECTION)
+        gl.glPushMatrix()
+        gl.glLoadIdentity()
+        glu.gluOrtho2D(0, WN_W, WN_H, 0)
+        gl.glMatrixMode(gl.GL_MODELVIEW)
+        gl.glPushMatrix()
+        gl.glLoadIdentity()
+
+        gl.glDisable(gl.GL_DEPTH_TEST)
+        gl.glBegin(gl.GL_QUADS)
+        # Top half (high to mid)
+        gl.glColor3ub(*colour_scheme.high)
+        gl.glVertex2f(0, 0)
+        gl.glVertex2f(WN_W, 0)
+        gl.glColor3ub(*colour_scheme.mid)
+        gl.glVertex2f(WN_W, WN_H / 2)
+        gl.glVertex2f(0, WN_H / 2)
+        # Bottom half (mid to low)
+        gl.glColor3ub(*colour_scheme.mid)
+        gl.glVertex2f(0, WN_H / 2)
+        gl.glVertex2f(WN_W, WN_H / 2)
+        gl.glColor3ub(*colour_scheme.low)
+        gl.glVertex2f(WN_W, WN_H)
+        gl.glVertex2f(0, WN_H)
+        gl.glEnd()
+        gl.glEnable(gl.GL_DEPTH_TEST)
+
+        gl.glPopMatrix()
+        gl.glMatrixMode(gl.GL_PROJECTION)
+        gl.glPopMatrix()
+        gl.glMatrixMode(gl.GL_MODELVIEW)
 
 class Ground(LargeSceneryObject):
     def __init__(self, textures: dict[str, Surface], env: Environment) -> None:
@@ -295,43 +350,6 @@ class Ground(LargeSceneryObject):
 
         gl.glPopMatrix()
 
-class Sky(LargeSceneryObject):
-    def __init__(self) -> None:
-        super().__init__(0, 0, 0)  # Sky placed at origin
-
-    def draw(self, colour_scheme) -> None:
-        gl.glMatrixMode(gl.GL_PROJECTION)
-        gl.glPushMatrix()
-        gl.glLoadIdentity()
-        glu.gluOrtho2D(0, WN_W, WN_H, 0)
-        gl.glMatrixMode(gl.GL_MODELVIEW)
-        gl.glPushMatrix()
-        gl.glLoadIdentity()
-
-        gl.glDisable(gl.GL_DEPTH_TEST)
-        gl.glBegin(gl.GL_QUADS)
-        # Top half (high to mid)
-        gl.glColor3ub(*colour_scheme.high)
-        gl.glVertex2f(0, 0)
-        gl.glVertex2f(WN_W, 0)
-        gl.glColor3ub(*colour_scheme.mid)
-        gl.glVertex2f(WN_W, WN_H / 2)
-        gl.glVertex2f(0, WN_H / 2)
-        # Bottom half (mid to low)
-        gl.glColor3ub(*colour_scheme.mid)
-        gl.glVertex2f(0, WN_H / 2)
-        gl.glVertex2f(WN_W, WN_H / 2)
-        gl.glColor3ub(*colour_scheme.low)
-        gl.glVertex2f(WN_W, WN_H)
-        gl.glVertex2f(0, WN_H)
-        gl.glEnd()
-        gl.glEnable(gl.GL_DEPTH_TEST)
-
-        gl.glPopMatrix()
-        gl.glMatrixMode(gl.GL_PROJECTION)
-        gl.glPopMatrix()
-        gl.glMatrixMode(gl.GL_MODELVIEW)
-
 class Ocean(LargeSceneryObject):
     def __init__(self, image_surface: Surface, env: "Environment") -> None:
         super().__init__(0, env.sea_level, 0)
@@ -475,10 +493,6 @@ class Ocean(LargeSceneryObject):
 
         gl.glPopMatrix()
 
-
-# TODO: Expand building objects once heightmap implementation is done
-class Building(SceneryObject): ...
-
 class Sun(CelestialObject):
     def __init__(self, image_surface: pg.Surface):
         super().__init__(image_surface, pg.Vector3(), scale=0.5)
@@ -526,3 +540,43 @@ class Moon(CelestialObject):
 
     def update(self):
         self.set_direction(fetch_hour())
+
+# TODO: Add stars
+class Star(CelestialObject):
+    def __init__(
+        self,
+        direction: pg.Vector3,
+        brightness: float = 1.0,
+        colour: tuple[int, int, int] = (255, 255, 255),
+        size: float = 1.0
+    ) -> None:
+        self.direction = direction
+        self.brightness = brightness
+        self.colour = colour
+        self.size = size
+
+# TODO: Expand building objects
+class Building(SmallSceneryObject):
+    ...
+
+class Lights(SmallSceneryObject):
+    ...
+
+# TODO: Finish building/structure subclasses
+class House(Building):
+    ...
+
+class ATCTower(Building):
+    ...
+
+class ApartmentBlock(Building):
+    ...
+
+class AirportBlock(Building):
+    ...
+
+class Streetlight(Lights):
+    ...
+
+class FairyLights(Lights):
+    ...
