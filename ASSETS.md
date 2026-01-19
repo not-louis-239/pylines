@@ -13,7 +13,7 @@ All other assets are original work unless stated otherwise.
 
 - Sound effects
   Source: Freesound (CC0 only)
-  https://https://freesound.org/
+  https://freesound.org/
 
 ## SIL Open Font License v1.1
 
