@@ -46,10 +46,6 @@ const float blend_range = 20.0;  // metres
 uniform float u_brightness;
 
 void main() {
-    if (v_height < sea_level) {
-        discard;
-    }
-
     // Sample all textures
     vec4 sand          = texture2D(sand_texture, v_tex_coord);
     vec4 low_grass     = texture2D(low_grass_texture, v_tex_coord);
