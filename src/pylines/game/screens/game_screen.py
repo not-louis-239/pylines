@@ -76,7 +76,7 @@ class GameScreen(State):
             "snow_texture": assets.images.snow,
             "noise": assets.map.noise,
         }
-        self.ocean = Ocean(assets.images.ocean, game.env.sea_level)
+        self.ocean = Ocean(assets.images.ocean, game.env)
         self.ground = Ground(ground_textures, game.env)
 
         self.plane = Plane(assets.sounds, self.landing_dialog_box, game.env)

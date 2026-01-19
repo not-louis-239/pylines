@@ -16,12 +16,15 @@
 
 attribute vec3 position;
 attribute vec2 tex_coord;
+attribute float terrain_height;
 
 varying vec2 v_tex_coord;
-varying vec3 v_world_xz;
+varying float v_sea_level;
+varying float v_terrain_height;
 
 void main() {
     v_tex_coord = tex_coord;
-    v_world_xz = position;
+    v_sea_level = position.y;
+    v_terrain_height = terrain_height;
     gl_Position = gl_ModelViewProjectionMatrix * vec4(position, 1.0);
 }

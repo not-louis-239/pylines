@@ -15,45 +15,33 @@
 #version 120
 
 varying vec2 v_tex_coord;
-varying vec3 v_world_xz;
+varying float v_sea_level;
+varying float v_terrain_height;
 
 uniform sampler2D u_texture;
-uniform sampler2D u_heightmap;
-
 uniform float u_brightness;
-uniform float u_sea_level;
-uniform float u_world_size;
-uniform float u_min_h;
-uniform float u_max_h;
 
 const float MIN_OPACITY = 0.1;
 const float MAX_OPACITY = 0.99;
-const float K = 0.01514;
+const float K = 0.01514;  // light reduction per metre
 
 void main() {
     // Base ocean color
     vec4 color = texture2D(u_texture, v_tex_coord);
     color.rgb *= u_brightness;
 
-    // Calculate UV coordinates for the heightmap based on world position
-    vec2 heightmap_uv = (v_world_xz.xz / u_world_size) * 0.5 + 0.5;
-
-    // Sample the heightmap
-    float terrain_height_raw = texture2D(u_heightmap, heightmap_uv).r;
-
-    // Convert raw height (0-1) to world height
-    float terrain_height = u_min_h + terrain_height_raw * (u_max_h - u_min_h);
-
-    // Calculate water depth
-    float water_depth = u_sea_level - terrain_height;
+    // Calculate water depth from interpolated values
+    float water_depth = v_sea_level - v_terrain_height;
 
     if (water_depth < 0.0) {
-        // This shouldn't happen if the ocean is rendered correctly, but as a safeguard
         water_depth = 0.0;
     }
 
+    // Optical depth for aesthetics
+    float optical_depth = water_depth * 0.2;
+
     // Calculate opacity using the Beer-Lambert-style formula
-    float factor = 1.0 - exp(-K * water_depth);
+    float factor = 1.0 - exp(-K * optical_depth);
     factor = clamp(factor, 0.0, 1.0);
 
     color.a = mix(MIN_OPACITY, MAX_OPACITY, factor);

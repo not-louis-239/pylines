@@ -48,7 +48,7 @@ class SceneryObject(Entity):
 class LargeSceneryObject(SceneryObject):
     def __init__(self, x, y, z):
         super().__init__(x, y, z)
-        self.vertices: list[Coord3] = [
+        self.vertices: list[Coord3] | np.ndarray = [
             (-WORLD_SIZE, 0, -WORLD_SIZE),
             (-WORLD_SIZE, 0, WORLD_SIZE),
             (WORLD_SIZE, 0, -WORLD_SIZE),
@@ -333,9 +333,11 @@ class Sky(LargeSceneryObject):
         gl.glMatrixMode(gl.GL_MODELVIEW)
 
 class Ocean(LargeSceneryObject):
-    def __init__(self, image_surface: Surface, sea_level: RealNumber) -> None:
-        super().__init__(0, sea_level, 0)
+    def __init__(self, image_surface: Surface, env: "Environment") -> None:
+        super().__init__(0, env.sea_level, 0)
         self.texture_id = self._load_texture(image_surface)
+        self.env = env
+        self.grid_resolution = 400  # Must match Ground for now
         self.texture_repeat_count = 25.0
 
         self.shader = load_shader_script(
@@ -344,12 +346,14 @@ class Ocean(LargeSceneryObject):
         )
         self.position_loc = gl.glGetAttribLocation(self.shader, "position")
         self.tex_coord_loc = gl.glGetAttribLocation(self.shader, "tex_coord")
+        self.terrain_height_loc = gl.glGetAttribLocation(self.shader, "terrain_height")
+
         self.texture_loc = gl.glGetUniformLocation(self.shader, "u_texture")
         self.brightness_loc = gl.glGetUniformLocation(self.shader, "u_brightness")
-        self.near_loc = gl.glGetUniformLocation(self.shader, "u_near")
-        self.far_loc = gl.glGetUniformLocation(self.shader, "u_far")
 
-        self.vbo, self.ebo, self.indices_len = self._setup_buffers()
+        self.vertices: np.ndarray
+        self.vertices, self.indices = self._build_mesh()
+        self.vbo, self.ebo = self._setup_buffers()
 
     def _load_texture(self, image_surface: Surface) -> int:
         image_surface = pg.transform.flip(image_surface, False, True)
@@ -364,31 +368,59 @@ class Ocean(LargeSceneryObject):
         gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
         return texture_id
 
+    def _build_mesh(self) -> tuple[np.ndarray, np.ndarray]:
+        vertices = []
+        indices = []
+
+        res = self.grid_resolution
+        step = WORLD_SIZE * 2 / res
+        texture_scale = self.texture_repeat_count / (WORLD_SIZE * 2)
+
+        def vert_index(r: int, c: int) -> int:
+            return r * (res + 1) + c
+
+        # ---- vertices ----
+        for r in range(res + 1):
+            for c in range(res + 1):
+                x = -WORLD_SIZE + c * step
+                z = -WORLD_SIZE + r * step
+                y = self.env.sea_level
+                terrain_y = self.env.height_at(x, z)
+
+                u = (x + WORLD_SIZE) * texture_scale
+                v = (z + WORLD_SIZE) * texture_scale
+
+                vertices.extend([x, y, z, u, v, terrain_y])
+
+        # ---- indices ----
+        for r in range(res):
+            for c in range(res):
+                A = vert_index(r, c)
+                B = vert_index(r, c + 1)
+                C = vert_index(r + 1, c)
+                D = vert_index(r + 1, c + 1)
+
+                indices.extend([A, B, D])
+                indices.extend([A, D, C])
+
+        return (
+            np.array(vertices, dtype=np.float32),
+            np.array(indices, dtype=np.uint32),
+        )
+
     def _setup_buffers(self):
-        s = WORLD_SIZE
-        r = self.texture_repeat_count
-        vertices = np.array([
-            # Position      # Tex Coords
-            -s, 0.0, -s,      0.0, 0.0,
-             s, 0.0, -s,      r,   0.0,
-             s, 0.0,  s,      r,   r,
-            -s, 0.0,  s,      0.0, r,
-        ], dtype=np.float32)
-
-        indices = np.array([0, 1, 2, 0, 2, 3], dtype=np.uint32)
-
         vbo = gl.glGenBuffers(1)
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, vbo)
-        gl.glBufferData(gl.GL_ARRAY_BUFFER, vertices.nbytes, vertices, gl.GL_STATIC_DRAW)
+        gl.glBufferData(gl.GL_ARRAY_BUFFER, self.vertices.nbytes, self.vertices, gl.GL_STATIC_DRAW)
 
         ebo = gl.glGenBuffers(1)
         gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, ebo)
-        gl.glBufferData(gl.GL_ELEMENT_ARRAY_BUFFER, indices.nbytes, indices, gl.GL_STATIC_DRAW)
+        gl.glBufferData(gl.GL_ELEMENT_ARRAY_BUFFER, self.indices.nbytes, self.indices, gl.GL_STATIC_DRAW)
 
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
         gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, 0)
 
-        return vbo, ebo, len(indices)
+        return vbo, ebo
 
     def draw(self):
         brightness = terrain_brightness_from_hour(fetch_hour())
@@ -398,6 +430,7 @@ class Ocean(LargeSceneryObject):
         was_blend_enabled = gl.glIsEnabled(gl.GL_BLEND)
         gl.glEnable(gl.GL_BLEND)
         gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
+        gl.glDepthMask(gl.GL_FALSE)  # Don't write to depth buffer
 
         gl.glEnable(gl.GL_POLYGON_OFFSET_FILL)
         gl.glPolygonOffset(1.0, 1.0)
@@ -413,17 +446,21 @@ class Ocean(LargeSceneryObject):
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.vbo)
         gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, self.ebo)
 
-        stride = 5 * ctypes.sizeof(ctypes.c_float)
+        stride = 6 * ctypes.sizeof(ctypes.c_float)
         gl.glEnableVertexAttribArray(self.position_loc)
         gl.glVertexAttribPointer(self.position_loc, 3, gl.GL_FLOAT, gl.GL_FALSE, stride, ctypes.c_void_p(0))
 
         gl.glEnableVertexAttribArray(self.tex_coord_loc)
         gl.glVertexAttribPointer(self.tex_coord_loc, 2, gl.GL_FLOAT, gl.GL_FALSE, stride, ctypes.c_void_p(3 * ctypes.sizeof(ctypes.c_float)))
 
-        gl.glDrawElements(gl.GL_TRIANGLES, self.indices_len, gl.GL_UNSIGNED_INT, None)
+        gl.glEnableVertexAttribArray(self.terrain_height_loc)
+        gl.glVertexAttribPointer(self.terrain_height_loc, 1, gl.GL_FLOAT, gl.GL_FALSE, stride, ctypes.c_void_p(5 * ctypes.sizeof(ctypes.c_float)))
+
+        gl.glDrawElements(gl.GL_TRIANGLES, len(self.indices), gl.GL_UNSIGNED_INT, None)
 
         gl.glDisableVertexAttribArray(self.position_loc)
         gl.glDisableVertexAttribArray(self.tex_coord_loc)
+        gl.glDisableVertexAttribArray(self.terrain_height_loc)
 
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
         gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, 0)
@@ -432,10 +469,12 @@ class Ocean(LargeSceneryObject):
 
         gl.glDisable(gl.GL_POLYGON_OFFSET_FILL)
 
+        gl.glDepthMask(gl.GL_TRUE) # Re-enable depth writing
         if not was_blend_enabled:
             gl.glDisable(gl.GL_BLEND)
 
         gl.glPopMatrix()
+
 
 # TODO: Expand building objects once heightmap implementation is done
 class Building(SceneryObject): ...
