@@ -24,9 +24,9 @@ from OpenGL import GLU as glu
 
 import pylines.core.constants as C
 from pylines.core.custom_types import Coord3, Surface
-from pylines.core.time_manager import fetch_hour, brightness_from_hour
-from pylines.objects.objects import Entity
+from pylines.core.time_manager import brightness_from_hour, fetch_hour
 from pylines.objects.building_parts import BuildingPart, draw_building_part
+from pylines.objects.objects import Entity
 from pylines.shaders.shader_manager import load_shader_script
 
 if TYPE_CHECKING:

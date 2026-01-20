@@ -14,9 +14,11 @@
 
 from __future__ import annotations
 
-from ..core.custom_types import RealNumber
-from dataclasses import dataclass
 import math
+from dataclasses import dataclass
+
+from ..core.custom_types import RealNumber
+
 
 @dataclass(frozen=True, kw_only=True)
 class _DimensionVector:

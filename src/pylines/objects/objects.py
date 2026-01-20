@@ -23,15 +23,15 @@ from typing import TYPE_CHECKING
 import pygame as pg
 from OpenGL import GL as gl
 
-from pylines.core.asset_manager import Sounds
 import pylines.core.constants as C
+from pylines.core.asset_manager import Sounds
 from pylines.core.custom_types import Surface
+from pylines.core.time_manager import brightness_from_hour, fetch_hour
 from pylines.core.utils import clamp, point_in_aabb
-from pylines.core.time_manager import fetch_hour, brightness_from_hour
 
 if TYPE_CHECKING:
-    from pylines.game.screens.game_screen import DialogMessage
     from pylines.game.environment import Environment
+    from pylines.game.screens.game_screen import DialogMessage
 
 class CrashReason(Enum):
     TERRAIN = "terrain"

@@ -19,14 +19,15 @@ contains the ingredients to make buildings
 and draw them
 """
 
-import pygame as pg
 from enum import Enum, auto
 
 import OpenGL.GL as gl
 import OpenGL.GLU as glu
+import pygame as pg
 
-from pylines.core.custom_types import Coord3, Colour
+from pylines.core.custom_types import Colour, Coord3
 from pylines.core.time_manager import brightness_from_hour, fetch_hour
+
 
 class Primitive(Enum):
     CUBOID = auto()

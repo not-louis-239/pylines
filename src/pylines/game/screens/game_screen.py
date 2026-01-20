@@ -29,8 +29,8 @@ import pylines.core.colours as cols
 import pylines.core.constants as C
 from pylines.core.custom_types import AColour, Colour, EventList, RealNumber
 from pylines.core.time_manager import fetch_hour, sky_colour_from_hour
+from pylines.core.units import FEET, METRES, convert_units
 from pylines.core.utils import clamp, draw_needle, draw_text, draw_transparent_rect
-from pylines.core.units import METRES, FEET, convert_units
 from pylines.game.engine_sound import SoundManager
 from pylines.game.states import State
 from pylines.objects.objects import CrashReason, Plane, Runway
@@ -478,7 +478,7 @@ class GameScreen(State):
             hud_surface,
             (agl_centre[0] - 45, agl_centre[1]),
             'left', 'centre',
-            f"AGL",
+            "AGL",
             (255, 255, 255),
             12,
             self.fonts.monospaced
