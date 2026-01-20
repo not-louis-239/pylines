@@ -27,7 +27,7 @@ from pylines.core.asset_manager import Sounds
 import pylines.core.constants as C
 from pylines.core.custom_types import Surface
 from pylines.core.utils import clamp, point_in_aabb
-from pylines.core.time_manager import fetch_hour, terrain_brightness_from_hour
+from pylines.core.time_manager import fetch_hour, brightness_from_hour
 
 if TYPE_CHECKING:
     from pylines.game.screens.game_screen import DialogMessage
@@ -400,7 +400,7 @@ class Runway(Entity):
         self.heading = heading
 
     def draw(self):
-        brightness = terrain_brightness_from_hour(fetch_hour())
+        brightness = brightness_from_hour(fetch_hour())
         gl.glPushMatrix()
 
         # Enable polygon offset to "pull" the runway towards the camera

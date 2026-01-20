@@ -24,8 +24,9 @@ from OpenGL import GLU as glu
 
 import pylines.core.constants as C
 from pylines.core.custom_types import Coord3, Surface
-from pylines.core.time_manager import fetch_hour, terrain_brightness_from_hour
+from pylines.core.time_manager import fetch_hour, brightness_from_hour
 from pylines.objects.objects import Entity
+from pylines.objects.building_parts import BuildingPart, draw_building_part
 from pylines.shaders.shader_manager import load_shader_script
 
 if TYPE_CHECKING:
@@ -51,14 +52,13 @@ class SmallSceneryObject(SceneryObject):
     Compared to LargeSceneryObjects, they are relatively small,
     and interactable/collideable, and may be spawned in groups."""
 
-    def __init__(self, x, y, z, l: float, h: float, w: float):
-        # Length and width are applied from the centre outwards,
-        # height is applied from the bottom upwards.
+    def __init__(self, x, y, z):
         super().__init__(x, y, z)
-        self.dims = pg.Vector3(l, h, w)
+        self.parts: list[BuildingPart] = []
 
     def draw(self):
-        raise NotImplementedError
+        for part in self.parts:
+            draw_building_part(self.pos, part)
 
 class LargeSceneryObject(SceneryObject):
     """Represents large, static elements forming the base world. Includes
@@ -301,7 +301,7 @@ class Ground(LargeSceneryObject):
         gl.glEnable(gl.GL_TEXTURE_2D)  # Enable texturing before using shaders
         gl.glUseProgram(self.shader)  # Activate the shader program
 
-        brightness = terrain_brightness_from_hour(fetch_hour())
+        brightness = brightness_from_hour(fetch_hour())
         gl.glUniform1f(self.brightness_loc, brightness)
 
         # Set up textures for the shader
@@ -442,7 +442,7 @@ class Ocean(LargeSceneryObject):
         return vbo, ebo
 
     def draw(self):
-        brightness = terrain_brightness_from_hour(fetch_hour())
+        brightness = brightness_from_hour(fetch_hour())
 
         gl.glPushMatrix()
 
@@ -557,32 +557,10 @@ class Star(CelestialObject):
         self.size = size
 
 class Building(SmallSceneryObject):
-    def __init__(self, x, y, z, l: float, h: float, w: float):
-        # Length and width are applied from the centre outwards,
-        # height is applied from the bottom upwards.
-        super().__init__(x, y, z, l, h, w)
+    def __init__(self, x, y, z, parts: list[BuildingPart]):
+        super().__init__(x, y, z)
+        self.parts = parts
 
     def draw(self):
-        raise NotImplementedError
-
-class Lights(SmallSceneryObject):
-    ...
-
-# TODO: Finish building/structure subclasses
-class House(Building):
-    ...
-
-class ATCTower(Building):
-    ...
-
-class ApartmentBlock(Building):
-    ...
-
-class AirportBlock(Building):
-    ...
-
-class Streetlight(Lights):
-    ...
-
-class FairyLights(Lights):
-    ...
+        for part in self.parts:
+            draw_building_part(self.pos, part)
