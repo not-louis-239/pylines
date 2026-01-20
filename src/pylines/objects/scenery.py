@@ -41,7 +41,6 @@ class SceneryObject(Entity):
     def draw(self):
         raise NotImplementedError
 
-# TODO: Finish small scenery object class body
 class SmallSceneryObject(SceneryObject):
     """Base class for interactive scenery objects. Represents discrete,
     mostly decorative or functional structures.
@@ -52,9 +51,14 @@ class SmallSceneryObject(SceneryObject):
     Compared to LargeSceneryObjects, they are relatively small,
     and interactable/collideable, and may be spawned in groups."""
 
-    def __init__(self, x, y, z):
+    def __init__(self, x, y, z, l: float, h: float, w: float):
+        # Length and width are applied from the centre outwards,
+        # height is applied from the bottom upwards.
         super().__init__(x, y, z)
+        self.dims = pg.Vector3(l, h, w)
 
+    def draw(self):
+        raise NotImplementedError
 
 class LargeSceneryObject(SceneryObject):
     """Represents large, static elements forming the base world. Includes
@@ -552,9 +556,14 @@ class Star(CelestialObject):
         self.colour = colour
         self.size = size
 
-# TODO: Expand building objects
 class Building(SmallSceneryObject):
-    ...
+    def __init__(self, x, y, z, l: float, h: float, w: float):
+        # Length and width are applied from the centre outwards,
+        # height is applied from the bottom upwards.
+        super().__init__(x, y, z, l, h, w)
+
+    def draw(self):
+        raise NotImplementedError
 
 class Lights(SmallSceneryObject):
     ...
