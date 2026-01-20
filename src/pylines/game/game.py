@@ -26,6 +26,8 @@ from pylines.game.screens.game_screen import GameScreen
 from pylines.game.screens.settings import SettingsScreen
 from pylines.game.screens.title import TitleScreen
 from pylines.objects.objects import Runway
+from pylines.objects.scenery import Building, BuildingPart
+from pylines.objects.building_parts import Primitive
 
 if TYPE_CHECKING:
     from pylines.core.custom_types import EventList, ScancodeWrapper, Surface
@@ -54,6 +56,9 @@ class Game:
                 Runway('DCM', 200, 280, -3_000, w=50, l=1_500, heading=130),
                 Runway('CRF', 2_250, 800, -17_500, w=50, l=1_500, heading=35),
                 Runway('RDS', 26_250, 970, 2_500, w=50, l=1_500, heading=108)
+            ],
+            buildings=[
+                # TODO: Add buildings
             ],
             diagonal_split='AD'
         )

@@ -22,8 +22,9 @@ from pylines.core.constants import EPSILON, WORLD_SIZE
 from pylines.core.utils import map_value
 
 if TYPE_CHECKING:
-    from ..core.asset_manager import MapData
+    from pylines.core.asset_manager import MapData
     from pylines.objects.objects import Runway
+    from pylines.objects.scenery import Building
 
 class Environment:
     """A class to own terrain, structures and buildings."""
@@ -32,6 +33,7 @@ class Environment:
             self,
             map_data: MapData,
             runways: list[Runway],
+            buildings: list[Building],
             diagonal_split: Literal['AD', 'BC'] = 'AD',
         ) -> None:
         self.height_array: np.ndarray = map_data.height_array
@@ -40,7 +42,9 @@ class Environment:
         self.max_h = map_data.MAX_H
         self.sea_level = map_data.SEA_LEVEL
         self.diagonal_split = diagonal_split
+
         self.runways = runways
+        self.buildings = buildings
 
         if self.diagonal_split not in ['AD', 'BC']:
             raise ValueError("diagonal_split must be either 'AD' or 'BC'")

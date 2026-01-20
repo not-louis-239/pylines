@@ -827,6 +827,9 @@ class GameScreen(State):
         for runway in self.env.runways:
             runway.draw()
 
+        for building in self.env.buildings:
+            building.draw()
+
         self.ground.draw()
         self.ocean.draw()
         self.draw_hud()
