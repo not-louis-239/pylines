@@ -34,6 +34,7 @@ GEMINI.md
 .geminiignore
 .pylintrc
 *.env
+pyproject.toml
 
 # OS / system files
 .DS_Store
