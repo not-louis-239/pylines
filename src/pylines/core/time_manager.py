@@ -31,7 +31,7 @@ def terrain_brightness_from_hour(hour: RealNumber) -> RealNumber:
 
     0 = pitch black, 1 = full brightness"""
 
-    MIN_BRIGHTNESS = 0.1  # moonlight
+    MIN_BRIGHTNESS = 0.15  # moonlight
     MAX_BRIGHTNESS = 1.0  # sunlight
 
     if hour < 4:
