@@ -65,7 +65,7 @@ def set_material(colour: Colour, emissive: bool):
 
         gl.glColor3f(adjusted_r, adjusted_g, adjusted_b)
 
-def draw_cuboid(pos: pg.Vector3, l: float, w: float, h: float):
+def draw_cuboid(pos: pg.Vector3, l: float, h: float, w: float):
     """Draws a cuboid centered at pos."""
     hl, hw, hh = l / 2, w / 2, h / 2
     vertices = [
