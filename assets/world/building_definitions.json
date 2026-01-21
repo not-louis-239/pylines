@@ -1,0 +1,42 @@
+{
+    "building_definitions": {
+        "house": {
+            "parts": [
+
+            ]
+        },
+        "atc_tower": {
+            "parts": [
+
+            ]
+        },
+        "apartment_block": {
+            "parts": [
+
+            ]
+        },
+        "airport_block": {
+            "parts": [
+
+            ]
+        },
+        "streetlight": {
+            "parts": [
+                {
+                    "offset": [0, 3, 0],
+                    "primitive": "cylinder",
+                    "dims": [0.15, 6],
+                    "colour": [108, 108, 108],
+                    "emissive": false
+                },
+                {
+                    "offset": [0, 6, 0],
+                    "primitive": "sphere",
+                    "dims": [0.2],
+                    "colour": [255, 229, 173],
+                    "emissive": true
+                }
+            ]
+        }
+    }
+}
