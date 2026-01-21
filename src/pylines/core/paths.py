@@ -14,6 +14,11 @@
 
 from pathlib import Path
 
-ROOT_DIR = Path(__file__).resolve().parents[3]  # project root
-ASSETS_DIR = ROOT_DIR / "assets"
-WORLD_DIR = ASSETS_DIR / "world"
+ROOT_DIR: Path = Path(__file__).resolve().parents[3]  # project root
+
+ASSETS_DIR: Path = ROOT_DIR / "assets"
+
+FONTS_DIR: Path = ASSETS_DIR / "fonts"
+IMAGES_DIR: Path = ASSETS_DIR / "images"
+SOUNDS_DIR: Path = ASSETS_DIR / "sounds"
+WORLD_DIR: Path = ASSETS_DIR / "world"
