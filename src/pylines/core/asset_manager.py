@@ -125,7 +125,9 @@ class Sounds(AssetBank):
     def _load(self, name: str) -> pg.mixer.Sound:
         return pg.mixer.Sound(paths.SOUNDS_DIR / name)
 
-class MapData(AssetBank):
+class WorldData(AssetBank):
+    """Contain information for the Environment to inherit"""
+
     def __init__(self) -> None:
         with open(paths.WORLD_DIR / "height.json") as f:
             meta = json.load(f)
@@ -147,4 +149,4 @@ class Assets:
         self.images: Images = Images()
         self.fonts: Fonts = Fonts()
         self.sounds: Sounds = Sounds()
-        self.map: MapData = MapData()
+        self.map: WorldData = WorldData()

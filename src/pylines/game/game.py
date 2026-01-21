@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 
 import pygame as pg
 
-from pylines.core.asset_manager import Assets, MapData
+from pylines.core.asset_manager import Assets, WorldData
 from pylines.core.data_manager import load_data, save_data
 from pylines.game.environment import Environment
 from pylines.game.screens.game_screen import GameScreen
@@ -47,7 +47,7 @@ class Game:
 
         # The MapData instance should be garbage collected after Game
         # has derived its height, size, data and other properties
-        map_data: MapData = self.assets.map
+        map_data: WorldData = self.assets.map
         self.env: Environment = Environment(
             map_data,
             runways=[

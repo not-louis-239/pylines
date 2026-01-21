@@ -22,7 +22,7 @@ from pylines.core.constants import EPSILON, WORLD_SIZE
 from pylines.core.utils import map_value
 
 if TYPE_CHECKING:
-    from pylines.core.asset_manager import MapData
+    from pylines.core.asset_manager import WorldData
     from pylines.objects.objects import Runway
     from pylines.objects.scenery import Building
 
@@ -31,7 +31,7 @@ class Environment:
 
     def __init__(
             self,
-            map_data: MapData,
+            map_data: WorldData,
             runways: list[Runway],
             buildings: list[Building],
             diagonal_split: Literal['AD', 'BC'] = 'AD',
