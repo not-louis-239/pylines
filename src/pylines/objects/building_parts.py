@@ -34,6 +34,18 @@ class Primitive(Enum):
     CYLINDER = auto()
     SPHERE = auto()
 
+PRIMITIVE_CORRESPONDENCE: dict[str, Primitive] = {
+    "cuboid": Primitive.CUBOID,
+    "cylinder": Primitive.CYLINDER,
+    "sphere": Primitive.SPHERE
+}
+
+def match_primitive(p: str) -> Primitive:
+    if p not in PRIMITIVE_CORRESPONDENCE.keys():
+        raise KeyError(f"Invalid primitive: '{p}'")
+
+    return PRIMITIVE_CORRESPONDENCE[p]
+
 def set_material(colour: Colour, emissive: bool):
     """Shader should set colour and emissive flags to prepare to draw a part."""
     r, g, b = [c / 255.0 for c in colour] # Normalize to 0.0-1.0
@@ -140,6 +152,8 @@ def draw_building_part(world_pos: pg.Vector3, part: BuildingPart):
         draw_cylinder(pos, *part.dims)
     elif part.primitive == Primitive.SPHERE:
         draw_sphere(pos, *part.dims)
+    else:
+        raise ValueError("invalid primitive")
 
 class BuildingPart:
     def __init__(
@@ -151,3 +165,11 @@ class BuildingPart:
         self.dims = dims
         self.colour = colour
         self.emissive = emissive
+
+    def __repr__(self) -> str:
+        ox, oy, oz = self.offset
+        prim = self.primitive.value
+        dims = self.dims
+        col = self.colour
+        emissive = self.emissive
+        return f"BuildingPart( offset = ({ox}, {oy}, {oz}), primitive = {prim}, dims = {dims}, col = {col}, emissive = {emissive} )"

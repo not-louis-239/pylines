@@ -1,8 +1,10 @@
 {
     "buildings": [
-        {
-            "pos": [100, 280, -3000],
-            "type": "airport"
-        }
+        { "type": "airport_block", "pos": [100, 280, -3000] },
+        { "type": "house", "pos": [200, 280, -2990] },
+        { "type": "atc_tower", "pos": [210, 280, -3010] },
+        { "type": "apartment_block", "pos": [190, 280, -3020] },
+        { "type": "airport_block", "pos": [220, 280, -2980] },
+        { "type": "streetlight", "pos": [200, 280, -3000] }
     ]
 }

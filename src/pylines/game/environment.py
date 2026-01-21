@@ -20,40 +20,58 @@ import numpy as np
 
 from pylines.core.constants import EPSILON, WORLD_SIZE
 from pylines.core.utils import map_value
+from pylines.objects.scenery import Building
+from pylines.objects.building_parts import BuildingPart, match_primitive
 
 if TYPE_CHECKING:
     from pylines.core.asset_manager import WorldData
     from pylines.objects.objects import Runway
-    from pylines.objects.scenery import Building
+
 
 class Environment:
     """A class to own terrain, structures and buildings."""
 
     def __init__(
             self,
-            map_data: WorldData,
+            world_data: WorldData,
             runways: list[Runway],
-            buildings: list[Building],
             diagonal_split: Literal['AD', 'BC'] = 'AD',
         ) -> None:
-        self.height_array: np.ndarray = map_data.height_array
 
-        self.min_h = map_data.MIN_H
-        self.max_h = map_data.MAX_H
-        self.sea_level = map_data.SEA_LEVEL
         self.diagonal_split = diagonal_split
-
-        self.runways = runways
-        self.buildings = buildings
-
         if self.diagonal_split not in ['AD', 'BC']:
             raise ValueError("diagonal_split must be either 'AD' or 'BC'")
 
-        self.h, self.w = self.height_array.shape
-        self.max_val = np.max(self.height_array)
+        self.height_array: np.ndarray = world_data.height_array
 
-        if self.max_val <= 0:
-            raise ValueError("Heightmap is empty or invalid")
+        self.min_h = world_data.MIN_H
+        self.max_h = world_data.MAX_H
+        self.sea_level = world_data.SEA_LEVEL
+        self.h, self.w = self.height_array.shape
+
+        self.runways = runways
+
+        # Convert raw dict entries to runtime objects
+        building_defs_raw = world_data.building_defs
+        building_placements_raw = world_data.building_placements
+
+        self.building_defs: dict[str, list[BuildingPart]] = {
+            name: [
+                BuildingPart(
+                    part["offset"],
+                    match_primitive(part["primitive"]),
+                    tuple(part["dims"]),
+                    tuple(part["colour"]),
+                    part["emissive"]
+                ) for part in part_list['parts']
+            ] for name, part_list in building_defs_raw.items()
+        }
+
+        self.buildings: list[Building] = [
+            Building(
+                *tuple(placement["pos"]), self.building_defs[placement["type"]]
+            ) for placement in building_placements_raw
+        ]
 
     def _world_to_map(self, x: float, z: float) -> tuple[float, float]:
         # Must map to 0 - w or height or else causes camera to go underground

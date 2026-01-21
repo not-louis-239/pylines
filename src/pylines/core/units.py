@@ -120,8 +120,11 @@ def convert_units(value: RealNumber, unit_in: Unit, unit_out: Unit, /) -> RealNu
         raise ValueError(f"Incompatible units: {unit_in.dims} -> {unit_out.dims}")
     return value * unit_in.scale / unit_out.scale
 
-if __name__ == "__main__":
+def _main():
     print("Test: Converting 5 m/s to km/h:")
     print("Output:", convert_units(5, METRES/SECONDS, KILOMETRES/HOURS))
     print("Testing exponentiation: seconds^2")
     print("Output:", SECONDS**2)
+
+if __name__ == "__main__":
+    _main()

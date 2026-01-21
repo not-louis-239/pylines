@@ -50,13 +50,10 @@ class Game:
         map_data: WorldData = self.assets.map
         self.env: Environment = Environment(
             map_data,
-            runways=[
+            runways=[  # TODO: convert runways to JSON
                 Runway('DCM', 200, 280, -3_000, w=50, l=1_500, heading=130),
                 Runway('CRF', 2_250, 800, -17_500, w=50, l=1_500, heading=35),
                 Runway('RDS', 26_250, 970, 2_500, w=50, l=1_500, heading=108)
-            ],
-            buildings=[
-                # TODO: Add buildings
             ],
             diagonal_split='AD'
         )

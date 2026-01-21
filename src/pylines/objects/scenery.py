@@ -564,3 +564,7 @@ class Building(SmallSceneryObject):
     def draw(self):
         for part in self.parts:
             draw_building_part(self.pos, part)
+
+    def __repr__(self) -> str:
+        x, y, z = self.pos
+        return f"Building( pos = ({x}, {y}, {z}), parts = {self.parts} )"

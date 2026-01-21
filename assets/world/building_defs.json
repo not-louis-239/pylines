@@ -1,23 +1,264 @@
 {
-    "building_definitions": {
+    "building_defs": {
         "house": {
             "parts": [
-
+                {
+                    "offset": [0, 0.3, 0],
+                    "primitive": "cuboid",
+                    "dims": [8, 0.6, 10],
+                    "colour": [200, 200, 200],
+                    "emissive": false
+                },
+                {
+                    "offset": [0, 4, 0],
+                    "primitive": "cuboid",
+                    "dims": [7.5, 6.8, 9.5],
+                    "colour": [255, 220, 115],
+                    "emissive": true
+                },
+                {
+                    "offset": [0, 7.7, 0],
+                    "primitive": "cuboid",
+                    "dims": [8, 0.6, 10],
+                    "colour": [200, 200, 200],
+                    "emissive": false
+                },
+                {
+                    "offset": [0, 8.1, 0],
+                    "primitive": "cuboid",
+                    "dims": [8, 0.2, 10],
+                    "colour": [43, 39, 51],
+                    "emissive": false
+                },
+                {
+                    "offset": [3.75, 4, 4.75],
+                    "primitive": "cuboid",
+                    "dims": [0.5, 8, 0.5],
+                    "colour": [200, 200, 200],
+                    "emissive": false
+                },
+                {
+                    "offset": [-3.75, 4, 4.75],
+                    "primitive": "cuboid",
+                    "dims": [0.5, 8, 0.5],
+                    "colour": [200, 200, 200],
+                    "emissive": false
+                },
+                {
+                    "offset": [-3.75, 4, -4.75],
+                    "primitive": "cuboid",
+                    "dims": [0.5, 8, 0.5],
+                    "colour": [200, 200, 200],
+                    "emissive": false
+                },
+                {
+                    "offset": [3.75, 4, -4.75],
+                    "primitive": "cuboid",
+                    "dims": [0.5, 8, 0.5],
+                    "colour": [200, 200, 200],
+                    "emissive": false
+                }
             ]
         },
         "atc_tower": {
             "parts": [
-
+                {
+                    "offset": [0, 0.5, 0],
+                    "primitive": "cuboid",
+                    "dims": [8, 1, 8],
+                    "colour": [80, 80, 80],
+                    "emissive": false
+                },
+                {
+                    "offset": [0, 15.5, 0],
+                    "primitive": "cylinder",
+                    "dims": [2, 29],
+                    "colour": [180, 180, 180],
+                    "emissive": false
+                },
+                {
+                    "offset": [0, 30.25, 0],
+                    "primitive": "cylinder",
+                    "dims": [3, 0.5],
+                    "colour": [100, 100, 100],
+                    "emissive": false
+                },
+                {
+                    "offset": [0, 32, 0],
+                    "primitive": "cylinder",
+                    "dims": [2.75, 4],
+                    "colour": [107, 161, 227],
+                    "emissive": true
+                },
+                {
+                    "offset": [0, 34.75, 0],
+                    "primitive": "cylinder",
+                    "dims": [3, 0.5],
+                    "colour": [100, 100, 100],
+                    "emissive": false
+                }
             ]
         },
         "apartment_block": {
             "parts": [
-
+                {
+                    "offset": [0, 0.1, 0],
+                    "primitive": "cuboid",
+                    "dims": [20, 0.2, 15],
+                    "colour": [150, 150, 150],
+                    "emissive": false
+                },
+                {
+                    "offset": [0, 0.25, 0],
+                    "primitive": "cuboid",
+                    "dims": [19.5, 0.3, 14.5],
+                    "colour": [180, 180, 180],
+                    "emissive": false
+                },
+                {
+                    "offset": [0, 3.85, 0],
+                    "primitive": "cuboid",
+                    "dims": [19.5, 0.3, 14.5],
+                    "colour": [180, 180, 180],
+                    "emissive": false
+                },
+                {
+                    "offset": [0, 7.45, 0],
+                    "primitive": "cuboid",
+                    "dims": [19.5, 0.3, 14.5],
+                    "colour": [180, 180, 180],
+                    "emissive": false
+                },
+                {
+                    "offset": [0, 11.05, 0],
+                    "primitive": "cuboid",
+                    "dims": [19.5, 0.3, 14.5],
+                    "colour": [180, 180, 180],
+                    "emissive": false
+                },
+                {
+                    "offset": [0, 14.65, 0],
+                    "primitive": "cuboid",
+                    "dims": [19.5, 0.3, 14.5],
+                    "colour": [180, 180, 180],
+                    "emissive": false
+                },
+                {
+                    "offset": [0, 7.45, 0],
+                    "primitive": "cuboid",
+                    "dims": [19.25, 14.7, 14.25],
+                    "colour": [107, 161, 227],
+                    "emissive": true
+                },
+                {
+                    "offset": [9.625, 7.45, 7.125],
+                    "primitive": "cuboid",
+                    "dims": [0.25, 14.7, 0.25],
+                    "colour": [180, 180, 180],
+                    "emissive": false
+                },
+                {
+                    "offset": [-9.625, 7.45, 7.125],
+                    "primitive": "cuboid",
+                    "dims": [0.25, 14.7, 0.25],
+                    "colour": [180, 180, 180],
+                    "emissive": false
+                },
+                {
+                    "offset": [9.625, 7.45, -7.125],
+                    "primitive": "cuboid",
+                    "dims": [0.25, 14.7, 0.25],
+                    "colour": [180, 180, 180],
+                    "emissive": false
+                },
+                {
+                    "offset": [-9.625, 7.45, -7.125],
+                    "primitive": "cuboid",
+                    "dims": [0.25, 14.7, 0.25],
+                    "colour": [180, 180, 180],
+                    "emissive": false
+                },
+                {
+                    "offset": [0, 14.9, 0],
+                    "primitive": "cuboid",
+                    "dims": [19.75, 0.2, 14.75],
+                    "colour": [80, 80, 80],
+                    "emissive": false
+                }
             ]
         },
         "airport_block": {
             "parts": [
-
+                {
+                    "offset": [0, 3, 0],
+                    "primitive": "cuboid",
+                    "dims": [50, 6, 50],
+                    "colour": [180, 180, 180],
+                    "emissive": false
+                },
+                {
+                    "offset": [0, 6.5, 0],
+                    "primitive": "cuboid",
+                    "dims": [50, 1, 50],
+                    "colour": [140, 140, 140],
+                    "emissive": false
+                },
+                {
+                    "offset": [0, 8, 0],
+                    "primitive": "cylinder",
+                    "dims": [0.1, 2],
+                    "colour": [180, 180, 180],
+                    "emissive": false
+                },
+                {
+                    "offset": [0, 9, 0],
+                    "primitive": "sphere",
+                    "dims": [0.2],
+                    "colour": [180, 180, 180],
+                    "emissive": false
+                },
+                {
+                    "offset": [-7, 7, 0],
+                    "primitive": "sphere",
+                    "dims": [0.2],
+                    "colour": [255, 0, 0],
+                    "emissive": true
+                },
+                {
+                    "offset": [7, 7, 0],
+                    "primitive": "sphere",
+                    "dims": [0.2],
+                    "colour": [255, 255, 0],
+                    "emissive": true
+                },
+                {
+                    "offset": [7, 7.05, 7],
+                    "primitive": "cuboid",
+                    "dims": [4, 0.1, 4],
+                    "colour": [90, 90, 90],
+                    "emissive": false
+                },
+                {
+                    "offset": [-7, 7.05, 7],
+                    "primitive": "cuboid",
+                    "dims": [4, 0.1, 4],
+                    "colour": [90, 90, 90],
+                    "emissive": false
+                },
+                {
+                    "offset": [-7, 7.05, -7],
+                    "primitive": "cuboid",
+                    "dims": [4, 0.1, 4],
+                    "colour": [90, 90, 90],
+                    "emissive": false
+                },
+                {
+                    "offset": [7, 7.05, -7],
+                    "primitive": "cuboid",
+                    "dims": [4, 0.1, 4],
+                    "colour": [90, 90, 90],
+                    "emissive": false
+                }
             ]
         },
         "streetlight": {

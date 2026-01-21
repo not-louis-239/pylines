@@ -126,20 +126,29 @@ class Sounds(AssetBank):
         return pg.mixer.Sound(paths.SOUNDS_DIR / name)
 
 class WorldData(AssetBank):
-    """Contain information for the Environment to inherit"""
+    """Contains raw information for the Environment to inherit"""
 
     def __init__(self) -> None:
+        # Heightmap metadata
         with open(paths.WORLD_DIR / "height.json") as f:
             meta = json.load(f)
             self.MIN_H = meta["heights"]["min"]
             self.MAX_H = meta["heights"]["max"]
             self.SEA_LEVEL = meta["heights"]["sea_lvl"]
 
+        # Heightmap raw data and noise
         img_path = paths.WORLD_DIR / "heightmap.png"
         img = Image.open(img_path)
         self.height_array = np.array(img, dtype=np.float32)
 
         self.noise = pg.image.load(paths.WORLD_DIR / "noise.png").convert_alpha()
+
+        # Building data
+        with open(paths.WORLD_DIR / "building_defs.json") as f:
+            self.building_defs: dict = json.load(f)["building_defs"]
+
+        with open(paths.WORLD_DIR / "building_placements.json") as f:
+            self.building_placements: dict = json.load(f)["buildings"]
 
     def _load(self, name: str) -> Path:
         return paths.WORLD_DIR / name
