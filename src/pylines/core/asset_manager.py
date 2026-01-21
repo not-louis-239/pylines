@@ -128,20 +128,20 @@ class Sounds(AssetBank):
 
 class MapData(AssetBank):
     def __init__(self) -> None:
-        with open(ROOT_DIR / "assets" / "map" / "height.json") as f:
+        with open(ROOT_DIR / "assets" / "world" / "height.json") as f:
             meta = json.load(f)
             self.MIN_H = meta["heights"]["min"]
             self.MAX_H = meta["heights"]["max"]
             self.SEA_LEVEL = meta["heights"]["sea_lvl"]
 
-        img_path = ROOT_DIR / "assets" / "map" / "heightmap.png"
+        img_path = ROOT_DIR / "assets" / "world" / "heightmap.png"
         img = Image.open(img_path)
         self.height_array = np.array(img, dtype=np.float32)
 
-        self.noise = pg.image.load(ROOT_DIR / "assets" / "map" / "noise.png").convert_alpha()
+        self.noise = pg.image.load(ROOT_DIR / "assets" / "world" / "noise.png").convert_alpha()
 
     def _load(self, name: str) -> Path:
-        return ROOT_DIR / "assets" / "map" / name
+        return ROOT_DIR / "assets" / "world" / name
 
 class Assets:
     def __init__(self) -> None:
