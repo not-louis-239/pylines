@@ -69,7 +69,10 @@ class Environment:
 
         self.buildings: list[Building] = [
             Building(
-                *tuple(placement["pos"]), self.building_defs[placement["type"]]
+                placement["pos"][0],
+                placement["pos"][1],
+                placement["pos"][2],
+                self.building_defs[placement["type"]]
             ) for placement in building_placements_raw
         ]
 
