@@ -77,14 +77,18 @@ class Environment:
             ] for name, part_list in building_defs_raw.items()
         }
 
-        self.buildings: list[Building] = [
-            Building(
-                placement["pos"][0],
-                placement["pos"][1],
-                placement["pos"][2],
-                self.building_defs[placement["type"]]
-            ) for placement in building_placements_raw
-        ]
+        try:
+            self.buildings: list[Building] = [
+                Building(
+                    placement["pos"][0],
+                    placement["pos"][1],
+                    placement["pos"][2],
+                    self.building_defs[placement["type"]]
+                ) for placement in building_placements_raw
+            ]
+        except KeyError as e:
+            offender = str(e).strip("'")
+            raise RuntimeError(f"Building definition missing for type: '{offender}'")
 
     def _world_to_map(self, x: float, z: float) -> tuple[float, float]:
         # Must map to 0 - w or height or else causes camera to go underground
