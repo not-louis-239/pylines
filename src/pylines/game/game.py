@@ -47,14 +47,9 @@ class Game:
 
         # The MapData instance should be garbage collected after Game
         # has derived its height, size, data and other properties
-        map_data: WorldData = self.assets.map
+        world_data: WorldData = self.assets.world
         self.env: Environment = Environment(
-            map_data,
-            runways=[  # TODO: convert runways to JSON
-                Runway('DCM', 200, 280, -3_000, w=50, l=1_500, heading=130),
-                Runway('CRF', 2_250, 800, -17_500, w=50, l=1_500, heading=35),
-                Runway('RDS', 26_250, 970, 2_500, w=50, l=1_500, heading=108)
-            ],
+            world_data,
             diagonal_split='AD'
         )
 

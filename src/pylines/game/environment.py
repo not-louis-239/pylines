@@ -22,10 +22,10 @@ from pylines.core.constants import EPSILON, WORLD_SIZE
 from pylines.core.utils import map_value
 from pylines.objects.scenery import Building
 from pylines.objects.building_parts import BuildingPart, match_primitive
+from pylines.objects.objects import Runway
 
 if TYPE_CHECKING:
     from pylines.core.asset_manager import WorldData
-    from pylines.objects.objects import Runway
 
 
 class Environment:
@@ -34,7 +34,6 @@ class Environment:
     def __init__(
             self,
             world_data: WorldData,
-            runways: list[Runway],
             diagonal_split: Literal['AD', 'BC'] = 'AD',
         ) -> None:
 
@@ -49,7 +48,18 @@ class Environment:
         self.sea_level = world_data.SEA_LEVEL
         self.h, self.w = self.height_array.shape
 
-        self.runways = runways
+        # Convert runway JSON to runway objects
+        self.runways: list[Runway] = [
+            Runway(
+                runway["name"],
+                runway["pos"][0],
+                runway["pos"][1],
+                runway["pos"][2],
+                runway["width"],
+                runway["length"],
+                runway["heading"],
+            ) for runway in world_data.runway_data
+        ]
 
         # Convert raw dict entries to runtime objects
         building_defs_raw = world_data.building_defs

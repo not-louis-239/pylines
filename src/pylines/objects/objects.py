@@ -392,7 +392,7 @@ class Plane(Entity):
 #      is a scenery object for all practical purposes.
 #      It is not a living entity.
 class Runway(Entity):
-    def __init__(self, name: str, x: float, y: float, z: float, w: float, l: float, heading: float = 0):
+    def __init__(self, name: str, x: float, y: float, z: float, w: float, l: float, heading: float):
         super().__init__(x, y, z)
         self.name = name
         self.w = w

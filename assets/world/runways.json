@@ -1,0 +1,25 @@
+{
+    "runways": [
+        {
+            "name": "DCM",
+            "pos": [200, 280, -3000],
+            "width": 50,
+            "length": 1500,
+            "heading": 130
+        },
+        {
+            "name": "CRF",
+            "pos": [2250, 800, -17500],
+            "width": 50,
+            "length": 1500,
+            "heading": 35
+        },
+        {
+            "name": "RDS",
+            "pos": [26250, 970, 2500],
+            "width": 50,
+            "length": 1500,
+            "heading": 108
+        }
+    ]
+}
