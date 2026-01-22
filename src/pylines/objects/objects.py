@@ -23,15 +23,15 @@ from typing import TYPE_CHECKING
 import pygame as pg
 from OpenGL import GL as gl
 
-from pylines.core.asset_manager import Sounds
 import pylines.core.constants as C
+from pylines.core.asset_manager import Sounds
 from pylines.core.custom_types import Surface
+from pylines.core.time_manager import brightness_from_hour, fetch_hour
 from pylines.core.utils import clamp, point_in_aabb
-from pylines.core.time_manager import fetch_hour, terrain_brightness_from_hour
 
 if TYPE_CHECKING:
-    from pylines.game.screens.game_screen import DialogMessage
     from pylines.game.environment import Environment
+    from pylines.game.screens.game_screen import DialogMessage
 
 class CrashReason(Enum):
     TERRAIN = "terrain"
@@ -40,7 +40,7 @@ class CrashReason(Enum):
     RUNWAY = "runway"  # reserved for fatal improper landing on runway, e.g. excessive sink rate, bad attitude
 
 class Entity:
-    """Base class for all in-game physical objects"""
+    """Base class for all in-game physical or contrallable objects."""
 
     def __init__(self, x: float, y: float, z: float) -> None:
         self.pos: pg.Vector3 = pg.Vector3(x, y, z)
@@ -388,8 +388,11 @@ class Plane(Entity):
 
         self.damage_level = clamp(self.damage_level, (0, 1))
 
+# XXX: The Runway class should be moved to scenery.py as it
+#      is a scenery object for all practical purposes.
+#      It is not a living entity.
 class Runway(Entity):
-    def __init__(self, name: str, x: float, y: float, z: float, w: float, l: float, heading: float = 0):
+    def __init__(self, name: str, x: float, y: float, z: float, w: float, l: float, heading: float):
         super().__init__(x, y, z)
         self.name = name
         self.w = w
@@ -397,7 +400,7 @@ class Runway(Entity):
         self.heading = heading
 
     def draw(self):
-        brightness = terrain_brightness_from_hour(fetch_hour())
+        brightness = brightness_from_hour(fetch_hour())
         gl.glPushMatrix()
 
         # Enable polygon offset to "pull" the runway towards the camera

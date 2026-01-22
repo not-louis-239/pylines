@@ -95,3 +95,4 @@ EPSILON = 0.0001  # Treat anything smaller than this as zero
 CHEVRON_ANGLE = 40
 CHEVRON_COLOUR = (255, 0, 0)
 MINIMAP_SIZE = 160
+BUILDING_RENDER_DISTANCE = 5_000  # metres, further away than this buildings won't render

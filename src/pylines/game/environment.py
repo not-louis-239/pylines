@@ -20,36 +20,75 @@ import numpy as np
 
 from pylines.core.constants import EPSILON, WORLD_SIZE
 from pylines.core.utils import map_value
+from pylines.objects.scenery import Building
+from pylines.objects.building_parts import BuildingPart, match_primitive
+from pylines.objects.objects import Runway
 
 if TYPE_CHECKING:
-    from ..core.asset_manager import MapData
-    from pylines.objects.objects import Runway
+    from pylines.core.asset_manager import WorldData
+
 
 class Environment:
     """A class to own terrain, structures and buildings."""
 
     def __init__(
             self,
-            map_data: MapData,
-            runways: list[Runway],
+            world_data: WorldData,
             diagonal_split: Literal['AD', 'BC'] = 'AD',
         ) -> None:
-        self.height_array: np.ndarray = map_data.height_array
 
-        self.min_h = map_data.MIN_H
-        self.max_h = map_data.MAX_H
-        self.sea_level = map_data.SEA_LEVEL
         self.diagonal_split = diagonal_split
-        self.runways = runways
-
         if self.diagonal_split not in ['AD', 'BC']:
             raise ValueError("diagonal_split must be either 'AD' or 'BC'")
 
-        self.h, self.w = self.height_array.shape
-        self.max_val = np.max(self.height_array)
+        self.height_array: np.ndarray = world_data.height_array
 
-        if self.max_val <= 0:
-            raise ValueError("Heightmap is empty or invalid")
+        self.min_h = world_data.MIN_H
+        self.max_h = world_data.MAX_H
+        self.sea_level = world_data.SEA_LEVEL
+        self.h, self.w = self.height_array.shape
+
+        # Convert runway JSON to runway objects
+        self.runways: list[Runway] = [
+            Runway(
+                runway["name"],
+                runway["pos"][0],
+                runway["pos"][1],
+                runway["pos"][2],
+                runway["width"],
+                runway["length"],
+                runway["heading"],
+            ) for runway in world_data.runway_data
+        ]
+
+        # Convert raw dict entries to runtime objects
+        building_defs_raw = world_data.building_defs
+        building_placements_raw = world_data.building_placements
+
+        self.building_defs: dict[str, list[BuildingPart]] = {
+            name: [
+                BuildingPart(
+                    part["offset"],
+                    match_primitive(part["primitive"]),
+                    tuple(part["dims"]),
+                    tuple(part["colour"]),
+                    part["emissive"]
+                ) for part in part_list['parts']
+            ] for name, part_list in building_defs_raw.items()
+        }
+
+        try:
+            self.buildings: list[Building] = [
+                Building(
+                    placement["pos"][0],
+                    placement["pos"][1],
+                    placement["pos"][2],
+                    self.building_defs[placement["type"]]
+                ) for placement in building_placements_raw
+            ]
+        except KeyError as e:
+            offender = str(e).strip("'")
+            raise RuntimeError(f"Building definition missing for type: '{offender}'")
 
     def _world_to_map(self, x: float, z: float) -> tuple[float, float]:
         # Must map to 0 - w or height or else causes camera to go underground

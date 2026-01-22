@@ -1,8 +1,24 @@
+# Copyright 2025-2026 Louis Masarei-Boulton
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
-from ..core.custom_types import RealNumber
-from dataclasses import dataclass
 import math
+from dataclasses import dataclass
+
+from ..core.custom_types import RealNumber
+
 
 @dataclass(frozen=True, kw_only=True)
 class _DimensionVector:
@@ -104,8 +120,11 @@ def convert_units(value: RealNumber, unit_in: Unit, unit_out: Unit, /) -> RealNu
         raise ValueError(f"Incompatible units: {unit_in.dims} -> {unit_out.dims}")
     return value * unit_in.scale / unit_out.scale
 
-if __name__ == "__main__":
+def _main():
     print("Test: Converting 5 m/s to km/h:")
     print("Output:", convert_units(5, METRES/SECONDS, KILOMETRES/HOURS))
     print("Testing exponentiation: seconds^2")
     print("Output:", SECONDS**2)
+
+if __name__ == "__main__":
+    _main()

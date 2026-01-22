@@ -22,16 +22,10 @@ import pygame as pg
 from OpenGL import GL as gl
 from OpenGL import GLU as glu
 
-from pylines.core.constants import (
-    EPSILON,
-    INNER_RENDER_LIMIT,
-    OUTER_RENDER_LIMIT,
-    WN_H,
-    WN_W,
-    WORLD_SIZE,
-)
-from pylines.core.custom_types import Coord3, RealNumber, Surface
-from pylines.core.time_manager import fetch_hour, terrain_brightness_from_hour
+import pylines.core.constants as C
+from pylines.core.custom_types import Coord3, Surface
+from pylines.core.time_manager import brightness_from_hour, fetch_hour
+from pylines.objects.building_parts import BuildingPart, draw_building_part
 from pylines.objects.objects import Entity
 from pylines.shaders.shader_manager import load_shader_script
 
@@ -39,20 +33,45 @@ if TYPE_CHECKING:
     from pylines.game.environment import Environment
 
 class SceneryObject(Entity):
+    """Base class for all scenery objects. Visual or structural
+    elements of the world that do not represent living entities."""
+
     def __init__(self, x, y, z):
         super().__init__(x, y, z)
 
     def draw(self):
         raise NotImplementedError
 
+class SmallSceneryObject(SceneryObject):
+    """Base class for interactive scenery objects. Represents discrete,
+    mostly decorative or functional structures.
+
+    Examples include buildings (houses, ATC towers, airports),
+    lights (streetlights, fairy lights, lamp posts) and city blocks.
+
+    Compared to LargeSceneryObjects, they are relatively small,
+    and interactable/collideable, and may be spawned in groups."""
+
+    def __init__(self, x, y, z):
+        super().__init__(x, y, z)
+        self.parts: list[BuildingPart] = []
+
+    def draw(self):
+        for part in self.parts:
+            draw_building_part(self.pos, part)
+
 class LargeSceneryObject(SceneryObject):
+    """Represents large, static elements forming the base world. Includes
+    terrain and oceans. They typically cover large areas, are immovable,
+    and can affect core gameplay, e.g. terrain height or GPWSs."""
+
     def __init__(self, x, y, z):
         super().__init__(x, y, z)
         self.vertices: list[Coord3] | np.ndarray = [
-            (-WORLD_SIZE, 0, -WORLD_SIZE),
-            (-WORLD_SIZE, 0, WORLD_SIZE),
-            (WORLD_SIZE, 0, -WORLD_SIZE),
-            (WORLD_SIZE, 0, WORLD_SIZE)
+            (-C.WORLD_SIZE, 0, -C.WORLD_SIZE),
+            (-C.WORLD_SIZE, 0, C.WORLD_SIZE),
+            (C.WORLD_SIZE, 0, -C.WORLD_SIZE),
+            (C.WORLD_SIZE, 0, C.WORLD_SIZE)
         ]
 
     def draw(self):
@@ -65,7 +84,7 @@ class CelestialObject(SceneryObject):
 
     def __init__(self, image_surface: Surface, direction: pg.Vector3, scale: float = 1.0):
         super().__init__(0, 0, 0)
-        self.direction = pg.Vector3(0, 0, -1) if direction.length() < EPSILON else direction.normalize()  # guard against zero length
+        self.direction = pg.Vector3(0, 0, -1) if direction.length() < C.EPSILON else direction.normalize()  # guard against zero length
         self.scale = scale
         self.texture_id = None
         self._load_texture(image_surface)
@@ -90,7 +109,7 @@ class CelestialObject(SceneryObject):
 
         gl.glPushMatrix()
 
-        # --- Save state ---
+        # Save state
         was_blend_enabled = gl.glIsEnabled(gl.GL_BLEND)
         was_depth_mask_enabled = gl.glGetIntegerv(gl.GL_DEPTH_WRITEMASK)
         gl.glTranslatef(pos.x, pos.y, pos.z)
@@ -120,7 +139,7 @@ class CelestialObject(SceneryObject):
         gl.glTexCoord2f(0, 1); gl.glVertex3f(-size, size, 0)
         gl.glEnd()
 
-        # --- Restore state ---
+        # Restore state
         gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
         gl.glDepthMask(was_depth_mask_enabled)
         gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA) # Restore default blend func
@@ -128,6 +147,43 @@ class CelestialObject(SceneryObject):
             gl.glDisable(gl.GL_BLEND)
 
         gl.glPopMatrix()
+
+class Sky(LargeSceneryObject):
+    def __init__(self) -> None:
+        super().__init__(0, 0, 0)  # Sky placed at origin
+
+    def draw(self, colour_scheme) -> None:
+        gl.glMatrixMode(gl.GL_PROJECTION)
+        gl.glPushMatrix()
+        gl.glLoadIdentity()
+        glu.gluOrtho2D(0, C.WN_W, C.WN_H, 0)
+        gl.glMatrixMode(gl.GL_MODELVIEW)
+        gl.glPushMatrix()
+        gl.glLoadIdentity()
+
+        gl.glDisable(gl.GL_DEPTH_TEST)
+        gl.glBegin(gl.GL_QUADS)
+        # Top half (high to mid)
+        gl.glColor3ub(*colour_scheme.high)
+        gl.glVertex2f(0, 0)
+        gl.glVertex2f(C.WN_W, 0)
+        gl.glColor3ub(*colour_scheme.mid)
+        gl.glVertex2f(C.WN_W, C.WN_H / 2)
+        gl.glVertex2f(0, C.WN_H / 2)
+        # Bottom half (mid to low)
+        gl.glColor3ub(*colour_scheme.mid)
+        gl.glVertex2f(0, C.WN_H / 2)
+        gl.glVertex2f(C.WN_W, C.WN_H / 2)
+        gl.glColor3ub(*colour_scheme.low)
+        gl.glVertex2f(C.WN_W, C.WN_H)
+        gl.glVertex2f(0, C.WN_H)
+        gl.glEnd()
+        gl.glEnable(gl.GL_DEPTH_TEST)
+
+        gl.glPopMatrix()
+        gl.glMatrixMode(gl.GL_PROJECTION)
+        gl.glPopMatrix()
+        gl.glMatrixMode(gl.GL_MODELVIEW)
 
 class Ground(LargeSceneryObject):
     def __init__(self, textures: dict[str, Surface], env: Environment) -> None:
@@ -162,8 +218,8 @@ class Ground(LargeSceneryObject):
         indices = []
 
         res = self.grid_resolution
-        step = WORLD_SIZE * 2 / res
-        texture_scale = 200.0 / (WORLD_SIZE * 2)
+        step = C.WORLD_SIZE * 2 / res
+        texture_scale = 200.0 / (C.WORLD_SIZE * 2)
 
         def vert_index(r: int, c: int) -> int:
             return r * (res + 1) + c
@@ -171,25 +227,25 @@ class Ground(LargeSceneryObject):
         # ---- vertices ----
         for r in range(res + 1):
             for c in range(res + 1):
-                x = -WORLD_SIZE + c * step
-                z = -WORLD_SIZE + r * step
+                x = -C.WORLD_SIZE + c * step
+                z = -C.WORLD_SIZE + r * step
                 y = self.env.height_at(x, z)
 
-                u = (x + WORLD_SIZE) * texture_scale
-                v = (z + WORLD_SIZE) * texture_scale
+                u = (x + C.WORLD_SIZE) * texture_scale
+                v = (z + C.WORLD_SIZE) * texture_scale
 
                 vertices.extend([x, y, z, u, v])
 
         # ---- indices ----
         for r in range(res):
             for c in range(res):
-                A = vert_index(r, c)
-                B = vert_index(r, c + 1)
-                C = vert_index(r + 1, c)
-                D = vert_index(r + 1, c + 1)
+                vA = vert_index(r, c)
+                vB = vert_index(r, c + 1)
+                vC = vert_index(r + 1, c)
+                vD = vert_index(r + 1, c + 1)
 
-                indices.extend([A, B, D])
-                indices.extend([A, D, C])
+                indices.extend([vA, vB, vD])
+                indices.extend([vA, vD, vC])
 
         return (
             np.array(vertices, dtype=np.float32),
@@ -245,7 +301,7 @@ class Ground(LargeSceneryObject):
         gl.glEnable(gl.GL_TEXTURE_2D)  # Enable texturing before using shaders
         gl.glUseProgram(self.shader)  # Activate the shader program
 
-        brightness = terrain_brightness_from_hour(fetch_hour())
+        brightness = brightness_from_hour(fetch_hour())
         gl.glUniform1f(self.brightness_loc, brightness)
 
         # Set up textures for the shader
@@ -295,43 +351,6 @@ class Ground(LargeSceneryObject):
 
         gl.glPopMatrix()
 
-class Sky(LargeSceneryObject):
-    def __init__(self) -> None:
-        super().__init__(0, 0, 0)  # Sky placed at origin
-
-    def draw(self, colour_scheme) -> None:
-        gl.glMatrixMode(gl.GL_PROJECTION)
-        gl.glPushMatrix()
-        gl.glLoadIdentity()
-        glu.gluOrtho2D(0, WN_W, WN_H, 0)
-        gl.glMatrixMode(gl.GL_MODELVIEW)
-        gl.glPushMatrix()
-        gl.glLoadIdentity()
-
-        gl.glDisable(gl.GL_DEPTH_TEST)
-        gl.glBegin(gl.GL_QUADS)
-        # Top half (high to mid)
-        gl.glColor3ub(*colour_scheme.high)
-        gl.glVertex2f(0, 0)
-        gl.glVertex2f(WN_W, 0)
-        gl.glColor3ub(*colour_scheme.mid)
-        gl.glVertex2f(WN_W, WN_H / 2)
-        gl.glVertex2f(0, WN_H / 2)
-        # Bottom half (mid to low)
-        gl.glColor3ub(*colour_scheme.mid)
-        gl.glVertex2f(0, WN_H / 2)
-        gl.glVertex2f(WN_W, WN_H / 2)
-        gl.glColor3ub(*colour_scheme.low)
-        gl.glVertex2f(WN_W, WN_H)
-        gl.glVertex2f(0, WN_H)
-        gl.glEnd()
-        gl.glEnable(gl.GL_DEPTH_TEST)
-
-        gl.glPopMatrix()
-        gl.glMatrixMode(gl.GL_PROJECTION)
-        gl.glPopMatrix()
-        gl.glMatrixMode(gl.GL_MODELVIEW)
-
 class Ocean(LargeSceneryObject):
     def __init__(self, image_surface: Surface, env: "Environment") -> None:
         super().__init__(0, env.sea_level, 0)
@@ -373,8 +392,8 @@ class Ocean(LargeSceneryObject):
         indices = []
 
         res = self.grid_resolution
-        step = WORLD_SIZE * 2 / res
-        texture_scale = self.texture_repeat_count / (WORLD_SIZE * 2)
+        step = C.WORLD_SIZE * 2 / res
+        texture_scale = self.texture_repeat_count / (C.WORLD_SIZE * 2)
 
         def vert_index(r: int, c: int) -> int:
             return r * (res + 1) + c
@@ -382,26 +401,26 @@ class Ocean(LargeSceneryObject):
         # ---- vertices ----
         for r in range(res + 1):
             for c in range(res + 1):
-                x = -WORLD_SIZE + c * step
-                z = -WORLD_SIZE + r * step
+                x = -C.WORLD_SIZE + c * step
+                z = -C.WORLD_SIZE + r * step
                 y = self.env.sea_level
                 terrain_y = self.env.height_at(x, z)
 
-                u = (x + WORLD_SIZE) * texture_scale
-                v = (z + WORLD_SIZE) * texture_scale
+                u = (x + C.WORLD_SIZE) * texture_scale
+                v = (z + C.WORLD_SIZE) * texture_scale
 
                 vertices.extend([x, y, z, u, v, terrain_y])
 
         # ---- indices ----
         for r in range(res):
             for c in range(res):
-                A = vert_index(r, c)
-                B = vert_index(r, c + 1)
-                C = vert_index(r + 1, c)
-                D = vert_index(r + 1, c + 1)
+                vA = vert_index(r, c)
+                vB = vert_index(r, c + 1)
+                vC = vert_index(r + 1, c)
+                vD = vert_index(r + 1, c + 1)
 
-                indices.extend([A, B, D])
-                indices.extend([A, D, C])
+                indices.extend([vA, vB, vD])
+                indices.extend([vA, vD, vC])
 
         return (
             np.array(vertices, dtype=np.float32),
@@ -423,7 +442,7 @@ class Ocean(LargeSceneryObject):
         return vbo, ebo
 
     def draw(self):
-        brightness = terrain_brightness_from_hour(fetch_hour())
+        brightness = brightness_from_hour(fetch_hour())
 
         gl.glPushMatrix()
 
@@ -475,10 +494,6 @@ class Ocean(LargeSceneryObject):
 
         gl.glPopMatrix()
 
-
-# TODO: Expand building objects once heightmap implementation is done
-class Building(SceneryObject): ...
-
 class Sun(CelestialObject):
     def __init__(self, image_surface: pg.Surface):
         super().__init__(image_surface, pg.Vector3(), scale=0.5)
@@ -526,3 +541,30 @@ class Moon(CelestialObject):
 
     def update(self):
         self.set_direction(fetch_hour())
+
+# TODO: Add stars
+class Star(CelestialObject):
+    def __init__(
+        self,
+        direction: pg.Vector3,
+        brightness: float = 1.0,
+        colour: tuple[int, int, int] = (255, 255, 255),
+        size: float = 1.0
+    ) -> None:
+        self.direction = direction
+        self.brightness = brightness
+        self.colour = colour
+        self.size = size
+
+class Building(SmallSceneryObject):
+    def __init__(self, x: float, y: float, z: float, parts: list[BuildingPart]):
+        super().__init__(x, y, z)
+        self.parts = parts
+
+    def draw(self):
+        for part in self.parts:
+            draw_building_part(self.pos, part)
+
+    def __repr__(self) -> str:
+        x, y, z = self.pos
+        return f"Building( pos = ({x}, {y}, {z}), parts = {self.parts} )"

@@ -28,9 +28,8 @@ import pygame as pg
 from PIL import Image
 from pygame.transform import scale, scale_by
 
-from .custom_types import Sound
-from .paths import ROOT_DIR
-
+from pylines.core.custom_types import Sound
+import pylines.core.paths as paths
 
 class AssetBank:
     """Base class to store assets. Objects of this type should be
@@ -55,7 +54,7 @@ class Fonts(AssetBank):
         self.augment()
 
     def _load(self, name: str) -> Path:
-        return ROOT_DIR / "assets" / "fonts" / name
+        return paths.FONTS_DIR / name
 
 class Images(AssetBank):
     def __init__(self):
@@ -96,7 +95,7 @@ class Images(AssetBank):
         self.minimap_cursor = scale(self.minimap_cursor, (20, 20))
 
     def _load(self, name: str):
-        return pg.image.load(ROOT_DIR / "assets" / "images" / name).convert_alpha()
+        return pg.image.load(paths.IMAGES_DIR / name).convert_alpha()
 
 class Sounds(AssetBank):
     def __init__(self) -> None:
@@ -124,28 +123,43 @@ class Sounds(AssetBank):
         self.good_landing.set_volume(10)
 
     def _load(self, name: str) -> pg.mixer.Sound:
-        return pg.mixer.Sound(ROOT_DIR / "assets" / "sounds" / name)
+        return pg.mixer.Sound(paths.SOUNDS_DIR / name)
 
-class MapData(AssetBank):
+class WorldData(AssetBank):
+    """Data container for raw world data."""
+
     def __init__(self) -> None:
-        with open(ROOT_DIR / "assets" / "map" / "height.json") as f:
+        # Heightmap metadata
+        with open(paths.WORLD_DIR / "height.json") as f:
             meta = json.load(f)
             self.MIN_H = meta["heights"]["min"]
             self.MAX_H = meta["heights"]["max"]
             self.SEA_LEVEL = meta["heights"]["sea_lvl"]
 
-        img_path = ROOT_DIR / "assets" / "map" / "heightmap.png"
+        # Heightmap raw data and noise
+        img_path = paths.WORLD_DIR / "heightmap.png"
         img = Image.open(img_path)
         self.height_array = np.array(img, dtype=np.float32)
 
-        self.noise = pg.image.load(ROOT_DIR / "assets" / "map" / "noise.png").convert_alpha()
+        self.noise = pg.image.load(paths.WORLD_DIR / "noise.png").convert_alpha()
+
+        # Runway data
+        with open(paths.WORLD_DIR / "runways.json") as f:
+            self.runway_data: list = json.load(f)["runways"]
+
+        # Building data
+        with open(paths.WORLD_DIR / "building_defs.json") as f:
+            self.building_defs: dict = json.load(f)["building_defs"]
+
+        with open(paths.WORLD_DIR / "building_placements.json") as f:
+            self.building_placements: dict = json.load(f)["buildings"]
 
     def _load(self, name: str) -> Path:
-        return ROOT_DIR / "assets" / "map" / name
+        return paths.WORLD_DIR / name
 
 class Assets:
     def __init__(self) -> None:
         self.images: Images = Images()
         self.fonts: Fonts = Fonts()
         self.sounds: Sounds = Sounds()
-        self.map: MapData = MapData()
+        self.world: WorldData = WorldData()

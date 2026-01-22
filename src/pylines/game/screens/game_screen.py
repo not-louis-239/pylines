@@ -29,8 +29,8 @@ import pylines.core.colours as cols
 import pylines.core.constants as C
 from pylines.core.custom_types import AColour, Colour, EventList, RealNumber
 from pylines.core.time_manager import fetch_hour, sky_colour_from_hour
+from pylines.core.units import FEET, METRES, convert_units
 from pylines.core.utils import clamp, draw_needle, draw_text, draw_transparent_rect
-from pylines.core.units import METRES, FEET, convert_units
 from pylines.game.engine_sound import SoundManager
 from pylines.game.states import State
 from pylines.objects.objects import CrashReason, Plane, Runway
@@ -74,7 +74,7 @@ class GameScreen(State):
             "treeline_rock_texture": assets.images.treeline_rock,
             "alpine_rock_texture": assets.images.alpine_rock,
             "snow_texture": assets.images.snow,
-            "noise": assets.map.noise,
+            "noise": assets.world.noise,
         }
         self.ocean = Ocean(assets.images.ocean, game.env)
         self.ground = Ground(ground_textures, game.env)
@@ -478,7 +478,7 @@ class GameScreen(State):
             hud_surface,
             (agl_centre[0] - 45, agl_centre[1]),
             'left', 'centre',
-            f"AGL",
+            "AGL",
             (255, 255, 255),
             12,
             self.fonts.monospaced
@@ -826,6 +826,10 @@ class GameScreen(State):
 
         for runway in self.env.runways:
             runway.draw()
+
+        for building in self.env.buildings:
+            if (self.plane.pos - building.pos).length() < C.BUILDING_RENDER_DISTANCE:
+                building.draw()
 
         self.ground.draw()
         self.ocean.draw()

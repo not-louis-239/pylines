@@ -26,12 +26,12 @@ def fetch_hour():
     hour = now.hour + now.minute/60 + now.second/3_600
     return hour
 
-def terrain_brightness_from_hour(hour: RealNumber) -> RealNumber:
+def brightness_from_hour(hour: RealNumber) -> RealNumber:
     """Returns the expected terrain brightness.
 
     0 = pitch black, 1 = full brightness"""
 
-    MIN_BRIGHTNESS = 0.1  # moonlight
+    MIN_BRIGHTNESS = 0.15  # moonlight
     MAX_BRIGHTNESS = 1.0  # sunlight
 
     if hour < 4:
