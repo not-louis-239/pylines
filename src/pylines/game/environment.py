@@ -117,8 +117,6 @@ class Environment:
             self.building_color_loc = gl.glGetAttribLocation(self.building_shader, "color")
             self.building_normal_loc = gl.glGetAttribLocation(self.building_shader, "normal")
             self.building_brightness_loc = gl.glGetUniformLocation(self.building_shader, "u_brightness")
-            self.building_modelview_loc = gl.glGetUniformLocation(self.building_shader, "modelview")
-            self.building_projection_loc = gl.glGetUniformLocation(self.building_shader, "projection")
         else:
             self.building_vertices = np.array([], dtype=np.float32)
             self.building_vertex_count = 0
@@ -133,11 +131,6 @@ class Environment:
         # Set uniforms
         brightness = time_manager.brightness_from_hour(time_manager.fetch_hour())
         gl.glUniform1f(self.building_brightness_loc, brightness)
-
-        modelview = gl.glGetFloatv(gl.GL_MODELVIEW_MATRIX)
-        projection = gl.glGetFloatv(gl.GL_PROJECTION_MATRIX)
-        gl.glUniformMatrix4fv(self.building_modelview_loc, 1, gl.GL_FALSE, modelview)
-        gl.glUniformMatrix4fv(self.building_projection_loc, 1, gl.GL_FALSE, projection)
 
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buildings_vbo)
 
