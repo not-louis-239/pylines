@@ -163,7 +163,32 @@ class GameScreen(State):
                     return col
             return LOWEST_COL
 
-        # TODO: Initialise tiled map
+        metres_per_tile = C.MAP_METRES_PER_PX * C.MAP_PIXELS_PER_TILE
+        NUM_TILES = math.ceil(C.HALF_WORLD_SIZE*2 / (metres_per_tile))
+        self.map_tiles: list[list[pg.Surface]] = []
+
+        # Loop over tiles
+        for tile_z in range(NUM_TILES):
+            tile_row: list[pg.Surface] = []
+            for tile_x in range(NUM_TILES):
+                tile_start_x = -C.HALF_WORLD_SIZE + metres_per_tile * tile_x
+                tile_start_z = -C.HALF_WORLD_SIZE + metres_per_tile * tile_z
+
+                # Make a new Surface for each tile
+                current_tile = pg.Surface((C.MAP_PIXELS_PER_TILE, C.MAP_PIXELS_PER_TILE))
+                pix_array = pg.PixelArray(current_tile)
+
+                # Loop over pixels within a tile
+                for pix_z in range(C.MAP_PIXELS_PER_TILE):
+                    for pix_x in range(C.MAP_PIXELS_PER_TILE):
+                        world_x = tile_start_x + pix_x * C.MAP_METRES_PER_PX
+                        world_z = tile_start_z + pix_z * C.MAP_METRES_PER_PX
+                        pix_array[pix_x, pix_z] = height_to_colour(self.game.env.height_at(world_x, world_z))  # type: ignore[index]
+
+                del pix_array  # Unlock the Surface so it can be used
+
+                tile_row.append(current_tile)
+            self.map_tiles.append(tile_row)
 
         # Building rendering setup
         all_vertices = []
