@@ -135,32 +135,6 @@ class GameScreen(State):
             inner_ai_rect.width//2
         )
 
-        def height_to_colour(h: RealNumber):
-            THRESHOLDS: dict[RealNumber, Colour] = {
-                5750: (207, 238, 255),
-                5300: (131, 134, 136),
-                4000: (64, 64, 64),
-                2200: (110, 67, 41),
-                800: (35, 110, 35),
-                150: (45, 170, 45),
-                0: (240, 240, 190),
-                -200: (0, 180, 240),
-            }
-
-            for th, col in THRESHOLDS.items():
-                if h > th:
-                    return col
-            return (0, 126, 199)
-
-        # Initialise minimap
-        WORLD_STEP = 2*C.WORLD_SIZE // C.MINIMAP_SIZE
-        self.minimap = pg.Surface((C.MINIMAP_SIZE, C.MINIMAP_SIZE))
-        px = pg.PixelArray(self.minimap)
-        for z_i, z in enumerate(range(-C.WORLD_SIZE, C.WORLD_SIZE, WORLD_STEP)):
-            for x_i, x in enumerate(range(-C.WORLD_SIZE, C.WORLD_SIZE, WORLD_STEP)):
-                px[x_i, z_i] = height_to_colour(self.game.env.height_at(x, z))  # type: ignore[index]
-        del px
-
         # Building rendering setup
         all_vertices = []
         for building in self.env.buildings:
@@ -630,25 +604,6 @@ class GameScreen(State):
 
             # White line
             pg.draw.line(hud_surface, (255, 255, 255), (glide_centre_x-7, glide_centre_y), (glide_centre_x+6, glide_centre_y), 2)
-
-        # Minimap
-        mini_centre = (int(C.WN_W*0.1), int(C.WN_H*0.88))
-        outer_mini_size = C.MINIMAP_SIZE + 6
-        mini_rect = pg.Rect(0, 0, outer_mini_size, outer_mini_size)
-        mini_rect.center = mini_centre
-        pg.draw.rect(hud_surface, (51, 43, 37), mini_rect)
-        mini_top_left = (mini_centre[0]-(C.MINIMAP_SIZE)/2, mini_centre[1]-(C.MINIMAP_SIZE)/2)
-        hud_surface.blit(self.minimap, mini_top_left)
-
-        px, pz = self.plane.pos.x, self.plane.pos.z
-        cursor_coord = pg.Vector2(
-            mini_centre[0] + (C.MINIMAP_SIZE/2)*(px/C.WORLD_SIZE),
-            mini_centre[1] + (C.MINIMAP_SIZE/2)*(pz/C.WORLD_SIZE)
-        )
-
-        rotated_cursor = pg.transform.rotate(self.game.assets.images.minimap_cursor, -self.plane.rot.y)
-        cursor_rect = rotated_cursor.get_rect(center=cursor_coord)
-        hud_surface.blit(rotated_cursor, cursor_rect)
 
         # Throttle bar
         draw_text(hud_surface, (C.WN_W*0.86, C.WN_H*0.97), 'centre', 'centre', "Throttle", (25, 20, 18), 30, self.fonts.monospaced)
