@@ -32,11 +32,11 @@ def load_shader_script(vert_path: str, frag_path: str) -> int:
 
     gl.glCompileShader(vert_shader)
     if not gl.glGetShaderiv(vert_shader, gl.GL_COMPILE_STATUS):
-        raise RuntimeError(gl.glGetShaderInfoLog(vert_shader).decode())
+        raise RuntimeError(f"Error in vert shader file '{vert_path}':\n" + gl.glGetShaderInfoLog(vert_shader).decode())
 
     gl.glCompileShader(frag_shader)
     if not gl.glGetShaderiv(frag_shader, gl.GL_COMPILE_STATUS):
-        raise RuntimeError(gl.glGetShaderInfoLog(frag_shader).decode())
+        raise RuntimeError(f"Error in frag shader file '{frag_path}':\n" + gl.glGetShaderInfoLog(frag_shader).decode())
 
     program = cast(int, gl.glCreateProgram())
 

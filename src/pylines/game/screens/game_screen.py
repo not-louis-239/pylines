@@ -827,9 +827,7 @@ class GameScreen(State):
         for runway in self.env.runways:
             runway.draw()
 
-        for building in self.env.buildings:
-            if (self.plane.pos - building.pos).length() < C.BUILDING_RENDER_DISTANCE:
-                building.draw()
+        self.env.draw_buildings()
 
         self.ground.draw()
         self.ocean.draw()

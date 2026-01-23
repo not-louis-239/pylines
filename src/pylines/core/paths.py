@@ -22,3 +22,5 @@ FONTS_DIR: Path = ASSETS_DIR / "fonts"
 IMAGES_DIR: Path = ASSETS_DIR / "images"
 SOUNDS_DIR: Path = ASSETS_DIR / "sounds"
 WORLD_DIR: Path = ASSETS_DIR / "world"
+
+SHADERS_DIR: Path = ROOT_DIR / "src" / "pylines" / "shaders"

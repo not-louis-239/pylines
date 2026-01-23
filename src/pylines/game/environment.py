@@ -14,22 +14,28 @@
 
 from __future__ import annotations
 
+import ctypes
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
+from OpenGL import GL as gl
 
+import pylines.core.paths as paths
+import pylines.core.time_manager as time_manager
 from pylines.core.constants import EPSILON, WORLD_SIZE
 from pylines.core.utils import map_value
-from pylines.objects.scenery import Building
 from pylines.objects.building_parts import BuildingPart, match_primitive
 from pylines.objects.objects import Runway
+from pylines.objects.scenery import Building
+from pylines.shaders.shader_manager import load_shader_script
 
 if TYPE_CHECKING:
     from pylines.core.asset_manager import WorldData
 
 
 class Environment:
-    """A class to own terrain, structures and buildings."""
+    """A class to own and store terrain, structure and building
+    information or runtime objects."""
 
     def __init__(
             self,
@@ -89,6 +95,73 @@ class Environment:
         except KeyError as e:
             offender = str(e).strip("'")
             raise RuntimeError(f"Building definition missing for type: '{offender}'")
+
+        all_vertices = []
+        for building in self.buildings:
+            all_vertices.extend(building.get_vertices())
+
+        if all_vertices:
+            self.building_vertices = np.array(all_vertices, dtype=np.float32)
+            self.building_vertex_count = len(self.building_vertices) // 9
+
+            self.buildings_vbo = gl.glGenBuffers(1)
+            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buildings_vbo)
+            gl.glBufferData(gl.GL_ARRAY_BUFFER, self.building_vertices.nbytes, self.building_vertices, gl.GL_STATIC_DRAW)
+            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
+
+            self.building_shader = load_shader_script(
+                str(paths.SHADERS_DIR / "building.vert"),
+                str(paths.SHADERS_DIR / "building.frag")
+            )
+            self.building_pos_loc = gl.glGetAttribLocation(self.building_shader, "position")
+            self.building_color_loc = gl.glGetAttribLocation(self.building_shader, "color")
+            self.building_normal_loc = gl.glGetAttribLocation(self.building_shader, "normal")
+            self.building_brightness_loc = gl.glGetUniformLocation(self.building_shader, "u_brightness")
+            self.building_modelview_loc = gl.glGetUniformLocation(self.building_shader, "modelview")
+            self.building_projection_loc = gl.glGetUniformLocation(self.building_shader, "projection")
+        else:
+            self.building_vertices = np.array([], dtype=np.float32)
+            self.building_vertex_count = 0
+            self.buildings_vbo = None
+
+    def draw_buildings(self):
+        if not self.building_vertex_count or self.buildings_vbo is None:
+            return
+
+        gl.glUseProgram(self.building_shader)
+
+        # Set uniforms
+        brightness = time_manager.brightness_from_hour(time_manager.fetch_hour())
+        gl.glUniform1f(self.building_brightness_loc, brightness)
+
+        modelview = gl.glGetFloatv(gl.GL_MODELVIEW_MATRIX)
+        projection = gl.glGetFloatv(gl.GL_PROJECTION_MATRIX)
+        gl.glUniformMatrix4fv(self.building_modelview_loc, 1, gl.GL_FALSE, modelview)
+        gl.glUniformMatrix4fv(self.building_projection_loc, 1, gl.GL_FALSE, projection)
+
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buildings_vbo)
+
+        stride = 9 * ctypes.sizeof(ctypes.c_float)
+
+        # Position
+        gl.glEnableVertexAttribArray(self.building_pos_loc)
+        gl.glVertexAttribPointer(self.building_pos_loc, 3, gl.GL_FLOAT, gl.GL_FALSE, stride, ctypes.c_void_p(0))
+
+        # Color
+        gl.glEnableVertexAttribArray(self.building_color_loc)
+        gl.glVertexAttribPointer(self.building_color_loc, 3, gl.GL_FLOAT, gl.GL_FALSE, stride, ctypes.c_void_p(3 * ctypes.sizeof(ctypes.c_float)))
+
+        # Normal
+        gl.glEnableVertexAttribArray(self.building_normal_loc)
+        gl.glVertexAttribPointer(self.building_normal_loc, 3, gl.GL_FLOAT, gl.GL_FALSE, stride, ctypes.c_void_p(6 * ctypes.sizeof(ctypes.c_float)))
+
+        gl.glDrawArrays(gl.GL_TRIANGLES, 0, self.building_vertex_count)
+
+        gl.glDisableVertexAttribArray(self.building_pos_loc)
+        gl.glDisableVertexAttribArray(self.building_color_loc)
+        gl.glDisableVertexAttribArray(self.building_normal_loc)
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
+        gl.glUseProgram(0)
 
     def _world_to_map(self, x: float, z: float) -> tuple[float, float]:
         # Must map to 0 - w or height or else causes camera to go underground
