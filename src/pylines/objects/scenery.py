@@ -65,10 +65,10 @@ class LargeSceneryObject(SceneryObject):
     def __init__(self, x, y, z):
         super().__init__(x, y, z)
         self.vertices: list[Coord3] | np.ndarray = [
-            (-C.WORLD_SIZE, 0, -C.WORLD_SIZE),
-            (-C.WORLD_SIZE, 0, C.WORLD_SIZE),
-            (C.WORLD_SIZE, 0, -C.WORLD_SIZE),
-            (C.WORLD_SIZE, 0, C.WORLD_SIZE)
+            (-C.HALF_WORLD_SIZE, 0, -C.HALF_WORLD_SIZE),
+            (-C.HALF_WORLD_SIZE, 0, C.HALF_WORLD_SIZE),
+            (C.HALF_WORLD_SIZE, 0, -C.HALF_WORLD_SIZE),
+            (C.HALF_WORLD_SIZE, 0, C.HALF_WORLD_SIZE)
         ]
 
     def draw(self):
@@ -215,8 +215,8 @@ class Ground(LargeSceneryObject):
         indices = []
 
         res = self.grid_resolution
-        step = C.WORLD_SIZE * 2 / res
-        texture_scale = 200.0 / (C.WORLD_SIZE * 2)
+        step = C.HALF_WORLD_SIZE * 2 / res
+        texture_scale = 200.0 / (C.HALF_WORLD_SIZE * 2)
 
         def vert_index(r: int, c: int) -> int:
             return r * (res + 1) + c
@@ -224,12 +224,12 @@ class Ground(LargeSceneryObject):
         # ---- vertices ----
         for r in range(res + 1):
             for c in range(res + 1):
-                x = -C.WORLD_SIZE + c * step
-                z = -C.WORLD_SIZE + r * step
+                x = -C.HALF_WORLD_SIZE + c * step
+                z = -C.HALF_WORLD_SIZE + r * step
                 y = self.env.height_at(x, z)
 
-                u = (x + C.WORLD_SIZE) * texture_scale
-                v = (z + C.WORLD_SIZE) * texture_scale
+                u = (x + C.HALF_WORLD_SIZE) * texture_scale
+                v = (z + C.HALF_WORLD_SIZE) * texture_scale
 
                 vertices.extend([x, y, z, u, v])
 
@@ -389,8 +389,8 @@ class Ocean(LargeSceneryObject):
         indices = []
 
         res = self.grid_resolution
-        step = C.WORLD_SIZE * 2 / res
-        texture_scale = self.texture_repeat_count / (C.WORLD_SIZE * 2)
+        step = C.HALF_WORLD_SIZE * 2 / res
+        texture_scale = self.texture_repeat_count / (C.HALF_WORLD_SIZE * 2)
 
         def vert_index(r: int, c: int) -> int:
             return r * (res + 1) + c
@@ -398,13 +398,13 @@ class Ocean(LargeSceneryObject):
         # ---- vertices ----
         for r in range(res + 1):
             for c in range(res + 1):
-                x = -C.WORLD_SIZE + c * step
-                z = -C.WORLD_SIZE + r * step
+                x = -C.HALF_WORLD_SIZE + c * step
+                z = -C.HALF_WORLD_SIZE + r * step
                 y = self.env.sea_level
                 terrain_y = self.env.height_at(x, z)
 
-                u = (x + C.WORLD_SIZE) * texture_scale
-                v = (z + C.WORLD_SIZE) * texture_scale
+                u = (x + C.HALF_WORLD_SIZE) * texture_scale
+                v = (z + C.HALF_WORLD_SIZE) * texture_scale
 
                 vertices.extend([x, y, z, u, v, terrain_y])
 

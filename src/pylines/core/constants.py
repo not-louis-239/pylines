@@ -49,9 +49,10 @@ WN_W = 1350
 WN_H = 850
 
 # Ground size
-WORLD_SIZE = 100_000  # distance from origin, metres, so the world is actually 200,000m wide
-HARD_TRAVEL_LIMIT = WORLD_SIZE * 0.99  # invisible wall
-SOFT_TRAVEL_LIMIT = WORLD_SIZE * 0.95  # past this, forces push the user back into the centre
+_WORLD_SIZE = 200_000  # metres
+HALF_WORLD_SIZE = _WORLD_SIZE // 2  # distance from origin, metres, so the world is actually 200,000m wide
+HARD_TRAVEL_LIMIT = HALF_WORLD_SIZE * 0.99  # invisible wall
+SOFT_TRAVEL_LIMIT = HALF_WORLD_SIZE * 0.95  # past this, forces push the user back into the centre
 
 # Rendering
 INNER_RENDER_LIMIT = 0.05
@@ -97,3 +98,4 @@ CHEVRON_COLOUR = (255, 0, 0)
 
 MAP_TOGGLE_ANIMATION_DURATION = 0.15  # seconds
 MAP_METRES_PER_PX = 50  # metres per pixel
+MAP_PIXELS_PER_TILE = 500  # pixels
