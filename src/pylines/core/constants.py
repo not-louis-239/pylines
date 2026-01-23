@@ -94,4 +94,4 @@ EPSILON = 0.0001  # Treat anything smaller than this as zero
 # Visual
 CHEVRON_ANGLE = 40
 CHEVRON_COLOUR = (255, 0, 0)
-BUILDING_RENDER_DISTANCE = 5_000  # metres, further away than this buildings won't render
+MAP_TOGGLE_ANIMATION_DURATION = 0.15  # seconds

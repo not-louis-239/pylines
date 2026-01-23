@@ -22,6 +22,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, cast
 
+from enum import Enum
 import pygame as pg
 import numpy as np
 from OpenGL import GL as gl
@@ -43,6 +44,10 @@ from pylines.objects.scenery import Ground, Moon, Ocean, Sky, Sun
 if TYPE_CHECKING:
     from pylines.core.custom_types import ScancodeWrapper, Surface
     from pylines.game.game import Game
+
+class MapState(Enum):
+    HIDDEN = 0
+    SHOWN = 1
 
 @dataclass
 class DialogMessage:
@@ -135,6 +140,10 @@ class GameScreen(State):
             inner_ai_rect.width//2
         )
 
+        # Big map
+        self.map_up: RealNumber = 0  # 1 = fully up, 0 = fully down
+        self.map_state: MapState = MapState.HIDDEN
+
         # Building rendering setup
         all_vertices = []
         for building in self.env.buildings:
@@ -185,6 +194,12 @@ class GameScreen(State):
             self.overspeed_channel.stop()
             self.sound_manager.stop()
             return
+
+        if self.map_state == MapState.HIDDEN:
+            self.map_up -= (dt/1000) / C.MAP_TOGGLE_ANIMATION_DURATION
+        else:
+            self.map_up += (dt/1000) / C.MAP_TOGGLE_ANIMATION_DURATION
+        self.map_up = clamp(self.map_up, (0, 1))
 
         self.sound_manager.update(self.plane.throttle_frac)
         self.plane.update(dt)
@@ -260,6 +275,10 @@ class GameScreen(State):
         if not self.plane.flyable:
             self.update_prev_keys(keys)
             return
+
+        # Show/hide map
+        if self.pressed(keys, pg.K_m):
+            self.map_state = MapState.HIDDEN if self.map_state == MapState.SHOWN else MapState.SHOWN
 
         # Cycle GPS waypoint
         if self.pressed(keys, pg.K_g):
@@ -741,6 +760,8 @@ class GameScreen(State):
         warning_col = (255, 0, 0) if self.show_overspeed_warning else cols.BLACK
         pg.draw.circle(hud_surface, (51, 43, 37), (warning_x, C.WN_H*0.965), 10)
         pg.draw.circle(hud_surface, (warning_col), (warning_x, C.WN_H*0.965), 8)
+
+        # TODO: Place big map rendering here
 
         # Show landing feedback
         if self.landing_dialog_box.active_time:
