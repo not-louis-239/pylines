@@ -22,10 +22,11 @@ import pygame as pg
 from OpenGL import GL as gl
 from OpenGL import GLU as glu
 
+import pylines.core.paths as paths
 import pylines.core.constants as C
 from pylines.core.custom_types import Coord3, Surface
 from pylines.core.time_manager import brightness_from_hour, fetch_hour
-from pylines.objects.building_parts import BuildingPart, draw_building_part
+from pylines.objects.building_parts import BuildingPart, generate_building_part_vertices
 from pylines.objects.objects import Entity
 from pylines.shaders.shader_manager import load_shader_script
 
@@ -55,10 +56,6 @@ class SmallSceneryObject(SceneryObject):
     def __init__(self, x, y, z):
         super().__init__(x, y, z)
         self.parts: list[BuildingPart] = []
-
-    def draw(self):
-        for part in self.parts:
-            draw_building_part(self.pos, part)
 
 class LargeSceneryObject(SceneryObject):
     """Represents large, static elements forming the base world. Includes
@@ -195,8 +192,8 @@ class Ground(LargeSceneryObject):
 
         # Load and compile the shader program
         self.shader = load_shader_script(
-            "src/pylines/shaders/terrain.vert",
-            "src/pylines/shaders/terrain.frag"
+            str(paths.SHADERS_DIR / "terrain.vert"),  # TODO: test shader laoding func for Path compatibility
+            str(paths.SHADERS_DIR / "terrain.frag")
         )
         self.position_loc = gl.glGetAttribLocation(self.shader, "position")
         self.tex_coord_loc = gl.glGetAttribLocation(self.shader, "tex_coord")
@@ -360,8 +357,8 @@ class Ocean(LargeSceneryObject):
         self.texture_repeat_count = 25.0
 
         self.shader = load_shader_script(
-            "src/pylines/shaders/ocean.vert",
-            "src/pylines/shaders/ocean.frag"
+            str(paths.SHADERS_DIR / "ocean.vert"),
+            str(paths.SHADERS_DIR / "ocean.frag")
         )
         self.position_loc = gl.glGetAttribLocation(self.shader, "position")
         self.tex_coord_loc = gl.glGetAttribLocation(self.shader, "tex_coord")
@@ -561,9 +558,11 @@ class Building(SmallSceneryObject):
         super().__init__(x, y, z)
         self.parts = parts
 
-    def draw(self):
+    def get_vertices(self) -> list[float]:
+        all_vertices: list[float] = []
         for part in self.parts:
-            draw_building_part(self.pos, part)
+            all_vertices.extend(generate_building_part_vertices(self.pos, part))
+        return all_vertices
 
     def __repr__(self) -> str:
         x, y, z = self.pos

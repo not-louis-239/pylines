@@ -16,13 +16,12 @@
 building_parts.py
 
 contains the ingredients to make buildings
-and draw them
+and generate their vertex data for batched rendering.
 """
 
 from enum import Enum, auto
-
-import OpenGL.GL as gl
-import OpenGL.GLU as glu
+import math
+import numpy as np
 import pygame as pg
 
 from pylines.core.custom_types import Colour, Coord3
@@ -42,118 +41,201 @@ PRIMITIVE_CORRESPONDENCE: dict[str, Primitive] = {
 
 def match_primitive(p: str) -> Primitive:
     if p not in PRIMITIVE_CORRESPONDENCE.keys():
-        raise KeyError(f"Invalid primitive: '{p}'")
+        raise RuntimeError(f"Invalid primitive: '{p}'")
 
     return PRIMITIVE_CORRESPONDENCE[p]
 
-def set_material(colour: Colour, emissive: bool):
-    """Shader should set colour and emissive flags to prepare to draw a part."""
-    r, g, b = [c / 255.0 for c in colour] # Normalize to 0.0-1.0
+def get_part_colour(colour: Colour) -> tuple[float, float, float]:
+    """Calculates the final color of a part based on its base color."""
+    r, g, b = colour
+    return r / 255.0, g / 255.0, b / 255.0
 
-    if emissive:
-        # If emissive, set the color directly, unaffected by ambient brightness.
-        # This color will be used directly for rendering.
-        gl.glColor3f(r, g, b)
-    else:
-        # If not emissive, its color is affected by daylight brightness.
-        # Fetch current brightness and apply it to the RGB channels.
-        daylight_brightness = brightness_from_hour(fetch_hour())
-
-        adjusted_r = r * daylight_brightness
-        adjusted_g = g * daylight_brightness
-        adjusted_b = b * daylight_brightness
-
-        gl.glColor3f(adjusted_r, adjusted_g, adjusted_b)
-
-def draw_cuboid(pos: pg.Vector3, l: float, h: float, w: float):
-    """Draws a cuboid centered at pos."""
+def generate_cuboid_vertices(pos: pg.Vector3, l: float, h: float, w: float, color: tuple[float, float, float], emissive: float) -> list[float]:
+    """Generates vertices for a cuboid, including position, color, and normal."""
     hl, hw, hh = l / 2, w / 2, h / 2
-    vertices = [
-        (pos.x - hl, pos.y - hh, pos.z + hw),  # 0: bottom-left-front
-        (pos.x + hl, pos.y - hh, pos.z + hw),  # 1: bottom-right-front
-        (pos.x + hl, pos.y + hh, pos.z + hw),  # 2: top-right-front
-        (pos.x - hl, pos.y + hh, pos.z + hw),  # 3: top-left-front
-        (pos.x - hl, pos.y - hh, pos.z - hw),  # 4: bottom-left-back
-        (pos.x + hl, pos.y - hh, pos.z - hw),  # 5: bottom-right-back
-        (pos.x + hl, pos.y + hh, pos.z - hw),  # 6: top-right-back
-        (pos.x - hl, pos.y + hh, pos.z - hw),  # 7: top-left-back
+
+    vertices_pos = [
+        (pos.x - hl, pos.y - hh, pos.z + hw),  # 0
+        (pos.x + hl, pos.y - hh, pos.z + hw),  # 1
+        (pos.x + hl, pos.y + hh, pos.z + hw),  # 2
+        (pos.x - hl, pos.y + hh, pos.z + hw),  # 3
+        (pos.x - hl, pos.y - hh, pos.z - hw),  # 4
+        (pos.x + hl, pos.y - hh, pos.z - hw),  # 5
+        (pos.x + hl, pos.y + hh, pos.z - hw),  # 6
+        (pos.x - hl, pos.y + hh, pos.z - hw),  # 7
     ]
+
     faces = [
-        (0, 1, 2, 3),  # front
-        (1, 5, 6, 2),  # right
-        (5, 4, 7, 6),  # back
-        (4, 0, 3, 7),  # left
-        (3, 2, 6, 7),  # top
-        (4, 5, 1, 0),  # bottom
+        (0, 1, 2, 3),
+        (1, 5, 6, 2),
+        (5, 4, 7, 6),
+        (4, 0, 3, 7),
+        (3, 2, 6, 7),
+        (4, 5, 1, 0),
     ]
+
     normals = [
-        (0, 0, 1),   # front
-        (1, 0, 0),   # right
-        (0, 0, -1),  # back
-        (-1, 0, 0),  # left
-        (0, 1, 0),   # top
-        (0, -1, 0),  # bottom
+        (0, 0, 1),
+        (1, 0, 0),
+        (0, 0, -1),
+        (-1, 0, 0),
+        (0, 1, 0),
+        (0, -1, 0),
     ]
 
-    gl.glBegin(gl.GL_QUADS)
-    for i, face in enumerate(faces):
-        gl.glNormal3fv(normals[i])
-        for vertex_index in face:
-            gl.glVertex3fv(vertices[vertex_index])
-    gl.glEnd()
+    vertex_data: list[float] = []
 
-def draw_cylinder(pos: pg.Vector3, r: float, h: float):
-    """Draws a cylinder centered at pos, standing upright on the Y axis."""
-    quad = glu.gluNewQuadric()
-    glu.gluQuadricNormals(quad, glu.GLU_SMOOTH)
+    for normal, (i0, i1, i2, i3) in zip(normals, faces):
+        # quad → two triangles: (0,1,2) and (0,2,3)
+        for idx in (i0, i1, i2, i0, i2, i3):
+            vertex_data.extend([
+                *vertices_pos[idx],
+                *color,
+                *normal,
+                emissive,
+            ])
 
-    gl.glPushMatrix()
-    gl.glTranslatef(pos.x, pos.y, pos.z)
-    gl.glRotatef(-90.0, 1.0, 0.0, 0.0)  # Align Z (glu default) with world Y
-    gl.glTranslatef(0, 0, -h / 2)       # Center it vertically
+    return vertex_data
 
-    # Cylinder Body
-    glu.gluCylinder(quad, r, r, h, 32, 1)
+def generate_cylinder_vertices(pos: pg.Vector3, r: float, h: float, color: tuple[float, float, float], emissive: float, segments: int = 32) -> list[float]:
+    """Generates vertices for a cylinder, including position, color, and normal."""
+    vertex_data = []
+    angle_step = 2 * math.pi / segments
+    half_h = h / 2
 
-    # Bottom Cap
-    gl.glPushMatrix()
-    gl.glRotatef(180, 1, 0, 0) # Flip to face down
-    glu.gluDisk(quad, 0, r, 32, 1)
-    gl.glPopMatrix()
+    # Body
+    for i in range(segments):
+        angle1 = i * angle_step
+        angle2 = (i + 1) * angle_step
+
+        x1, z1 = r * math.cos(angle1), r * math.sin(angle1)
+        x2, z2 = r * math.cos(angle2), r * math.sin(angle2)
+
+        p1_top = (pos.x + x1, pos.y + half_h, pos.z + z1)
+        p1_bot = (pos.x + x1, pos.y - half_h, pos.z + z1)
+        p2_top = (pos.x + x2, pos.y + half_h, pos.z + z2)
+        p2_bot = (pos.x + x2, pos.y - half_h, pos.z + z2)
+
+        normal1 = (x1 / r, 0, z1 / r)
+        normal2 = (x2 / r, 0, z2 / r)
+
+        # Triangle 1
+        vertex_data.extend([*p1_bot, *color, *normal1, emissive])
+        vertex_data.extend([*p2_bot, *color, *normal2, emissive])
+        vertex_data.extend([*p1_top, *color, *normal1, emissive])
+
+        # Triangle 2
+        vertex_data.extend([*p1_top, *color, *normal1, emissive])
+        vertex_data.extend([*p2_bot, *color, *normal2, emissive])
+        vertex_data.extend([*p2_top, *color, *normal2, emissive])
 
     # Top Cap
-    gl.glPushMatrix()
-    gl.glTranslatef(0, 0, h)
-    glu.gluDisk(quad, 0, r, 32, 1)
-    gl.glPopMatrix()
+    top_center = (pos.x, pos.y + half_h, pos.z)
+    normal_top = (0, 1, 0)
+    for i in range(segments):
+        angle1 = i * angle_step
+        angle2 = (i + 1) * angle_step
 
-    gl.glPopMatrix()
-    glu.gluDeleteQuadric(quad)
+        x1, z1 = r * math.cos(angle1), r * math.sin(angle1)
+        x2, z2 = r * math.cos(angle2), r * math.sin(angle2)
 
-def draw_sphere(pos: pg.Vector3, r: float):
-    """Draws a sphere centered at pos."""
-    quad = glu.gluNewQuadric()
-    glu.gluQuadricNormals(quad, glu.GLU_SMOOTH)
+        p1 = (pos.x + x1, pos.y + half_h, pos.z + z1)
+        p2 = (pos.x + x2, pos.y + half_h, pos.z + z2)
 
-    gl.glPushMatrix()
-    gl.glTranslatef(pos.x, pos.y, pos.z)
-    glu.gluSphere(quad, r, 32, 32)
-    gl.glPopMatrix()
+        vertex_data.extend([*top_center, *color, *normal_top, emissive])
+        vertex_data.extend([*p1, *color, *normal_top, emissive])
+        vertex_data.extend([*p2, *color, *normal_top, emissive])
 
-    glu.gluDeleteQuadric(quad)
+    # Bottom Cap
+    bot_center = (pos.x, pos.y - half_h, pos.z)
+    normal_bot = (0, -1, 0)
+    for i in range(segments):
+        angle1 = i * angle_step
+        angle2 = (i + 1) * angle_step
 
-def draw_building_part(world_pos: pg.Vector3, part: BuildingPart):
+        x1, z1 = r * math.cos(angle1), r * math.sin(angle1)
+        x2, z2 = r * math.cos(angle2), r * math.sin(angle2)
+
+        p1 = (pos.x + x1, pos.y - half_h, pos.z + z1)
+        p2 = (pos.x + x2, pos.y - half_h, pos.z + z2)
+
+        vertex_data.extend([*bot_center, *color, *normal_bot, emissive])
+        vertex_data.extend([*p2, *color, *normal_bot, emissive])
+        vertex_data.extend([*p1, *color, *normal_bot, emissive])
+
+    return vertex_data
+
+def generate_sphere_vertices(pos: pg.Vector3, r: float, color: tuple[float, float, float], emissive: float, stacks: int = 16, sectors: int = 32) -> list[float]:
+    """Generates vertices for a sphere, including position, color, and normal."""
+    vertex_data = []
+    stack_step = math.pi / stacks
+    sector_step = 2 * math.pi / sectors
+
+    for i in range(stacks):
+        stack_angle1 = i * stack_step
+        stack_angle2 = (i + 1) * stack_step
+
+        for j in range(sectors):
+            sector_angle1 = j * sector_step
+            sector_angle2 = (j + 1) * sector_step
+
+            # Vertices of the quad
+            p1 = (
+                pos.x + r * math.sin(stack_angle1) * math.cos(sector_angle1),
+                pos.y + r * math.cos(stack_angle1),
+                pos.z + r * math.sin(stack_angle1) * math.sin(sector_angle1),
+            )
+            p2 = (
+                pos.x + r * math.sin(stack_angle1) * math.cos(sector_angle2),
+                pos.y + r * math.cos(stack_angle1),
+                pos.z + r * math.sin(stack_angle1) * math.sin(sector_angle2),
+            )
+            p3 = (
+                pos.x + r * math.sin(stack_angle2) * math.cos(sector_angle1),
+                pos.y + r * math.cos(stack_angle2),
+                pos.z + r * math.sin(stack_angle2) * math.sin(sector_angle1),
+            )
+            p4 = (
+                pos.x + r * math.sin(stack_angle2) * math.cos(sector_angle2),
+                pos.y + r * math.cos(stack_angle2),
+                pos.z + r * math.sin(stack_angle2) * math.sin(sector_angle2),
+            )
+
+            # Normals are just the normalized position vectors from the center
+            n1 = tuple(c / r for c in (p1[0]-pos.x, p1[1]-pos.y, p1[2]-pos.z))
+            n2 = tuple(c / r for c in (p2[0]-pos.x, p2[1]-pos.y, p2[2]-pos.z))
+            n3 = tuple(c / r for c in (p3[0]-pos.x, p3[1]-pos.y, p3[2]-pos.z))
+            n4 = tuple(c / r for c in (p4[0]-pos.x, p4[1]-pos.y, p4[2]-pos.z))
+
+            # Triangle 1
+            vertex_data.extend([*p1, *color, *n1, emissive])
+            vertex_data.extend([*p3, *color, *n3, emissive])
+            vertex_data.extend([*p2, *color, *n2, emissive])
+
+            # Triangle 2
+            vertex_data.extend([*p2, *color, *n2, emissive])
+            vertex_data.extend([*p3, *color, *n3, emissive])
+            vertex_data.extend([*p4, *color, *n4, emissive])
+
+    return vertex_data
+
+def generate_building_part_vertices(world_pos: pg.Vector3, part: "BuildingPart") -> list[float]:
+    """Generates all vertices for a single building part."""
     pos = world_pos + part.offset
-    set_material(part.colour, part.emissive)
+    color = get_part_colour(part.colour)
+    emissive_float = 1.0 if part.emissive else 0.0
 
     if part.primitive == Primitive.CUBOID:
-        draw_cuboid(pos, *part.dims)
+        l, h, w = part.dims
+        return generate_cuboid_vertices(pos, l, h, w, color, emissive_float)
     elif part.primitive == Primitive.CYLINDER:
-        draw_cylinder(pos, *part.dims)
+        r, h = part.dims
+        return generate_cylinder_vertices(pos, r, h, color, emissive_float)
     elif part.primitive == Primitive.SPHERE:
-        draw_sphere(pos, *part.dims)
+        r = part.dims[0]
+        return generate_sphere_vertices(pos, r, color, emissive_float)
     else:
-        raise ValueError("invalid primitive")
+        raise ValueError(f"Missing vertices generator for primitive: {part.primitive.value}")
 
 class BuildingPart:
     def __init__(

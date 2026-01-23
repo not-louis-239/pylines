@@ -17,19 +17,23 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
+from OpenGL import GL as gl
 
+import pylines.core.paths as paths
 from pylines.core.constants import EPSILON, WORLD_SIZE
 from pylines.core.utils import map_value
-from pylines.objects.scenery import Building
 from pylines.objects.building_parts import BuildingPart, match_primitive
 from pylines.objects.objects import Runway
+from pylines.objects.scenery import Building
+from pylines.shaders.shader_manager import load_shader_script
 
 if TYPE_CHECKING:
     from pylines.core.asset_manager import WorldData
 
 
 class Environment:
-    """A class to own terrain, structures and buildings."""
+    """A class to own and store terrain, structure and building
+    information or runtime objects."""
 
     def __init__(
             self,

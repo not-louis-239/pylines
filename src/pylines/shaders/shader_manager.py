@@ -32,11 +32,11 @@ def load_shader_script(vert_path: str, frag_path: str) -> int:
 
     gl.glCompileShader(vert_shader)
     if not gl.glGetShaderiv(vert_shader, gl.GL_COMPILE_STATUS):
-        raise RuntimeError(gl.glGetShaderInfoLog(vert_shader).decode())
+        raise RuntimeError(f"Error in vert shader file '{vert_path}':\n" + gl.glGetShaderInfoLog(vert_shader).decode())
 
     gl.glCompileShader(frag_shader)
     if not gl.glGetShaderiv(frag_shader, gl.GL_COMPILE_STATUS):
-        raise RuntimeError(gl.glGetShaderInfoLog(frag_shader).decode())
+        raise RuntimeError(f"Error in frag shader file '{frag_path}':\n" + gl.glGetShaderInfoLog(frag_shader).decode())
 
     program = cast(int, gl.glCreateProgram())
 
@@ -45,7 +45,13 @@ def load_shader_script(vert_path: str, frag_path: str) -> int:
     gl.glLinkProgram(program)
 
     if not gl.glGetProgramiv(program, gl.GL_LINK_STATUS):
-        raise RuntimeError(gl.glGetProgramInfoLog(program).decode())
+        info = gl.glGetProgramInfoLog(program).decode()
+        raise RuntimeError(
+            "Shader program link failed\n"
+            f"Vertex shader: {vert_path}\n"
+            f"Fragment shader: {frag_path}\n"
+            f"Linker output:\n{info}"
+        )
 
     gl.glDeleteShader(vert_shader)
     gl.glDeleteShader(frag_shader)

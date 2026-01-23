@@ -16,19 +16,23 @@
 
 from __future__ import annotations
 
+import ctypes
 import math
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, cast
 
 import pygame as pg
+import numpy as np
 from OpenGL import GL as gl
 from OpenGL import GLU as glu
 
 import pylines.core.colours as cols
 import pylines.core.constants as C
+import pylines.core.paths as paths
+from pylines.shaders.shader_manager import load_shader_script
 from pylines.core.custom_types import AColour, Colour, EventList, RealNumber
-from pylines.core.time_manager import fetch_hour, sky_colour_from_hour
+from pylines.core.time_manager import fetch_hour, sky_colour_from_hour, brightness_from_hour
 from pylines.core.units import FEET, METRES, convert_units
 from pylines.core.utils import clamp, draw_needle, draw_text, draw_transparent_rect
 from pylines.game.engine_sound import SoundManager
@@ -156,6 +160,34 @@ class GameScreen(State):
             for x_i, x in enumerate(range(-C.WORLD_SIZE, C.WORLD_SIZE, WORLD_STEP)):
                 px[x_i, z_i] = height_to_colour(self.game.env.height_at(x, z))  # type: ignore[index]
         del px
+
+        # Building rendering setup
+        all_vertices = []
+        for building in self.env.buildings:
+            all_vertices.extend(building.get_vertices())
+
+        if all_vertices:
+            self.building_vertices = np.array(all_vertices, dtype=np.float32)
+            self.building_vertex_count = len(self.building_vertices) // 10
+
+            self.buildings_vbo = gl.glGenBuffers(1)
+            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buildings_vbo)
+            gl.glBufferData(gl.GL_ARRAY_BUFFER, self.building_vertices.nbytes, self.building_vertices, gl.GL_STATIC_DRAW)
+            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
+
+            self.building_shader = load_shader_script(
+                str(paths.SHADERS_DIR / "building.vert"),
+                str(paths.SHADERS_DIR / "building.frag")
+            )
+            self.building_pos_loc = gl.glGetAttribLocation(self.building_shader, "position")
+            self.building_color_loc = gl.glGetAttribLocation(self.building_shader, "color")
+            self.building_normal_loc = gl.glGetAttribLocation(self.building_shader, "normal")
+            self.building_emissive_loc = gl.glGetAttribLocation(self.building_shader, "in_emissive")
+            self.building_brightness_loc = gl.glGetUniformLocation(self.building_shader, "u_brightness")
+        else:
+            self.building_vertices = np.array([], dtype=np.float32)
+            self.building_vertex_count = 0
+            self.buildings_vbo = None
 
     def reset(self) -> None:
         self.plane.reset()
@@ -312,6 +344,45 @@ class GameScreen(State):
         self.plane.braking = keys[pg.K_b]  # b to brake
 
         self.update_prev_keys(keys)
+
+    def draw_buildings(self):
+        if not self.building_vertex_count or self.buildings_vbo is None:
+            return
+
+        gl.glUseProgram(self.building_shader)
+
+        # Set uniforms
+        brightness = brightness_from_hour(fetch_hour())
+        gl.glUniform1f(self.building_brightness_loc, brightness)
+
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buildings_vbo)
+
+        stride = 10 * ctypes.sizeof(ctypes.c_float)
+
+        # Position
+        gl.glEnableVertexAttribArray(self.building_pos_loc)
+        gl.glVertexAttribPointer(self.building_pos_loc, 3, gl.GL_FLOAT, gl.GL_FALSE, stride, ctypes.c_void_p(0))
+
+        # Color
+        gl.glEnableVertexAttribArray(self.building_color_loc)
+        gl.glVertexAttribPointer(self.building_color_loc, 3, gl.GL_FLOAT, gl.GL_FALSE, stride, ctypes.c_void_p(3 * ctypes.sizeof(ctypes.c_float)))
+
+        # Normal
+        gl.glEnableVertexAttribArray(self.building_normal_loc)
+        gl.glVertexAttribPointer(self.building_normal_loc, 3, gl.GL_FLOAT, gl.GL_FALSE, stride, ctypes.c_void_p(6 * ctypes.sizeof(ctypes.c_float)))
+
+        # Emissive
+        gl.glEnableVertexAttribArray(self.building_emissive_loc)
+        gl.glVertexAttribPointer(self.building_emissive_loc, 1, gl.GL_FLOAT, gl.GL_FALSE, stride, ctypes.c_void_p(9 * ctypes.sizeof(ctypes.c_float)))
+
+        gl.glDrawArrays(gl.GL_TRIANGLES, 0, self.building_vertex_count)
+
+        gl.glDisableVertexAttribArray(self.building_pos_loc)
+        gl.glDisableVertexAttribArray(self.building_color_loc)
+        gl.glDisableVertexAttribArray(self.building_normal_loc)
+        gl.glDisableVertexAttribArray(self.building_emissive_loc)
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
+        gl.glUseProgram(0)
 
     def draw_hud(self):
         pitch, yaw, roll = self.plane.rot
@@ -827,9 +898,7 @@ class GameScreen(State):
         for runway in self.env.runways:
             runway.draw()
 
-        for building in self.env.buildings:
-            if (self.plane.pos - building.pos).length() < C.BUILDING_RENDER_DISTANCE:
-                building.draw()
+        self.draw_buildings()
 
         self.ground.draw()
         self.ocean.draw()
