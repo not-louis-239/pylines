@@ -160,6 +160,8 @@ class GameScreen(State):
                 (-0.01,(84, 156, 240)),
                 (-200, (43, 118, 204)),
                 (-500, (37, 59, 179)),
+                (-1_000, (18, 36, 130)),
+                (-4_000, (7, 18, 74))
             ]
 
             # Sort descending by threshold
@@ -181,7 +183,7 @@ class GameScreen(State):
             return THRESHOLDS[0][1]
 
         # Precompute height-colour relationship to avoid wasteful function calls
-        HEIGHT_COLOUR_LOOKUP = [height_to_colour(h) for h in range(-500, 6001)]
+        HEIGHT_COLOUR_LOOKUP = [height_to_colour(h) for h in range(-4_000, 6_001)]
 
         NUM_TILES = math.ceil(C.HALF_WORLD_SIZE*2 / (C.METRES_PER_TILE))
         self.map_tiles: list[list[pg.Surface]] = []
@@ -207,8 +209,8 @@ class GameScreen(State):
                         world_x = tile_start_x + pix_x * C.MAP_METRES_PER_PX
                         world_z = tile_start_z + pix_z * C.MAP_METRES_PER_PX
                         pix_array[pix_x, pix_z] = HEIGHT_COLOUR_LOOKUP[clamp(  # type: ignore[index]
-                            int(self.game.env.height_at(world_x, world_z)), (-500, 6000)
-                        ) + 500]
+                            int(self.game.env.height_at(world_x, world_z)), (-4_000, 6_000)
+                        ) + 4_000]
 
                 del pix_array  # Unlock the Surface so it can be used
 
@@ -835,7 +837,7 @@ class GameScreen(State):
         # Render map
         if self.map_up:
             NUM_TILES = math.ceil(C.HALF_WORLD_SIZE*2 / (C.METRES_PER_TILE))
-            VIEWPORT_ZOOM = 200  # metres per pixel in map view
+            VIEWPORT_ZOOM = 50  # metres per pixel in map view
             MAP_OVERLAY_SIZE = 500  # size of the map overlay in pixels
 
             # TODO: VIEWPORT_ZOOM is eventually intended to be changeable via keys while map is up
@@ -889,8 +891,9 @@ class GameScreen(State):
                         tile_size_on_screen,
                     )
 
-                    hud_surface.blit(tile_surface, dest_rect)
-
+                    scaled_tile = pg.transform.scale(tile_surface, (tile_size_on_screen, tile_size_on_screen))
+                    hud_surface.blit(scaled_tile, dest_rect)
+                    
             # Draw icon
             icon_rect = self.images.plane_icon.get_rect(center=map_centre)
             plane_icon_rotated = pg.transform.rotate(self.images.plane_icon, -self.plane.rot.y)
