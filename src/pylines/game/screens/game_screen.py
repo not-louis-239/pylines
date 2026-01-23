@@ -853,9 +853,8 @@ class GameScreen(State):
             pg.draw.rect(hud_surface, (129, 137, 143), outer_map_rect)
 
             # Base
-            map_rect = pg.Rect(0, 0, MAP_OVERLAY_SIZE, MAP_OVERLAY_SIZE)
-            map_rect.center = map_centre
-            pg.draw.rect(hud_surface, (0, 0, 0), map_rect)
+            map_surface = pg.Surface((MAP_OVERLAY_SIZE, MAP_OVERLAY_SIZE))
+            map_surface.fill((0, 0, 0))
 
             # World coordinates of the top-left corner of the map viewport
             viewport_half_size_metres = MAP_OVERLAY_SIZE / 2 * VIEWPORT_ZOOM
@@ -879,8 +878,8 @@ class GameScreen(State):
                     tile_world_z = -C.HALF_WORLD_SIZE + tile_z * C.METRES_PER_TILE
 
                     # Position of the tile on the screen
-                    screen_pos_x = map_rect.left + (tile_world_x - viewport_top_left_x) / VIEWPORT_ZOOM
-                    screen_pos_z = map_rect.top + (tile_world_z - viewport_top_left_z) / VIEWPORT_ZOOM
+                    screen_pos_x = (tile_world_x - viewport_top_left_x) / VIEWPORT_ZOOM
+                    screen_pos_z = (tile_world_z - viewport_top_left_z) / VIEWPORT_ZOOM
 
                     tile_size_on_screen = C.METRES_PER_TILE / VIEWPORT_ZOOM
 
@@ -891,13 +890,17 @@ class GameScreen(State):
                         tile_size_on_screen,
                     )
 
-                    scaled_tile = pg.transform.scale(tile_surface, (tile_size_on_screen, tile_size_on_screen))
-                    hud_surface.blit(scaled_tile, dest_rect)
-                    
+                    scaled_tile = pg.transform.scale(tile_surface, (int(tile_size_on_screen) + 1, int(tile_size_on_screen) + 1))
+                    map_surface.blit(scaled_tile, dest_rect)
+
             # Draw icon
-            icon_rect = self.images.plane_icon.get_rect(center=map_centre)
+            icon_rect = self.images.plane_icon.get_rect(center=(MAP_OVERLAY_SIZE/2, MAP_OVERLAY_SIZE/2))
             plane_icon_rotated = pg.transform.rotate(self.images.plane_icon, -self.plane.rot.y)
-            hud_surface.blit(plane_icon_rotated, icon_rect)
+            map_surface.blit(plane_icon_rotated, icon_rect)
+
+            # Blit the completed map to the main HUD surface
+            map_rect = map_surface.get_rect(center=map_centre)
+            hud_surface.blit(map_surface, map_rect)
 
         # Show landing feedback
         if self.landing_dialog_box.active_time:
