@@ -122,40 +122,6 @@ class Environment:
             self.building_vertex_count = 0
             self.buildings_vbo = None
 
-    def draw_buildings(self):
-        if not self.building_vertex_count or self.buildings_vbo is None:
-            return
-
-        gl.glUseProgram(self.building_shader)
-
-        # Set uniforms
-        brightness = time_manager.brightness_from_hour(time_manager.fetch_hour())
-        gl.glUniform1f(self.building_brightness_loc, brightness)
-
-        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buildings_vbo)
-
-        stride = 9 * ctypes.sizeof(ctypes.c_float)
-
-        # Position
-        gl.glEnableVertexAttribArray(self.building_pos_loc)
-        gl.glVertexAttribPointer(self.building_pos_loc, 3, gl.GL_FLOAT, gl.GL_FALSE, stride, ctypes.c_void_p(0))
-
-        # Color
-        gl.glEnableVertexAttribArray(self.building_color_loc)
-        gl.glVertexAttribPointer(self.building_color_loc, 3, gl.GL_FLOAT, gl.GL_FALSE, stride, ctypes.c_void_p(3 * ctypes.sizeof(ctypes.c_float)))
-
-        # Normal
-        gl.glEnableVertexAttribArray(self.building_normal_loc)
-        gl.glVertexAttribPointer(self.building_normal_loc, 3, gl.GL_FLOAT, gl.GL_FALSE, stride, ctypes.c_void_p(6 * ctypes.sizeof(ctypes.c_float)))
-
-        gl.glDrawArrays(gl.GL_TRIANGLES, 0, self.building_vertex_count)
-
-        gl.glDisableVertexAttribArray(self.building_pos_loc)
-        gl.glDisableVertexAttribArray(self.building_color_loc)
-        gl.glDisableVertexAttribArray(self.building_normal_loc)
-        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
-        gl.glUseProgram(0)
-
     def _world_to_map(self, x: float, z: float) -> tuple[float, float]:
         # Must map to 0 - w or height or else causes camera to go underground
         # This is because mapping to 0-w/h makes _world_to_map sample exactly

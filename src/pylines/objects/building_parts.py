@@ -41,7 +41,7 @@ PRIMITIVE_CORRESPONDENCE: dict[str, Primitive] = {
 
 def match_primitive(p: str) -> Primitive:
     if p not in PRIMITIVE_CORRESPONDENCE.keys():
-        raise KeyError(f"Invalid primitive: '{p}'")
+        raise RuntimeError(f"Invalid primitive: '{p}'")
 
     return PRIMITIVE_CORRESPONDENCE[p]
 
@@ -238,7 +238,7 @@ def generate_building_part_vertices(world_pos: pg.Vector3, part: "BuildingPart")
         r = part.dims[0]
         return generate_sphere_vertices(pos, r, color)
     else:
-        raise ValueError(f"No vertices generator for primitive: {part.primitive.value}")
+        raise ValueError(f"Missing vertices generator for primitive: {part.primitive.value}")
 
 class BuildingPart:
     def __init__(
