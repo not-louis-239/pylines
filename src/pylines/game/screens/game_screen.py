@@ -838,6 +838,8 @@ class GameScreen(State):
             VIEWPORT_ZOOM = 200  # metres per pixel in map view
             MAP_OVERLAY_SIZE = 500  # size of the map overlay in pixels
 
+            # TODO: VIEWPORT_ZOOM is eventually intended to be changeable via keys while map is up
+
             px, _, pz = self.plane.pos
 
             # Render base map
@@ -853,48 +855,41 @@ class GameScreen(State):
             map_rect.center = map_centre
             pg.draw.rect(hud_surface, (0, 0, 0), map_rect)
 
-            # Plane map position in pixels relative to top-left of world
-            plane_px = (px - (-C.HALF_WORLD_SIZE)) / C.MAP_METRES_PER_PX
-            plane_pz = (pz - (-C.HALF_WORLD_SIZE)) / C.MAP_METRES_PER_PX
+            # World coordinates of the top-left corner of the map viewport
+            viewport_half_size_metres = MAP_OVERLAY_SIZE / 2 * VIEWPORT_ZOOM
+            viewport_top_left_x = px - viewport_half_size_metres
+            viewport_top_left_z = pz - viewport_half_size_metres
 
-            # map rectangle in pixels relative to world origin
-            half_vw = MAP_OVERLAY_SIZE // 2
-            top_left_px = plane_px - half_vw
-            top_left_pz = plane_pz - half_vw
-            bottom_right_px = plane_px + half_vw
-            bottom_right_pz = plane_pz + half_vw
+            # Tile indices for the visible area
+            start_tile_x = int((viewport_top_left_x + C.HALF_WORLD_SIZE) / C.METRES_PER_TILE)
+            start_tile_z = int((viewport_top_left_z + C.HALF_WORLD_SIZE) / C.METRES_PER_TILE)
+            end_tile_x = int((viewport_top_left_x + 2 * viewport_half_size_metres + C.HALF_WORLD_SIZE) / C.METRES_PER_TILE)
+            end_tile_z = int((viewport_top_left_z + 2 * viewport_half_size_metres + C.HALF_WORLD_SIZE) / C.METRES_PER_TILE)
 
-            # Convert pixels to tile indices
-            tile_start_x = int(top_left_px // C.MAP_PIXELS_PER_TILE)
-            tile_end_x = int(bottom_right_px // C.MAP_PIXELS_PER_TILE)
-            tile_start_z = int(top_left_pz // C.MAP_PIXELS_PER_TILE)
-            tile_end_z = int(bottom_right_pz // C.MAP_PIXELS_PER_TILE)
+            for tile_z in range(start_tile_z, end_tile_z + 1):
+                for tile_x in range(start_tile_x, end_tile_x + 1):
+                    if not (0 <= tile_x < NUM_TILES and 0 <= tile_z < NUM_TILES):
+                        continue
 
-            # Handle viewport extending beyond world edges
-            tile_start_x = max(0, tile_start_x)
-            tile_start_z = max(0, tile_start_z)
-            tile_end_x = min(NUM_TILES-1, tile_end_x)
-            tile_end_z = min(NUM_TILES-1, tile_end_z)
-
-            for tile_z in range(tile_start_z, tile_end_z + 1):
-                for tile_x in range(tile_start_x, tile_end_x + 1):
                     tile_surface = self.map_tiles[tile_z][tile_x]
 
-                    # Determine what portion of the tile overlaps the viewport
-                    src_rect = pg.Rect(0, 0, C.MAP_PIXELS_PER_TILE, C.MAP_PIXELS_PER_TILE)
+                    tile_world_x = -C.HALF_WORLD_SIZE + tile_x * C.METRES_PER_TILE
+                    tile_world_z = -C.HALF_WORLD_SIZE + tile_z * C.METRES_PER_TILE
 
-                    # TODO: adjust src_rect if the tile is partially offscreen (optional)
-                    # e.g., crop src_rect if top-left is outside the viewport
+                    # Position of the tile on the screen
+                    screen_pos_x = map_rect.left + (tile_world_x - viewport_top_left_x) / VIEWPORT_ZOOM
+                    screen_pos_z = map_rect.top + (tile_world_z - viewport_top_left_z) / VIEWPORT_ZOOM
 
-                    # Compute destination rect on HUD surface
+                    tile_size_on_screen = C.METRES_PER_TILE / VIEWPORT_ZOOM
+
                     dest_rect = pg.Rect(
-                        map_centre[0] - half_vw + (tile_x * C.MAP_PIXELS_PER_TILE - plane_px),
-                        map_centre[1] - half_vw + (tile_z * C.MAP_PIXELS_PER_TILE - plane_pz),
-                        C.MAP_PIXELS_PER_TILE,
-                        C.MAP_PIXELS_PER_TILE,
+                        screen_pos_x,
+                        screen_pos_z,
+                        tile_size_on_screen,
+                        tile_size_on_screen,
                     )
 
-                    hud_surface.blit(tile_surface, dest_rect, area=src_rect)
+                    hud_surface.blit(tile_surface, dest_rect)
 
             # Draw icon
             icon_rect = self.images.plane_icon.get_rect(center=map_centre)
