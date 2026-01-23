@@ -84,7 +84,7 @@
                     "emissive": false
                 },
                 {
-                    "offset": [0, 32, 0],
+                    "offset": [0, 32.5, 0],
                     "primitive": "cylinder",
                     "dims": [2.75, 4],
                     "colour": [107, 161, 227],

@@ -45,17 +45,12 @@ def match_primitive(p: str) -> Primitive:
 
     return PRIMITIVE_CORRESPONDENCE[p]
 
-def get_part_colour(colour: Colour, emissive: bool) -> tuple[float, float, float]:
-    """Calculates the final color of a part based on its base color, emissiveness, and the time of day."""
-    r, g, b = [c / 255.0 for c in colour]
+def get_part_colour(colour: Colour) -> tuple[float, float, float]:
+    """Calculates the final color of a part based on its base color."""
+    r, g, b = colour
+    return r / 255.0, g / 255.0, b / 255.0
 
-    if emissive:
-        return r, g, b
-    else:
-        daylight_brightness = brightness_from_hour(fetch_hour())
-        return r * daylight_brightness, g * daylight_brightness, b * daylight_brightness
-
-def generate_cuboid_vertices(pos: pg.Vector3, l: float, h: float, w: float, color: tuple[float, float, float]) -> list[float]:
+def generate_cuboid_vertices(pos: pg.Vector3, l: float, h: float, w: float, color: tuple[float, float, float], emissive: float) -> list[float]:
     """Generates vertices for a cuboid, including position, color, and normal."""
     hl, hw, hh = l / 2, w / 2, h / 2
 
@@ -97,11 +92,12 @@ def generate_cuboid_vertices(pos: pg.Vector3, l: float, h: float, w: float, colo
                 *vertices_pos[idx],
                 *color,
                 *normal,
+                emissive,
             ])
 
     return vertex_data
 
-def generate_cylinder_vertices(pos: pg.Vector3, r: float, h: float, color: tuple[float, float, float], segments: int = 32) -> list[float]:
+def generate_cylinder_vertices(pos: pg.Vector3, r: float, h: float, color: tuple[float, float, float], emissive: float, segments: int = 32) -> list[float]:
     """Generates vertices for a cylinder, including position, color, and normal."""
     vertex_data = []
     angle_step = 2 * math.pi / segments
@@ -124,14 +120,14 @@ def generate_cylinder_vertices(pos: pg.Vector3, r: float, h: float, color: tuple
         normal2 = (x2 / r, 0, z2 / r)
 
         # Triangle 1
-        vertex_data.extend([*p1_bot, *color, *normal1])
-        vertex_data.extend([*p2_bot, *color, *normal2])
-        vertex_data.extend([*p1_top, *color, *normal1])
+        vertex_data.extend([*p1_bot, *color, *normal1, emissive])
+        vertex_data.extend([*p2_bot, *color, *normal2, emissive])
+        vertex_data.extend([*p1_top, *color, *normal1, emissive])
 
         # Triangle 2
-        vertex_data.extend([*p1_top, *color, *normal1])
-        vertex_data.extend([*p2_bot, *color, *normal2])
-        vertex_data.extend([*p2_top, *color, *normal2])
+        vertex_data.extend([*p1_top, *color, *normal1, emissive])
+        vertex_data.extend([*p2_bot, *color, *normal2, emissive])
+        vertex_data.extend([*p2_top, *color, *normal2, emissive])
 
     # Top Cap
     top_center = (pos.x, pos.y + half_h, pos.z)
@@ -146,9 +142,9 @@ def generate_cylinder_vertices(pos: pg.Vector3, r: float, h: float, color: tuple
         p1 = (pos.x + x1, pos.y + half_h, pos.z + z1)
         p2 = (pos.x + x2, pos.y + half_h, pos.z + z2)
 
-        vertex_data.extend([*top_center, *color, *normal_top])
-        vertex_data.extend([*p1, *color, *normal_top])
-        vertex_data.extend([*p2, *color, *normal_top])
+        vertex_data.extend([*top_center, *color, *normal_top, emissive])
+        vertex_data.extend([*p1, *color, *normal_top, emissive])
+        vertex_data.extend([*p2, *color, *normal_top, emissive])
 
     # Bottom Cap
     bot_center = (pos.x, pos.y - half_h, pos.z)
@@ -163,13 +159,13 @@ def generate_cylinder_vertices(pos: pg.Vector3, r: float, h: float, color: tuple
         p1 = (pos.x + x1, pos.y - half_h, pos.z + z1)
         p2 = (pos.x + x2, pos.y - half_h, pos.z + z2)
 
-        vertex_data.extend([*bot_center, *color, *normal_bot])
-        vertex_data.extend([*p2, *color, *normal_bot])
-        vertex_data.extend([*p1, *color, *normal_bot])
+        vertex_data.extend([*bot_center, *color, *normal_bot, emissive])
+        vertex_data.extend([*p2, *color, *normal_bot, emissive])
+        vertex_data.extend([*p1, *color, *normal_bot, emissive])
 
     return vertex_data
 
-def generate_sphere_vertices(pos: pg.Vector3, r: float, color: tuple[float, float, float], stacks: int = 16, sectors: int = 32) -> list[float]:
+def generate_sphere_vertices(pos: pg.Vector3, r: float, color: tuple[float, float, float], emissive: float, stacks: int = 16, sectors: int = 32) -> list[float]:
     """Generates vertices for a sphere, including position, color, and normal."""
     vertex_data = []
     stack_step = math.pi / stacks
@@ -212,31 +208,32 @@ def generate_sphere_vertices(pos: pg.Vector3, r: float, color: tuple[float, floa
             n4 = tuple(c / r for c in (p4[0]-pos.x, p4[1]-pos.y, p4[2]-pos.z))
 
             # Triangle 1
-            vertex_data.extend([*p1, *color, *n1])
-            vertex_data.extend([*p3, *color, *n3])
-            vertex_data.extend([*p2, *color, *n2])
+            vertex_data.extend([*p1, *color, *n1, emissive])
+            vertex_data.extend([*p3, *color, *n3, emissive])
+            vertex_data.extend([*p2, *color, *n2, emissive])
 
             # Triangle 2
-            vertex_data.extend([*p2, *color, *n2])
-            vertex_data.extend([*p3, *color, *n3])
-            vertex_data.extend([*p4, *color, *n4])
+            vertex_data.extend([*p2, *color, *n2, emissive])
+            vertex_data.extend([*p3, *color, *n3, emissive])
+            vertex_data.extend([*p4, *color, *n4, emissive])
 
     return vertex_data
 
 def generate_building_part_vertices(world_pos: pg.Vector3, part: "BuildingPart") -> list[float]:
     """Generates all vertices for a single building part."""
     pos = world_pos + part.offset
-    color = get_part_colour(part.colour, part.emissive)
+    color = get_part_colour(part.colour)
+    emissive_float = 1.0 if part.emissive else 0.0
 
     if part.primitive == Primitive.CUBOID:
         l, h, w = part.dims
-        return generate_cuboid_vertices(pos, l, h, w, color)
+        return generate_cuboid_vertices(pos, l, h, w, color, emissive_float)
     elif part.primitive == Primitive.CYLINDER:
         r, h = part.dims
-        return generate_cylinder_vertices(pos, r, h, color)
+        return generate_cylinder_vertices(pos, r, h, color, emissive_float)
     elif part.primitive == Primitive.SPHERE:
         r = part.dims[0]
-        return generate_sphere_vertices(pos, r, color)
+        return generate_sphere_vertices(pos, r, color, emissive_float)
     else:
         raise ValueError(f"Missing vertices generator for primitive: {part.primitive.value}")
 

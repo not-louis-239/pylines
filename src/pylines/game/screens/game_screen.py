@@ -168,7 +168,7 @@ class GameScreen(State):
 
         if all_vertices:
             self.building_vertices = np.array(all_vertices, dtype=np.float32)
-            self.building_vertex_count = len(self.building_vertices) // 9
+            self.building_vertex_count = len(self.building_vertices) // 10
 
             self.buildings_vbo = gl.glGenBuffers(1)
             gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buildings_vbo)
@@ -182,6 +182,7 @@ class GameScreen(State):
             self.building_pos_loc = gl.glGetAttribLocation(self.building_shader, "position")
             self.building_color_loc = gl.glGetAttribLocation(self.building_shader, "color")
             self.building_normal_loc = gl.glGetAttribLocation(self.building_shader, "normal")
+            self.building_emissive_loc = gl.glGetAttribLocation(self.building_shader, "in_emissive")
             self.building_brightness_loc = gl.glGetUniformLocation(self.building_shader, "u_brightness")
         else:
             self.building_vertices = np.array([], dtype=np.float32)
@@ -356,7 +357,7 @@ class GameScreen(State):
 
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buildings_vbo)
 
-        stride = 9 * ctypes.sizeof(ctypes.c_float)
+        stride = 10 * ctypes.sizeof(ctypes.c_float)
 
         # Position
         gl.glEnableVertexAttribArray(self.building_pos_loc)
@@ -370,11 +371,16 @@ class GameScreen(State):
         gl.glEnableVertexAttribArray(self.building_normal_loc)
         gl.glVertexAttribPointer(self.building_normal_loc, 3, gl.GL_FLOAT, gl.GL_FALSE, stride, ctypes.c_void_p(6 * ctypes.sizeof(ctypes.c_float)))
 
+        # Emissive
+        gl.glEnableVertexAttribArray(self.building_emissive_loc)
+        gl.glVertexAttribPointer(self.building_emissive_loc, 1, gl.GL_FLOAT, gl.GL_FALSE, stride, ctypes.c_void_p(9 * ctypes.sizeof(ctypes.c_float)))
+
         gl.glDrawArrays(gl.GL_TRIANGLES, 0, self.building_vertex_count)
 
         gl.glDisableVertexAttribArray(self.building_pos_loc)
         gl.glDisableVertexAttribArray(self.building_color_loc)
         gl.glDisableVertexAttribArray(self.building_normal_loc)
+        gl.glDisableVertexAttribArray(self.building_emissive_loc)
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
         gl.glUseProgram(0)
 
