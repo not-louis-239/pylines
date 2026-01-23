@@ -140,9 +140,30 @@ class GameScreen(State):
             inner_ai_rect.width//2
         )
 
-        # Big map
+        # Map setup
         self.map_up: RealNumber = 0  # 1 = fully up, 0 = fully down
         self.map_state: MapState = MapState.HIDDEN
+
+        def height_to_colour(h: RealNumber):
+            LOWEST_COL = (11, 11, 38)
+            THRESHOLDS: dict[RealNumber, Colour] = {
+                5750: (61, 66, 69),
+                5300: (43, 43, 43),
+                4000: (31, 31, 31),
+                2200: (69, 39, 23),
+                800: (16, 54, 16),
+                150: (27, 66, 27),
+                0: (66, 60, 51),
+                -200: (21, 31, 82),
+                -500: (16, 16, 64)
+            }
+
+            for th, col in THRESHOLDS.items():
+                if h > th:
+                    return col
+            return LOWEST_COL
+
+        # TODO: Initialise tiled map
 
         # Building rendering setup
         all_vertices = []

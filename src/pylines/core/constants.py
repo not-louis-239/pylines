@@ -94,4 +94,6 @@ EPSILON = 0.0001  # Treat anything smaller than this as zero
 # Visual
 CHEVRON_ANGLE = 40
 CHEVRON_COLOUR = (255, 0, 0)
+
 MAP_TOGGLE_ANIMATION_DURATION = 0.15  # seconds
+MAP_METRES_PER_PX = 50  # metres per pixel
