@@ -217,8 +217,8 @@ class GameScreen(State):
                 tile_row.append(current_tile)
             self.map_tiles.append(tile_row)
 
-        # Viewport zoom for map - metres per pixel of map shown
-        self.VIEWPORT_ZOOM = 50
+        self.viewport_zoom = 50  # metres per pixel of map shown
+        self.viewport_pos = pg.Vector3(self.plane.pos)
 
         # Building rendering setup
         all_vertices = []
@@ -363,10 +363,10 @@ class GameScreen(State):
         if self.map_state == MapState.SHOWN:
             # While map is shown: control zoom
             if keys[pg.K_w]:
-                self.VIEWPORT_ZOOM /= 2.5 ** (dt/1000)
+                self.viewport_zoom /= 2.5 ** (dt/1000)
             if keys[pg.K_s]:
-                self.VIEWPORT_ZOOM *= 2.5 ** (dt/1000)
-            self.VIEWPORT_ZOOM = clamp(self.VIEWPORT_ZOOM, (5, 100))
+                self.viewport_zoom *= 2.5 ** (dt/1000)
+            self.viewport_zoom = clamp(self.viewport_zoom, (5, 100))
         else:
             # Throttle controls
             throttle_speed = 0.4 * dt/1000
@@ -382,21 +382,43 @@ class GameScreen(State):
         speed_authority_factor = clamp((self.plane.vel.length()/30.87)**2, (0.01, 1))  # based on vel in m/s
         rot_accel = control_authority * base_rot_accel * speed_authority_factor * (0.2 if self.plane.on_ground else 1)
 
-        # Pitch
-        if keys[pg.K_UP]:
-            self.plane.rot_rate.x += rot_accel * (1 - (self.plane.rot.x / 90))
-        if keys[pg.K_DOWN]:
-            self.plane.rot_rate.x -= rot_accel * (1 + (self.plane.rot.x / 90))
-        if not (keys[pg.K_UP] or keys[pg.K_DOWN]):
-            self.plane.rot_rate.x *= (1 - 0.8 * dt/1000)
+        # Turning or map panning
+        if self.map_state == MapState.SHOWN:
+            panning_speed = self.viewport_zoom * 150
 
-        # Turning
-        if keys[pg.K_LEFT]:
-            self.plane.rot_rate.z -= rot_accel
-        if keys[pg.K_RIGHT]:
-            self.plane.rot_rate.z += rot_accel
-        if not (keys[pg.K_LEFT] or keys[pg.K_RIGHT]):
-            self.plane.rot_rate.z *= (1 - 0.8 * dt/1000)
+            # Map shown -> pan map
+            if keys[pg.K_UP]:
+                self.viewport_pos.z -= panning_speed * dt/1000
+            if keys[pg.K_DOWN]:
+                self.viewport_pos.z += panning_speed * dt/1000
+            if keys[pg.K_LEFT]:
+                self.viewport_pos.x -= panning_speed * dt/1000
+            if keys[pg.K_RIGHT]:
+                self.viewport_pos.x += panning_speed * dt/1000
+
+            # Reset map viewport pos
+            if self.pressed(keys, pg.K_SPACE):
+                self.viewport_pos = self.plane.pos.copy()
+        else:
+            # Reset map viewport pos once map goes fully down
+            if not self.map_up:
+                self.viewport_pos = self.plane.pos.copy()
+
+            # Pitch
+            if keys[pg.K_UP]:
+                self.plane.rot_rate.x += rot_accel * (1 - (self.plane.rot.x / 90))
+            if keys[pg.K_DOWN]:
+                self.plane.rot_rate.x -= rot_accel * (1 + (self.plane.rot.x / 90))
+            if not (keys[pg.K_UP] or keys[pg.K_DOWN]):
+                self.plane.rot_rate.x *= (1 - 0.8 * dt/1000)
+
+            # Turning
+            if keys[pg.K_LEFT]:
+                self.plane.rot_rate.z -= rot_accel
+            if keys[pg.K_RIGHT]:
+                self.plane.rot_rate.z += rot_accel
+            if not (keys[pg.K_LEFT] or keys[pg.K_RIGHT]):
+                self.plane.rot_rate.z *= (1 - 0.8 * dt/1000)
 
         # Flaps
         FLAPS_SPEED = 2
@@ -851,9 +873,7 @@ class GameScreen(State):
             NUM_TILES = math.ceil(C.HALF_WORLD_SIZE*2 / (C.METRES_PER_TILE))
             MAP_OVERLAY_SIZE = 500  # size of the map overlay in pixels
 
-            # TODO: VIEWPORT_ZOOM is eventually intended to be changeable via keys while map is up
-
-            px, _, pz = self.plane.pos
+            px, _, pz = self.viewport_pos
 
             # Render base map
             map_centre = C.WN_W//2, int(285 + C.WN_H * (1-self.map_up))
@@ -868,7 +888,7 @@ class GameScreen(State):
             map_surface.fill((0, 0, 0))
 
             # World coordinates of the top-left corner of the map viewport
-            viewport_half_size_metres = MAP_OVERLAY_SIZE / 2 * self.VIEWPORT_ZOOM
+            viewport_half_size_metres = MAP_OVERLAY_SIZE / 2 * self.viewport_zoom
             viewport_top_left_x = px - viewport_half_size_metres
             viewport_top_left_z = pz - viewport_half_size_metres
 
@@ -889,10 +909,10 @@ class GameScreen(State):
                     tile_world_z = -C.HALF_WORLD_SIZE + tile_z * C.METRES_PER_TILE
 
                     # Position of the tile on the screen
-                    screen_pos_x = (tile_world_x - viewport_top_left_x) / self.VIEWPORT_ZOOM
-                    screen_pos_z = (tile_world_z - viewport_top_left_z) / self.VIEWPORT_ZOOM
+                    screen_pos_x = (tile_world_x - viewport_top_left_x) / self.viewport_zoom
+                    screen_pos_z = (tile_world_z - viewport_top_left_z) / self.viewport_zoom
 
-                    tile_size_on_screen = C.METRES_PER_TILE / self.VIEWPORT_ZOOM
+                    tile_size_on_screen = C.METRES_PER_TILE / self.viewport_zoom
 
                     dest_rect = pg.Rect(
                         screen_pos_x,
@@ -905,12 +925,16 @@ class GameScreen(State):
                     map_surface.blit(scaled_tile, dest_rect)
 
             # Draw icon
-            icon_rect = self.images.plane_icon.get_rect(center=(MAP_OVERLAY_SIZE/2, MAP_OVERLAY_SIZE/2))
+            cx, cz = MAP_OVERLAY_SIZE/2, MAP_OVERLAY_SIZE/2
+            icon_x = cx - (self.viewport_pos.x - self.plane.pos.x) / self.viewport_zoom
+            icon_z = cz - (self.viewport_pos.z - self.plane.pos.z) / self.viewport_zoom
+
+            icon_rect = self.images.plane_icon.get_rect(center=(icon_x, icon_z))
             plane_icon_rotated = pg.transform.rotate(self.images.plane_icon, -self.plane.rot.y)
             map_surface.blit(plane_icon_rotated, icon_rect)
 
             # Blit the completed map to the main HUD surface
-            map_rect = map_surface.get_rect(center=map_centre)
+            map_rect = map_surface.get_rect(center=(map_centre))
             hud_surface.blit(map_surface, map_rect)
 
         # Show landing feedback

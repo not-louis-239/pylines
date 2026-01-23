@@ -134,8 +134,7 @@ class Plane(Entity):
             self.sounds.hard_landing.play()
             if not suppress_dialog: self.dialog_box.set_message("Hard landing...", (255, 200, 0))
 
-        # TODO: Collision with buildings and ocean should be auto-lethal
-        # (add once buildings and ocean are implemented)
+        # TODO: Collision with buildings should be auto-lethal
 
         def crash(*, suppress_dialog: bool = False, damage_taken: float = 0.0, lethal: bool = False, reason: CrashReason):
             self.damage_level = 1 if lethal else min(self.damage_level + damage_taken, 1)
