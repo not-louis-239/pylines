@@ -25,6 +25,7 @@ from typing import TYPE_CHECKING, cast
 from enum import Enum
 import pygame as pg
 import numpy as np
+from typing import Callable
 from OpenGL import GL as gl
 from OpenGL import GLU as glu
 
@@ -144,35 +145,57 @@ class GameScreen(State):
         self.map_up: RealNumber = 0  # 1 = fully up, 0 = fully down
         self.map_state: MapState = MapState.HIDDEN
 
-        def height_to_colour(h: RealNumber):
-            LOWEST_COL = (11, 11, 38)
-            THRESHOLDS: dict[RealNumber, Colour] = {
-                5750: (61, 66, 69),
-                5300: (43, 43, 43),
-                4000: (31, 31, 31),
-                2200: (69, 39, 23),
-                800: (16, 54, 16),
-                150: (27, 66, 27),
-                0: (66, 60, 51),
-                -200: (21, 31, 82),
-                -500: (16, 16, 64)
-            }
+        def height_to_colour(h: float) -> Colour:
+            lerp_colour: Callable = cols.lerp_colour
 
-            for th, col in THRESHOLDS.items():
-                if h > th:
-                    return col
-            return LOWEST_COL
+            THRESHOLDS: list[tuple[float, Colour]] = [
+                (6000, (177, 192, 204)),
+                (5500, (113, 122, 130)),
+                (5000, (79, 79, 79)),
+                (4000, (38, 38, 38)),
+                (2200, (94, 61, 39)),
+                (800,  (10, 99, 5)),
+                (150,  (23, 143, 49)),
+                (0,    (224, 207, 162)),
+                (-0.01,(84, 156, 240)),
+                (-200, (43, 118, 204)),
+                (-500, (37, 59, 179)),
+            ]
 
-        metres_per_tile = C.MAP_METRES_PER_PX * C.MAP_PIXELS_PER_TILE
-        NUM_TILES = math.ceil(C.HALF_WORLD_SIZE*2 / (metres_per_tile))
+            # Sort descending by threshold
+            THRESHOLDS.sort(reverse=True, key=lambda t: t[0])
+
+            # Below the lowest threshold
+            if h <= THRESHOLDS[-1][0]:
+                return THRESHOLDS[-1][1]
+
+            # Find the interval to interpolate
+            for i in range(len(THRESHOLDS) - 1):
+                high_h, high_c = THRESHOLDS[i]
+                low_h, low_c = THRESHOLDS[i+1]
+                if low_h <= h <= high_h:
+                    t = (h - low_h) / (high_h - low_h)
+                    return lerp_colour(low_c, high_c, t)
+
+            # Above the highest threshold
+            return THRESHOLDS[0][1]
+
+        # Precompute height-colour relationship to avoid wasteful function calls
+        HEIGHT_COLOUR_LOOKUP = [height_to_colour(h) for h in range(-500, 6001)]
+
+        NUM_TILES = math.ceil(C.HALF_WORLD_SIZE*2 / (C.METRES_PER_TILE))
         self.map_tiles: list[list[pg.Surface]] = []
 
         # Loop over tiles
         for tile_z in range(NUM_TILES):
+            print(f"making map tile row {tile_z}...")  # DEBUG
+
             tile_row: list[pg.Surface] = []
             for tile_x in range(NUM_TILES):
-                tile_start_x = -C.HALF_WORLD_SIZE + metres_per_tile * tile_x
-                tile_start_z = -C.HALF_WORLD_SIZE + metres_per_tile * tile_z
+                print(f"making map tile {tile_x}...")  # DEBUG
+
+                tile_start_x = -C.HALF_WORLD_SIZE + C.METRES_PER_TILE * tile_x
+                tile_start_z = -C.HALF_WORLD_SIZE + C.METRES_PER_TILE * tile_z
 
                 # Make a new Surface for each tile
                 current_tile = pg.Surface((C.MAP_PIXELS_PER_TILE, C.MAP_PIXELS_PER_TILE))
@@ -183,7 +206,9 @@ class GameScreen(State):
                     for pix_x in range(C.MAP_PIXELS_PER_TILE):
                         world_x = tile_start_x + pix_x * C.MAP_METRES_PER_PX
                         world_z = tile_start_z + pix_z * C.MAP_METRES_PER_PX
-                        pix_array[pix_x, pix_z] = height_to_colour(self.game.env.height_at(world_x, world_z))  # type: ignore[index]
+                        pix_array[pix_x, pix_z] = HEIGHT_COLOUR_LOOKUP[clamp(  # type: ignore[index]
+                            int(self.game.env.height_at(world_x, world_z)), (-500, 6000)
+                        ) + 500]
 
                 del pix_array  # Unlock the Surface so it can be used
 
@@ -807,7 +832,74 @@ class GameScreen(State):
         pg.draw.circle(hud_surface, (51, 43, 37), (warning_x, C.WN_H*0.965), 10)
         pg.draw.circle(hud_surface, (warning_col), (warning_x, C.WN_H*0.965), 8)
 
-        # TODO: Place big map rendering here
+        # Render map
+        if self.map_up:
+            NUM_TILES = math.ceil(C.HALF_WORLD_SIZE*2 / (C.METRES_PER_TILE))
+            VIEWPORT_ZOOM = 200  # metres per pixel in map view
+            MAP_OVERLAY_SIZE = 500  # size of the map overlay in pixels
+
+            px, _, pz = self.plane.pos
+
+            # Render base map
+            map_centre = C.WN_W//2, int(285 + C.WN_H * (1-self.map_up))
+
+            # Map border
+            outer_map_rect = pg.Rect(0, 0, MAP_OVERLAY_SIZE+10, MAP_OVERLAY_SIZE+10)
+            outer_map_rect.center = map_centre
+            pg.draw.rect(hud_surface, (129, 137, 143), outer_map_rect)
+
+            # Base
+            map_rect = pg.Rect(0, 0, MAP_OVERLAY_SIZE, MAP_OVERLAY_SIZE)
+            map_rect.center = map_centre
+            pg.draw.rect(hud_surface, (0, 0, 0), map_rect)
+
+            # Plane map position in pixels relative to top-left of world
+            plane_px = (px - (-C.HALF_WORLD_SIZE)) / C.MAP_METRES_PER_PX
+            plane_pz = (pz - (-C.HALF_WORLD_SIZE)) / C.MAP_METRES_PER_PX
+
+            # map rectangle in pixels relative to world origin
+            half_vw = MAP_OVERLAY_SIZE // 2
+            top_left_px = plane_px - half_vw
+            top_left_pz = plane_pz - half_vw
+            bottom_right_px = plane_px + half_vw
+            bottom_right_pz = plane_pz + half_vw
+
+            # Convert pixels to tile indices
+            tile_start_x = int(top_left_px // C.MAP_PIXELS_PER_TILE)
+            tile_end_x = int(bottom_right_px // C.MAP_PIXELS_PER_TILE)
+            tile_start_z = int(top_left_pz // C.MAP_PIXELS_PER_TILE)
+            tile_end_z = int(bottom_right_pz // C.MAP_PIXELS_PER_TILE)
+
+            # Handle viewport extending beyond world edges
+            tile_start_x = max(0, tile_start_x)
+            tile_start_z = max(0, tile_start_z)
+            tile_end_x = min(NUM_TILES-1, tile_end_x)
+            tile_end_z = min(NUM_TILES-1, tile_end_z)
+
+            for tile_z in range(tile_start_z, tile_end_z + 1):
+                for tile_x in range(tile_start_x, tile_end_x + 1):
+                    tile_surface = self.map_tiles[tile_z][tile_x]
+
+                    # Determine what portion of the tile overlaps the viewport
+                    src_rect = pg.Rect(0, 0, C.MAP_PIXELS_PER_TILE, C.MAP_PIXELS_PER_TILE)
+
+                    # TODO: adjust src_rect if the tile is partially offscreen (optional)
+                    # e.g., crop src_rect if top-left is outside the viewport
+
+                    # Compute destination rect on HUD surface
+                    dest_rect = pg.Rect(
+                        map_centre[0] - half_vw + (tile_x * C.MAP_PIXELS_PER_TILE - plane_px),
+                        map_centre[1] - half_vw + (tile_z * C.MAP_PIXELS_PER_TILE - plane_pz),
+                        C.MAP_PIXELS_PER_TILE,
+                        C.MAP_PIXELS_PER_TILE,
+                    )
+
+                    hud_surface.blit(tile_surface, dest_rect, area=src_rect)
+
+            # Draw icon
+            icon_rect = self.images.plane_icon.get_rect(center=map_centre)
+            plane_icon_rotated = pg.transform.rotate(self.images.plane_icon, -self.plane.rot.y)
+            hud_surface.blit(plane_icon_rotated, icon_rect)
 
         # Show landing feedback
         if self.landing_dialog_box.active_time:

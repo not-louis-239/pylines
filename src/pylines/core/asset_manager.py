@@ -84,12 +84,15 @@ class Images(AssetBank):
             self._load("damage_full.png")
         )
 
+        self.plane_icon = self._load("plane_icon.png")
+
         self.augment()
 
     def augment(self):
         self.speed_dial = scale(self.speed_dial, (250, 250))
         self.compass = scale(self.compass, (250, 250))
         self.logo = scale_by(self.logo, 0.2)
+        self.plane_icon = scale(self.plane_icon, (24, 24))
 
     def _load(self, name: str):
         return pg.image.load(paths.IMAGES_DIR / name).convert_alpha()
