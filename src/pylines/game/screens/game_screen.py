@@ -217,6 +217,9 @@ class GameScreen(State):
                 tile_row.append(current_tile)
             self.map_tiles.append(tile_row)
 
+        # Viewport zoom for map - metres per pixel of map shown
+        self.VIEWPORT_ZOOM = 50
+
         # Building rendering setup
         all_vertices = []
         for building in self.env.buildings:
@@ -357,14 +360,23 @@ class GameScreen(State):
         if self.pressed(keys, pg.K_g):
             self.gps_runway_index = (self.gps_runway_index + 1) % len(self.env.runways)
 
-        # Throttle controls
-        throttle_speed = 0.4 * dt/1000
-        if keys[pg.K_w]:
-            self.plane.throttle_frac += throttle_speed
-        if keys[pg.K_s]:
-            self.plane.throttle_frac -= throttle_speed
-        self.plane.throttle_frac = clamp(self.plane.throttle_frac, (0, 1))
+        if self.map_state == MapState.SHOWN:
+            # While map is shown: control zoom
+            if keys[pg.K_w]:
+                self.VIEWPORT_ZOOM /= 2.5 ** (dt/1000)
+            if keys[pg.K_s]:
+                self.VIEWPORT_ZOOM *= 2.5 ** (dt/1000)
+            self.VIEWPORT_ZOOM = clamp(self.VIEWPORT_ZOOM, (5, 100))
+        else:
+            # Throttle controls
+            throttle_speed = 0.4 * dt/1000
+            if keys[pg.K_w]:
+                self.plane.throttle_frac += throttle_speed
+            if keys[pg.K_s]:
+                self.plane.throttle_frac -= throttle_speed
+            self.plane.throttle_frac = clamp(self.plane.throttle_frac, (0, 1))
 
+        # Turning authority
         base_rot_accel = 20 * dt/1000
         control_authority = 1 - 0.875 * self.plane.damage_level**2  # reduce authority based on damage level
         speed_authority_factor = clamp((self.plane.vel.length()/30.87)**2, (0.01, 1))  # based on vel in m/s
@@ -837,7 +849,6 @@ class GameScreen(State):
         # Render map
         if self.map_up:
             NUM_TILES = math.ceil(C.HALF_WORLD_SIZE*2 / (C.METRES_PER_TILE))
-            VIEWPORT_ZOOM = 50  # metres per pixel in map view
             MAP_OVERLAY_SIZE = 500  # size of the map overlay in pixels
 
             # TODO: VIEWPORT_ZOOM is eventually intended to be changeable via keys while map is up
@@ -857,7 +868,7 @@ class GameScreen(State):
             map_surface.fill((0, 0, 0))
 
             # World coordinates of the top-left corner of the map viewport
-            viewport_half_size_metres = MAP_OVERLAY_SIZE / 2 * VIEWPORT_ZOOM
+            viewport_half_size_metres = MAP_OVERLAY_SIZE / 2 * self.VIEWPORT_ZOOM
             viewport_top_left_x = px - viewport_half_size_metres
             viewport_top_left_z = pz - viewport_half_size_metres
 
@@ -878,10 +889,10 @@ class GameScreen(State):
                     tile_world_z = -C.HALF_WORLD_SIZE + tile_z * C.METRES_PER_TILE
 
                     # Position of the tile on the screen
-                    screen_pos_x = (tile_world_x - viewport_top_left_x) / VIEWPORT_ZOOM
-                    screen_pos_z = (tile_world_z - viewport_top_left_z) / VIEWPORT_ZOOM
+                    screen_pos_x = (tile_world_x - viewport_top_left_x) / self.VIEWPORT_ZOOM
+                    screen_pos_z = (tile_world_z - viewport_top_left_z) / self.VIEWPORT_ZOOM
 
-                    tile_size_on_screen = C.METRES_PER_TILE / VIEWPORT_ZOOM
+                    tile_size_on_screen = C.METRES_PER_TILE / self.VIEWPORT_ZOOM
 
                     dest_rect = pg.Rect(
                         screen_pos_x,
