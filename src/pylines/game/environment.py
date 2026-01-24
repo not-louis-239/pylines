@@ -20,7 +20,7 @@ import numpy as np
 from OpenGL import GL as gl
 
 import pylines.core.paths as paths
-from pylines.core.constants import EPSILON, WORLD_SIZE
+from pylines.core.constants import EPSILON, HALF_WORLD_SIZE
 from pylines.core.utils import map_value
 from pylines.objects.building_parts import BuildingPart, match_primitive
 from pylines.objects.objects import Runway
@@ -98,8 +98,8 @@ class Environment:
         # Must map to 0 - w or height or else causes camera to go underground
         # This is because mapping to 0-w/h makes _world_to_map sample exactly
         # from the correct pixel
-        image_x = map_value(x, -WORLD_SIZE, WORLD_SIZE, 0, self.w)
-        image_z = map_value(z, -WORLD_SIZE, WORLD_SIZE, 0, self.h)
+        image_x = map_value(x, -HALF_WORLD_SIZE, HALF_WORLD_SIZE, 0, self.w)
+        image_z = map_value(z, -HALF_WORLD_SIZE, HALF_WORLD_SIZE, 0, self.h)
         return image_x, image_z
 
     def height_at(self, x: float, z: float) -> float:

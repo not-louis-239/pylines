@@ -22,8 +22,10 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, cast
 
+from enum import Enum
 import pygame as pg
 import numpy as np
+from typing import Callable
 from OpenGL import GL as gl
 from OpenGL import GLU as glu
 
@@ -33,7 +35,7 @@ import pylines.core.paths as paths
 from pylines.shaders.shader_manager import load_shader_script
 from pylines.core.custom_types import AColour, Colour, EventList, RealNumber
 from pylines.core.time_manager import fetch_hour, sky_colour_from_hour, brightness_from_hour
-from pylines.core.units import FEET, METRES, convert_units
+import pylines.core.units as units
 from pylines.core.utils import clamp, draw_needle, draw_text, draw_transparent_rect
 from pylines.game.engine_sound import SoundManager
 from pylines.game.states import State
@@ -43,6 +45,10 @@ from pylines.objects.scenery import Ground, Moon, Ocean, Sky, Sun
 if TYPE_CHECKING:
     from pylines.core.custom_types import ScancodeWrapper, Surface
     from pylines.game.game import Game
+
+class MapState(Enum):
+    HIDDEN = 0
+    SHOWN = 1
 
 @dataclass
 class DialogMessage:
@@ -135,31 +141,99 @@ class GameScreen(State):
             inner_ai_rect.width//2
         )
 
-        def height_to_colour(h: RealNumber):
-            THRESHOLDS: dict[RealNumber, Colour] = {
-                5750: (207, 238, 255),
-                5300: (131, 134, 136),
-                4000: (64, 64, 64),
-                2200: (110, 67, 41),
-                800: (35, 110, 35),
-                150: (45, 170, 45),
-                0: (240, 240, 190),
-                -200: (0, 180, 240),
-            }
+        # Map setup
+        self.map_up: RealNumber = 0  # 1 = fully up, 0 = fully down
+        self.map_state: MapState = MapState.HIDDEN
+        self.map_show_advanced_info = False
 
-            for th, col in THRESHOLDS.items():
-                if h > th:
-                    return col
-            return (0, 126, 199)
+        def height_to_colour(h: float) -> Colour:
+            lerp_colour: Callable = cols.lerp_colour
 
-        # Initialise minimap
-        WORLD_STEP = 2*C.WORLD_SIZE // C.MINIMAP_SIZE
-        self.minimap = pg.Surface((C.MINIMAP_SIZE, C.MINIMAP_SIZE))
-        px = pg.PixelArray(self.minimap)
-        for z_i, z in enumerate(range(-C.WORLD_SIZE, C.WORLD_SIZE, WORLD_STEP)):
-            for x_i, x in enumerate(range(-C.WORLD_SIZE, C.WORLD_SIZE, WORLD_STEP)):
-                px[x_i, z_i] = height_to_colour(self.game.env.height_at(x, z))  # type: ignore[index]
-        del px
+            THRESHOLDS: list[tuple[float, Colour]] = [
+                (6000, (177, 192, 204)),
+                (5500, (113, 122, 130)),
+                (5000, (79, 79, 79)),
+                (4000, (38, 38, 38)),
+                (2200, (94, 61, 39)),
+                (800,  (10, 99, 5)),
+                (150,  (23, 143, 49)),
+                (0,    (224, 207, 162)),
+                (-0.01,(84, 156, 240)),
+                (-200, (43, 118, 204)),
+                (-500, (37, 59, 179)),
+                (-1_000, (18, 36, 130)),
+                (-4_000, (7, 18, 74))
+            ]
+
+            # Sort descending by threshold
+            THRESHOLDS.sort(reverse=True, key=lambda t: t[0])
+
+            # Below the lowest threshold
+            if h <= THRESHOLDS[-1][0]:
+                return THRESHOLDS[-1][1]
+
+            # Find the interval to interpolate
+            for i in range(len(THRESHOLDS) - 1):
+                high_h, high_c = THRESHOLDS[i]
+                low_h, low_c = THRESHOLDS[i+1]
+                if low_h <= h <= high_h:
+                    t = (h - low_h) / (high_h - low_h)
+                    return lerp_colour(low_c, high_c, t)
+
+            # Above the highest threshold
+            return THRESHOLDS[0][1]
+
+        self.map_height_to_colour = height_to_colour
+
+        # Precompute height-colour relationship to avoid wasteful function calls
+        HEIGHT_COLOUR_LOOKUP = [height_to_colour(h) for h in range(-4_000, 6_001)]
+
+        NUM_TILES = math.ceil(C.HALF_WORLD_SIZE*2 / (C.METRES_PER_TILE))
+        self.map_tiles: list[list[pg.Surface]] = []
+
+        print(f"Generating map tiles...")
+
+        # Loop over tiles
+        for tile_z in range(NUM_TILES):
+            print(f"Making map tile row {tile_z+1} / {NUM_TILES}...")
+
+            tile_row: list[pg.Surface] = []
+            for tile_x in range(NUM_TILES):
+                tile_start_x = -C.HALF_WORLD_SIZE + C.METRES_PER_TILE * tile_x
+                tile_start_z = -C.HALF_WORLD_SIZE + C.METRES_PER_TILE * tile_z
+
+                # Make a new Surface for each tile
+                current_tile = pg.Surface((C.MAP_PIXELS_PER_TILE, C.MAP_PIXELS_PER_TILE))
+                pix_array = pg.PixelArray(current_tile)
+
+                # Loop over pixels within a tile
+                for pix_z in range(C.MAP_PIXELS_PER_TILE):
+                    for pix_x in range(C.MAP_PIXELS_PER_TILE):
+                        world_x = tile_start_x + pix_x * C.MAP_METRES_PER_PX
+                        world_z = tile_start_z + pix_z * C.MAP_METRES_PER_PX
+                        pix_array[pix_x, pix_z] = HEIGHT_COLOUR_LOOKUP[clamp(  # type: ignore[index]
+                            int(self.game.env.height_at(world_x, world_z)), (-4_000, 6_000)
+                        ) + 4_000]
+
+                del pix_array  # Unlock the Surface so it can be used
+
+                tile_row.append(current_tile)
+            self.map_tiles.append(tile_row)
+
+        self.viewport_zoom = 50  # metres per pixel of map shown
+        self.viewport_pos = pg.Vector3(self.plane.pos)
+        self.viewport_auto_panning = True
+
+        # Height key setup
+        self.HEIGHT_KEY_W = 30
+        self.HEIGHT_KEY_H = 200
+        self.height_key: pg.Surface = pg.Surface((self.HEIGHT_KEY_W, self.HEIGHT_KEY_H))
+
+        for i in range(self.HEIGHT_KEY_H):
+            # i goes from 0 (top) to self.HEIGHT_KEY_H - 1 (bottom)
+            # We want h to go from 6_000 (top) to -4_000 (bottom)
+            h = 6_000 - (10_000 * i / (self.HEIGHT_KEY_H - 1))
+            pg.draw.rect(self.height_key, HEIGHT_COLOUR_LOOKUP[int(h+4000)], pg.Rect(0, i, self.HEIGHT_KEY_W, 1))
 
         # Building rendering setup
         all_vertices = []
@@ -211,6 +285,12 @@ class GameScreen(State):
             self.overspeed_channel.stop()
             self.sound_manager.stop()
             return
+
+        if self.map_state == MapState.HIDDEN:
+            self.map_up -= (dt/1000) / C.MAP_TOGGLE_ANIMATION_DURATION
+        else:
+            self.map_up += (dt/1000) / C.MAP_TOGGLE_ANIMATION_DURATION
+        self.map_up = clamp(self.map_up, (0, 1))
 
         self.sound_manager.update(self.plane.throttle_frac)
         self.plane.update(dt)
@@ -287,37 +367,82 @@ class GameScreen(State):
             self.update_prev_keys(keys)
             return
 
+        # Show/hide map
+        if self.pressed(keys, pg.K_m):
+            self.map_state = MapState.HIDDEN if self.map_state == MapState.SHOWN else MapState.SHOWN
+
         # Cycle GPS waypoint
         if self.pressed(keys, pg.K_g):
             self.gps_runway_index = (self.gps_runway_index + 1) % len(self.env.runways)
 
-        # Throttle controls
-        throttle_speed = 0.4 * dt/1000
-        if keys[pg.K_w]:
-            self.plane.throttle_frac += throttle_speed
-        if keys[pg.K_s]:
-            self.plane.throttle_frac -= throttle_speed
-        self.plane.throttle_frac = clamp(self.plane.throttle_frac, (0, 1))
+        if self.map_state == MapState.SHOWN:
+            # While map is shown: control zoom
+            if keys[pg.K_w]:
+                self.viewport_zoom /= 2.5 ** (dt/1000)
+            if keys[pg.K_s]:
+                self.viewport_zoom *= 2.5 ** (dt/1000)
+            self.viewport_zoom = clamp(self.viewport_zoom, (5, 100))
+        else:
+            # Throttle controls
+            throttle_speed = 0.4 * dt/1000
+            if keys[pg.K_w]:
+                self.plane.throttle_frac += throttle_speed
+            if keys[pg.K_s]:
+                self.plane.throttle_frac -= throttle_speed
+            self.plane.throttle_frac = clamp(self.plane.throttle_frac, (0, 1))
 
+        self.map_show_advanced_info = self.map_state == MapState.SHOWN and keys[pg.K_h]
+
+        # Turning authority
         base_rot_accel = 20 * dt/1000
         control_authority = 1 - 0.875 * self.plane.damage_level**2  # reduce authority based on damage level
         speed_authority_factor = clamp((self.plane.vel.length()/30.87)**2, (0.01, 1))  # based on vel in m/s
         rot_accel = control_authority * base_rot_accel * speed_authority_factor * (0.2 if self.plane.on_ground else 1)
 
-        # Pitch
-        if keys[pg.K_UP]:
-            self.plane.rot_rate.x += rot_accel * (1 - (self.plane.rot.x / 90))
-        if keys[pg.K_DOWN]:
-            self.plane.rot_rate.x -= rot_accel * (1 + (self.plane.rot.x / 90))
-        if not (keys[pg.K_UP] or keys[pg.K_DOWN]):
-            self.plane.rot_rate.x *= (1 - 0.8 * dt/1000)
+        # Turning or map panning
+        if self.map_state == MapState.SHOWN:
+            panning_speed = self.viewport_zoom * 150
 
-        # Turning
-        if keys[pg.K_LEFT]:
-            self.plane.rot_rate.z -= rot_accel
-        if keys[pg.K_RIGHT]:
-            self.plane.rot_rate.z += rot_accel
-        if not (keys[pg.K_LEFT] or keys[pg.K_RIGHT]):
+            # Map shown -> pan map
+            if keys[pg.K_UP]:
+                self.viewport_pos.z -= panning_speed * dt/1000
+                self.viewport_auto_panning = False
+            if keys[pg.K_DOWN]:
+                self.viewport_pos.z += panning_speed * dt/1000
+                self.viewport_auto_panning = False
+            if keys[pg.K_LEFT]:
+                self.viewport_pos.x -= panning_speed * dt/1000
+                self.viewport_auto_panning = False
+            if keys[pg.K_RIGHT]:
+                self.viewport_pos.x += panning_speed * dt/1000
+                self.viewport_auto_panning = False
+
+            # Reset map viewport pos
+            if self.pressed(keys, pg.K_SPACE):
+                self.viewport_pos = self.plane.pos.copy()
+                self.viewport_auto_panning = True
+        else:
+            # Reset map viewport pos once map goes fully down
+            if not self.map_up:
+                self.viewport_pos = self.plane.pos.copy()
+                self.viewport_auto_panning = True
+
+            # Pitch
+            if keys[pg.K_UP]:
+                self.plane.rot_rate.x += rot_accel * (1 - (self.plane.rot.x / 90))
+            if keys[pg.K_DOWN]:
+                self.plane.rot_rate.x -= rot_accel * (1 + (self.plane.rot.x / 90))
+
+            # Turning
+            if keys[pg.K_LEFT]:
+                self.plane.rot_rate.z -= rot_accel
+            if keys[pg.K_RIGHT]:
+                self.plane.rot_rate.z += rot_accel
+
+        # Input stabilisation
+        if (not (keys[pg.K_UP] or keys[pg.K_DOWN])) or self.map_state == MapState.HIDDEN:
+            self.plane.rot_rate.x *= (1 - 0.8 * dt/1000)
+        if (not (keys[pg.K_LEFT] or keys[pg.K_RIGHT])) or self.map_state == MapState.HIDDEN:
             self.plane.rot_rate.z *= (1 - 0.8 * dt/1000)
 
         # Flaps
@@ -383,6 +508,202 @@ class GameScreen(State):
         gl.glDisableVertexAttribArray(self.building_emissive_loc)
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
         gl.glUseProgram(0)
+
+    def draw_map(self):
+        hud_surface = self.hud_surface
+        NUM_TILES = math.ceil(C.HALF_WORLD_SIZE*2 / (C.METRES_PER_TILE))
+        MAP_OVERLAY_SIZE = 500  # size of the map overlay in pixels
+
+        if self.viewport_auto_panning:
+            self.viewport_pos = self.plane.pos.copy()
+
+        px, _, pz = self.viewport_pos
+
+        # Render base map
+        map_centre = C.WN_W//2, int(285 + C.WN_H * (1-self.map_up))
+
+        # Map border
+        outer_map_rect = pg.Rect(0, 0, MAP_OVERLAY_SIZE+10, MAP_OVERLAY_SIZE+10)
+        outer_map_rect.center = map_centre
+        pg.draw.rect(hud_surface, (129, 137, 143), outer_map_rect)
+
+        # Base
+        map_surface = pg.Surface((MAP_OVERLAY_SIZE, MAP_OVERLAY_SIZE))
+        map_surface.fill((0, 0, 0))
+
+        # Draw map tiles
+        # World coordinates of the top-left corner of the map viewport
+        viewport_half_size_metres = MAP_OVERLAY_SIZE / 2 * self.viewport_zoom
+        viewport_top_left_x = px - viewport_half_size_metres
+        viewport_top_left_z = pz - viewport_half_size_metres
+
+        # Tile indices for the visible area
+        start_tile_x = int((viewport_top_left_x + C.HALF_WORLD_SIZE) / C.METRES_PER_TILE)
+        start_tile_z = int((viewport_top_left_z + C.HALF_WORLD_SIZE) / C.METRES_PER_TILE)
+        end_tile_x = int((viewport_top_left_x + 2 * viewport_half_size_metres + C.HALF_WORLD_SIZE) / C.METRES_PER_TILE)
+        end_tile_z = int((viewport_top_left_z + 2 * viewport_half_size_metres + C.HALF_WORLD_SIZE) / C.METRES_PER_TILE)
+
+        for tile_z in range(start_tile_z, end_tile_z + 1):
+            for tile_x in range(start_tile_x, end_tile_x + 1):
+                if not (0 <= tile_x < NUM_TILES and 0 <= tile_z < NUM_TILES):
+                    continue
+
+                tile_surface = self.map_tiles[tile_z][tile_x]
+
+                tile_world_x = -C.HALF_WORLD_SIZE + tile_x * C.METRES_PER_TILE
+                tile_world_z = -C.HALF_WORLD_SIZE + tile_z * C.METRES_PER_TILE
+
+                # Position of the tile on the screen
+                screen_pos_x = (tile_world_x - viewport_top_left_x) / self.viewport_zoom
+                screen_pos_z = (tile_world_z - viewport_top_left_z) / self.viewport_zoom
+
+                tile_size_on_screen = C.METRES_PER_TILE / self.viewport_zoom
+
+                dest_rect = pg.Rect(
+                    screen_pos_x,
+                    screen_pos_z,
+                    tile_size_on_screen,
+                    tile_size_on_screen,
+                )
+
+                scaled_tile = pg.transform.scale(tile_surface, (int(tile_size_on_screen) + 1, int(tile_size_on_screen) + 1))
+                map_surface.blit(scaled_tile, dest_rect)
+
+        # Draw runways
+        runways: list[Runway] = self.env.runways
+        for runway in runways:
+            # Convert runway world dimensions to map pixel dimensions, 1 pix min size
+            runway_width_on_map = max(1, int(runway.w / self.viewport_zoom))
+            runway_length_on_map = max(1, int(runway.l / self.viewport_zoom))
+
+            # Create a base surface for the runway. Its length (l) will align with the Y-axis when unrotated.
+            runway_surface_base = pg.Surface((runway_width_on_map, runway_length_on_map), pg.SRCALPHA)
+            runway_surface_base.fill((175, 175, 175))
+
+            rotated_runway_surface = pg.transform.rotate(runway_surface_base, -runway.heading)
+
+            # Calculate the runway's center position on the map_surface in pixels.
+            runway_map_center_x = (runway.pos.x - viewport_top_left_x) / self.viewport_zoom
+            runway_map_center_y = (runway.pos.z - viewport_top_left_z) / self.viewport_zoom
+
+            # Get bounding rectangle for the rotated surface and set its center.
+            runway_rect_on_map = rotated_runway_surface.get_rect(center=(runway_map_center_x, runway_map_center_y))
+
+            # Blit runway onto map surface
+            map_surface.blit(rotated_runway_surface, runway_rect_on_map)
+
+            runway_cx, runway_cy = runway_map_center_x, runway_map_center_y  # local alias
+
+            # Show GPS pointer
+            if runway is self.env.runways[self.gps_runway_index]:
+                gps_rect = self.images.gps_dest_marker.get_rect(center=(runway_cx, runway_cy))
+                map_surface.blit(self.images.gps_dest_marker, gps_rect)
+
+            # Runway information
+            draw_text(map_surface, (runway_cx, runway_cy - 50), 'centre', 'centre', runway.name, (255, 255, 255), 20, self.fonts.monospaced)
+
+            info_text = f"{runway.heading:03d}°, {units.convert_units(runway.pos.y, units.METRES, units.FEET):,.0f} ft"
+            draw_text(map_surface, (runway_cx, runway_cy - 30), 'centre', 'centre', info_text, (255, 255, 255), 15, self.fonts.monospaced)
+
+        # Draw plane icon
+        cx, cz = MAP_OVERLAY_SIZE/2, MAP_OVERLAY_SIZE/2
+        icon_x = cx - (self.viewport_pos.x - self.plane.pos.x) / self.viewport_zoom
+        icon_z = cz - (self.viewport_pos.z - self.plane.pos.z) / self.viewport_zoom
+
+        icon_rect = self.images.plane_icon.get_rect(center=(icon_x, icon_z))
+        plane_icon_rotated = pg.transform.rotate(self.images.plane_icon, -self.plane.rot.y)
+        map_surface.blit(plane_icon_rotated, icon_rect)
+
+        # North indicator - draw an arrow pointing upwards
+        north_indicator_size = 20
+        north_indicator_offset_x = 12
+        north_indicator_offset_y = 42
+        ni_center_x = north_indicator_offset_x + north_indicator_size // 2
+        ni_center_y = north_indicator_offset_y + north_indicator_size // 2
+
+        # Calculate arrow vertices
+        arrow_points = [
+            (ni_center_x, north_indicator_offset_y),  # Top point
+            (ni_center_x - north_indicator_size // 4, ni_center_y + north_indicator_size // 2),  # Bottom-left
+            (ni_center_x, ni_center_y + north_indicator_size // 4),  # Bottom-middle (for dart shape)
+            (ni_center_x + north_indicator_size // 4, ni_center_y + north_indicator_size // 2),  # Bottom-right
+        ]
+        pg.draw.polygon(map_surface, cols.WHITE, arrow_points)
+        draw_text(map_surface, (ni_center_x, ni_center_y - north_indicator_offset_y), 'centre', 'top', "N", cols.WHITE, 25, self.fonts.monospaced)
+
+        # Scale bar
+        SCALE_BAR_LENGTHS = [500, 1_000, 2_000, 5_000, 10_000]
+        MAX_SCALE_BAR_SIZE = 80  # pixels
+        target_size = self.viewport_zoom * MAX_SCALE_BAR_SIZE
+
+        scale_bar_length_world = max([l for l in SCALE_BAR_LENGTHS if l <= target_size], default=SCALE_BAR_LENGTHS[0])
+        scale_bar_offset = (12, 80)
+
+        scale_bar_length_pix = scale_bar_length_world / self.viewport_zoom
+        scale_bar_rect = pg.Rect(scale_bar_offset[0], scale_bar_offset[1], scale_bar_length_pix, 5)
+
+        pg.draw.rect(map_surface, (255, 255, 255), scale_bar_rect)
+        draw_text(map_surface, (scale_bar_offset[0], scale_bar_offset[1] + 20), 'left', 'centre', f"{scale_bar_length_world:,} m", cols.WHITE, 20, self.fonts.monospaced)
+
+        # Calculate ground speed
+        ground_speed_vec = pg.Vector3(self.plane.vel.x, 0, self.plane.vel.z)
+        ground_speed_mag = ground_speed_vec.length()
+
+        draw_text(map_surface, (MAP_OVERLAY_SIZE//2 - 100, 30), 'left', 'centre', 'GS', (100, 255, 255), 25, self.fonts.monospaced)
+        draw_text(map_surface, (MAP_OVERLAY_SIZE//2 - 45, 30), 'left', 'centre', f"{units.convert_units(ground_speed_mag, units.METRES/units.SECONDS, units.KNOTS):,.0f}", (255, 255, 255), 25, self.fonts.monospaced)
+
+        # Calculate ETA
+        dest_runway = self.env.runways[self.gps_runway_index]
+
+        # Take out vertical components of relevant vectors
+        dest_pos_flat = pg.Vector3(dest_runway.pos.x, 0, dest_runway.pos.z)
+        plane_pos_flat = pg.Vector3(self.plane.pos.x, 0, self.plane.pos.z)
+        vel_flat = pg.Vector3(self.plane.vel.x, 0, self.plane.vel.z)
+
+        vec_to_dest = dest_pos_flat - plane_pos_flat
+        distance = vec_to_dest.length()
+
+        if distance <= C.EPSILON:
+            # Very small distance -> already at destination
+            eta_seconds = 0
+        else:
+            direction = vec_to_dest.normalize()
+            ground_speed_towards_dest = vel_flat.dot(direction)
+
+            eta_seconds: float | None
+            if ground_speed_towards_dest <= C.EPSILON:
+                eta_seconds = None
+            else:
+                eta_seconds = distance / ground_speed_towards_dest
+
+        if eta_seconds is None:
+            eta_text = "--:--"
+        elif eta_seconds >= 3_600:
+            eta_text = "59:59+"
+        else:
+            eta_seconds_rounded = int(eta_seconds)
+
+            eta_text_mins = eta_seconds_rounded // 60
+            eta_text_secs = eta_seconds_rounded % 60
+
+            eta_text = f"{eta_text_mins:02d}:{eta_text_secs:02d}"
+
+        draw_text(map_surface, (MAP_OVERLAY_SIZE//2 - 100, 55), 'left', 'centre', 'ETA', (100, 255, 255), 25, self.fonts.monospaced)
+        draw_text(map_surface, (MAP_OVERLAY_SIZE//2 - 45, 55), 'left', 'centre', eta_text, (255, 255, 255), 25, self.fonts.monospaced)
+
+        # Blit the completed map to the main HUD surface
+        map_rect = map_surface.get_rect(center=(map_centre))
+        hud_surface.blit(map_surface, map_rect)
+
+        if self.map_show_advanced_info:
+            # Show height key
+            hud_surface.blit(self.height_key, (C.WN_W//2 - MAP_OVERLAY_SIZE//2 - 50, map_centre[1] - self.HEIGHT_KEY_H//2))
+            draw_text(hud_surface, (C.WN_W//2 - MAP_OVERLAY_SIZE//2 - 70, map_centre[1] - self.HEIGHT_KEY_H//2 - 30), 'centre', 'centre', f"Altitude (ft)", (255, 255, 255), 12, self.fonts.monospaced)
+
+            # Show heightmap labels in feet
+            for h in range(-12_000, 18_001, 2_000):
+                text_y = map_centre[1] + self.HEIGHT_KEY_H//2 - (self.HEIGHT_KEY_H * (h+12_000)/30_000)
+                draw_text(hud_surface, (C.WN_W//2 - MAP_OVERLAY_SIZE//2 - 55, text_y), 'right', 'centre', f"{h:,.0f}", (255, 255, 255), 12, self.fonts.monospaced)
 
     def draw_hud(self):
         pitch, yaw, roll = self.plane.rot
@@ -558,7 +879,7 @@ class GameScreen(State):
             hud_surface,
             (agl_centre[0] + 45, agl_centre[1]),
             'right', 'centre',
-            f"{convert_units(altitude_agl, METRES, FEET):,.0f} ft",
+            f"{units.convert_units(altitude_agl, units.METRES, units.FEET):,.0f} ft",
             (255, 255, 255),
             18,
             self.fonts.monospaced
@@ -630,25 +951,6 @@ class GameScreen(State):
 
             # White line
             pg.draw.line(hud_surface, (255, 255, 255), (glide_centre_x-7, glide_centre_y), (glide_centre_x+6, glide_centre_y), 2)
-
-        # Minimap
-        mini_centre = (int(C.WN_W*0.1), int(C.WN_H*0.88))
-        outer_mini_size = C.MINIMAP_SIZE + 6
-        mini_rect = pg.Rect(0, 0, outer_mini_size, outer_mini_size)
-        mini_rect.center = mini_centre
-        pg.draw.rect(hud_surface, (51, 43, 37), mini_rect)
-        mini_top_left = (mini_centre[0]-(C.MINIMAP_SIZE)/2, mini_centre[1]-(C.MINIMAP_SIZE)/2)
-        hud_surface.blit(self.minimap, mini_top_left)
-
-        px, pz = self.plane.pos.x, self.plane.pos.z
-        cursor_coord = pg.Vector2(
-            mini_centre[0] + (C.MINIMAP_SIZE/2)*(px/C.WORLD_SIZE),
-            mini_centre[1] + (C.MINIMAP_SIZE/2)*(pz/C.WORLD_SIZE)
-        )
-
-        rotated_cursor = pg.transform.rotate(self.game.assets.images.minimap_cursor, -self.plane.rot.y)
-        cursor_rect = rotated_cursor.get_rect(center=cursor_coord)
-        hud_surface.blit(rotated_cursor, cursor_rect)
 
         # Throttle bar
         draw_text(hud_surface, (C.WN_W*0.86, C.WN_H*0.97), 'centre', 'centre', "Throttle", (25, 20, 18), 30, self.fonts.monospaced)
@@ -786,6 +1088,10 @@ class GameScreen(State):
         warning_col = (255, 0, 0) if self.show_overspeed_warning else cols.BLACK
         pg.draw.circle(hud_surface, (51, 43, 37), (warning_x, C.WN_H*0.965), 10)
         pg.draw.circle(hud_surface, (warning_col), (warning_x, C.WN_H*0.965), 8)
+
+        # Render map
+        if self.map_up:
+            self.draw_map()
 
         # Show landing feedback
         if self.landing_dialog_box.active_time:

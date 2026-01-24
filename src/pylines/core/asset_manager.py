@@ -73,8 +73,6 @@ class Images(AssetBank):
         self.sun = self._load("sun.png")
         self.moon = self._load("moon.png")
 
-        self.minimap_cursor = self._load("minimap_cursor.png")
-
         self.logo = self._load("logo.png")
 
         self.damage_overlays: tuple = (
@@ -86,13 +84,17 @@ class Images(AssetBank):
             self._load("damage_full.png")
         )
 
+        self.plane_icon = self._load("plane_icon.png")
+        self.gps_dest_marker = self._load("gps_dest_marker.png")
+
         self.augment()
 
     def augment(self):
         self.speed_dial = scale(self.speed_dial, (250, 250))
         self.compass = scale(self.compass, (250, 250))
         self.logo = scale_by(self.logo, 0.2)
-        self.minimap_cursor = scale(self.minimap_cursor, (20, 20))
+        self.plane_icon = scale(self.plane_icon, (24, 24))
+        self.gps_dest_marker = scale(self.gps_dest_marker, (24, 24))
 
     def _load(self, name: str):
         return pg.image.load(paths.IMAGES_DIR / name).convert_alpha()
