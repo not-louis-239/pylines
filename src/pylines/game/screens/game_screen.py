@@ -576,6 +576,20 @@ class GameScreen(State):
         pg.draw.polygon(map_surface, cols.WHITE, arrow_points)
         draw_text(map_surface, (ni_center_x, ni_center_y - north_indicator_offset_y), 'centre', 'top', "N", cols.WHITE, 25, self.fonts.monospaced)
 
+        # Scale bar
+        SCALE_BAR_LENGTHS = [500, 1_000, 2_000, 5_000, 10_000]
+        MAX_SCALE_BAR_SIZE = 80  # pixels
+        target_size = self.viewport_zoom * MAX_SCALE_BAR_SIZE
+
+        scale_bar_length_world = max([l for l in SCALE_BAR_LENGTHS if l <= target_size], default=SCALE_BAR_LENGTHS[0])
+        scale_bar_offset = (12, 80)
+
+        scale_bar_length_pix = scale_bar_length_world / self.viewport_zoom
+        scale_bar_rect = pg.Rect(scale_bar_offset[0], scale_bar_offset[1], scale_bar_length_pix, 5)
+
+        pg.draw.rect(map_surface, (255, 255, 255), scale_bar_rect)
+        draw_text(map_surface, (scale_bar_offset[0], scale_bar_offset[1] + 20), 'left', 'centre', f"{scale_bar_length_world:,} m", cols.WHITE, 20, self.fonts.monospaced)
+
         # Blit the completed map to the main HUD surface
         map_rect = map_surface.get_rect(center=(map_centre))
         hud_surface.blit(map_surface, map_rect)
