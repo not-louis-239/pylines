@@ -85,6 +85,7 @@ class Images(AssetBank):
         )
 
         self.plane_icon = self._load("plane_icon.png")
+        self.gps_dest_marker = self._load("gps_dest_marker.png")
 
         self.augment()
 
@@ -93,6 +94,7 @@ class Images(AssetBank):
         self.compass = scale(self.compass, (250, 250))
         self.logo = scale_by(self.logo, 0.2)
         self.plane_icon = scale(self.plane_icon, (24, 24))
+        self.gps_dest_marker = scale(self.gps_dest_marker, (24, 24))
 
     def _load(self, name: str):
         return pg.image.load(paths.IMAGES_DIR / name).convert_alpha()

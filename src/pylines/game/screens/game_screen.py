@@ -590,23 +590,20 @@ class GameScreen(State):
             # Blit runway onto map surface
             map_surface.blit(rotated_runway_surface, runway_rect_on_map)
 
-            # Runway information
             runway_cx, runway_cy = runway_map_center_x, runway_map_center_y  # local alias
+
+            # Show GPS pointer
+            if runway is self.env.runways[self.gps_runway_index]:
+                gps_rect = self.images.gps_dest_marker.get_rect(center=(runway_cx, runway_cy))
+                map_surface.blit(self.images.gps_dest_marker, gps_rect)
+
+            # Runway information
             draw_text(map_surface, (runway_cx, runway_cy - 50), 'centre', 'centre', runway.name, (255, 255, 255), 20, self.fonts.monospaced)
 
             info_text = f"{runway.heading:03d}°, {convert_units(runway.pos.y, METRES, FEET):,.0f} ft"
             draw_text(map_surface, (runway_cx, runway_cy - 30), 'centre', 'centre', info_text, (255, 255, 255), 15, self.fonts.monospaced)
 
-            if self.map_show_advanced_info:
-                hud_surface.blit(self.height_key, (C.WN_W//2 - MAP_OVERLAY_SIZE//2 - 50, map_centre[1] - self.HEIGHT_KEY_H//2))
-                draw_text(hud_surface, (C.WN_W//2 - MAP_OVERLAY_SIZE//2 - 70, map_centre[1] - self.HEIGHT_KEY_H//2 - 30), 'centre', 'centre', f"Altitude (ft)", (255, 255, 255), 12, self.fonts.monospaced)
-
-                # Show heightmap labels in feet
-                for h in range(-12_000, 18_001, 2_000):
-                    text_y = map_centre[1] + self.HEIGHT_KEY_H//2 - (self.HEIGHT_KEY_H * (h+12_000)/30_000)
-                    draw_text(hud_surface, (C.WN_W//2 - MAP_OVERLAY_SIZE//2 - 55, text_y), 'right', 'centre', f"{h:,.0f}", (255, 255, 255), 12, self.fonts.monospaced)
-
-        # Draw icon
+        # Draw plane icon
         cx, cz = MAP_OVERLAY_SIZE/2, MAP_OVERLAY_SIZE/2
         icon_x = cx - (self.viewport_pos.x - self.plane.pos.x) / self.viewport_zoom
         icon_z = cz - (self.viewport_pos.z - self.plane.pos.z) / self.viewport_zoom
@@ -649,6 +646,16 @@ class GameScreen(State):
         # Blit the completed map to the main HUD surface
         map_rect = map_surface.get_rect(center=(map_centre))
         hud_surface.blit(map_surface, map_rect)
+
+        if self.map_show_advanced_info:
+            # Show height key
+            hud_surface.blit(self.height_key, (C.WN_W//2 - MAP_OVERLAY_SIZE//2 - 50, map_centre[1] - self.HEIGHT_KEY_H//2))
+            draw_text(hud_surface, (C.WN_W//2 - MAP_OVERLAY_SIZE//2 - 70, map_centre[1] - self.HEIGHT_KEY_H//2 - 30), 'centre', 'centre', f"Altitude (ft)", (255, 255, 255), 12, self.fonts.monospaced)
+
+            # Show heightmap labels in feet
+            for h in range(-12_000, 18_001, 2_000):
+                text_y = map_centre[1] + self.HEIGHT_KEY_H//2 - (self.HEIGHT_KEY_H * (h+12_000)/30_000)
+                draw_text(hud_surface, (C.WN_W//2 - MAP_OVERLAY_SIZE//2 - 55, text_y), 'right', 'centre', f"{h:,.0f}", (255, 255, 255), 12, self.fonts.monospaced)
 
     def draw_hud(self):
         pitch, yaw, roll = self.plane.rot
