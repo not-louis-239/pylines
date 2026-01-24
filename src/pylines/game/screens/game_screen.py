@@ -35,7 +35,7 @@ import pylines.core.paths as paths
 from pylines.shaders.shader_manager import load_shader_script
 from pylines.core.custom_types import AColour, Colour, EventList, RealNumber
 from pylines.core.time_manager import fetch_hour, sky_colour_from_hour, brightness_from_hour
-from pylines.core.units import FEET, METRES, convert_units
+import pylines.core.units as units
 from pylines.core.utils import clamp, draw_needle, draw_text, draw_transparent_rect
 from pylines.game.engine_sound import SoundManager
 from pylines.game.states import State
@@ -432,16 +432,18 @@ class GameScreen(State):
                 self.plane.rot_rate.x += rot_accel * (1 - (self.plane.rot.x / 90))
             if keys[pg.K_DOWN]:
                 self.plane.rot_rate.x -= rot_accel * (1 + (self.plane.rot.x / 90))
-            if not (keys[pg.K_UP] or keys[pg.K_DOWN]):
-                self.plane.rot_rate.x *= (1 - 0.8 * dt/1000)
 
             # Turning
             if keys[pg.K_LEFT]:
                 self.plane.rot_rate.z -= rot_accel
             if keys[pg.K_RIGHT]:
                 self.plane.rot_rate.z += rot_accel
-            if not (keys[pg.K_LEFT] or keys[pg.K_RIGHT]):
-                self.plane.rot_rate.z *= (1 - 0.8 * dt/1000)
+
+        # Input stabilisation
+        if (not (keys[pg.K_UP] or keys[pg.K_DOWN])) or self.map_state == MapState.HIDDEN:
+            self.plane.rot_rate.x *= (1 - 0.8 * dt/1000)
+        if (not (keys[pg.K_LEFT] or keys[pg.K_RIGHT])) or self.map_state == MapState.HIDDEN:
+            self.plane.rot_rate.z *= (1 - 0.8 * dt/1000)
 
         # Flaps
         FLAPS_SPEED = 2
@@ -600,7 +602,7 @@ class GameScreen(State):
             # Runway information
             draw_text(map_surface, (runway_cx, runway_cy - 50), 'centre', 'centre', runway.name, (255, 255, 255), 20, self.fonts.monospaced)
 
-            info_text = f"{runway.heading:03d}°, {convert_units(runway.pos.y, METRES, FEET):,.0f} ft"
+            info_text = f"{runway.heading:03d}°, {units.convert_units(runway.pos.y, units.METRES, units.FEET):,.0f} ft"
             draw_text(map_surface, (runway_cx, runway_cy - 30), 'centre', 'centre', info_text, (255, 255, 255), 15, self.fonts.monospaced)
 
         # Draw plane icon
@@ -642,6 +644,52 @@ class GameScreen(State):
 
         pg.draw.rect(map_surface, (255, 255, 255), scale_bar_rect)
         draw_text(map_surface, (scale_bar_offset[0], scale_bar_offset[1] + 20), 'left', 'centre', f"{scale_bar_length_world:,} m", cols.WHITE, 20, self.fonts.monospaced)
+
+        # Calculate ground speed
+        ground_speed_vec = pg.Vector3(self.plane.vel.x, 0, self.plane.vel.z)
+        ground_speed_mag = ground_speed_vec.length()
+
+        draw_text(map_surface, (MAP_OVERLAY_SIZE//2 - 100, 30), 'left', 'centre', 'GS', (100, 255, 255), 25, self.fonts.monospaced)
+        draw_text(map_surface, (MAP_OVERLAY_SIZE//2 - 45, 30), 'left', 'centre', f"{units.convert_units(ground_speed_mag, units.METRES/units.SECONDS, units.KNOTS):,.0f}", (255, 255, 255), 25, self.fonts.monospaced)
+
+        # Calculate ETA
+        dest_runway = self.env.runways[self.gps_runway_index]
+
+        # Take out vertical components of relevant vectors
+        dest_pos_flat = pg.Vector3(dest_runway.pos.x, 0, dest_runway.pos.z)
+        plane_pos_flat = pg.Vector3(self.plane.pos.x, 0, self.plane.pos.z)
+        vel_flat = pg.Vector3(self.plane.vel.x, 0, self.plane.vel.z)
+
+        vec_to_dest = dest_pos_flat - plane_pos_flat
+        distance = vec_to_dest.length()
+
+        if distance <= C.EPSILON:
+            # Very small distance -> already at destination
+            eta_seconds = 0
+        else:
+            direction = vec_to_dest.normalize()
+            ground_speed_towards_dest = vel_flat.dot(direction)
+
+            eta_seconds: float | None
+            if ground_speed_towards_dest <= C.EPSILON:
+                eta_seconds = None
+            else:
+                eta_seconds = distance / ground_speed_towards_dest
+
+        if eta_seconds is None:
+            eta_text = "--:--"
+        elif eta_seconds >= 3_600:
+            eta_text = "59:59+"
+        else:
+            eta_seconds_rounded = int(eta_seconds)
+
+            eta_text_mins = eta_seconds_rounded // 60
+            eta_text_secs = eta_seconds_rounded % 60
+
+            eta_text = f"{eta_text_mins:02d}:{eta_text_secs:02d}"
+
+        draw_text(map_surface, (MAP_OVERLAY_SIZE//2 - 100, 55), 'left', 'centre', 'ETA', (100, 255, 255), 25, self.fonts.monospaced)
+        draw_text(map_surface, (MAP_OVERLAY_SIZE//2 - 45, 55), 'left', 'centre', eta_text, (255, 255, 255), 25, self.fonts.monospaced)
 
         # Blit the completed map to the main HUD surface
         map_rect = map_surface.get_rect(center=(map_centre))
@@ -831,7 +879,7 @@ class GameScreen(State):
             hud_surface,
             (agl_centre[0] + 45, agl_centre[1]),
             'right', 'centre',
-            f"{convert_units(altitude_agl, METRES, FEET):,.0f} ft",
+            f"{units.convert_units(altitude_agl, units.METRES, units.FEET):,.0f} ft",
             (255, 255, 255),
             18,
             self.fonts.monospaced
