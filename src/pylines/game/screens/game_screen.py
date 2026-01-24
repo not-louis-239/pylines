@@ -188,14 +188,13 @@ class GameScreen(State):
         NUM_TILES = math.ceil(C.HALF_WORLD_SIZE*2 / (C.METRES_PER_TILE))
         self.map_tiles: list[list[pg.Surface]] = []
 
+        print(f"Generating map tiles...")
         # Loop over tiles
         for tile_z in range(NUM_TILES):
-            print(f"making map tile row {tile_z}...")  # DEBUG
+            print(f"Making map tile row {tile_z+1} / {NUM_TILES}...")
 
             tile_row: list[pg.Surface] = []
             for tile_x in range(NUM_TILES):
-                print(f"making map tile {tile_x}...")  # DEBUG
-
                 tile_start_x = -C.HALF_WORLD_SIZE + C.METRES_PER_TILE * tile_x
                 tile_start_z = -C.HALF_WORLD_SIZE + C.METRES_PER_TILE * tile_z
 
