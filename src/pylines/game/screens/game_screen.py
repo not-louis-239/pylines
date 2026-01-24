@@ -933,6 +933,23 @@ class GameScreen(State):
             plane_icon_rotated = pg.transform.rotate(self.images.plane_icon, -self.plane.rot.y)
             map_surface.blit(plane_icon_rotated, icon_rect)
 
+            # North indicator - draw an arrow pointing upwards
+            north_indicator_size = 20
+            north_indicator_offset_x = 12
+            north_indicator_offset_y = 42
+            ni_center_x = north_indicator_offset_x + north_indicator_size // 2
+            ni_center_y = north_indicator_offset_y + north_indicator_size // 2
+
+            # Calculate arrow vertices
+            arrow_points = [
+                (ni_center_x, north_indicator_offset_y),  # Top point
+                (ni_center_x - north_indicator_size // 4, ni_center_y + north_indicator_size // 2),  # Bottom-left
+                (ni_center_x, ni_center_y + north_indicator_size // 4),  # Bottom-middle (for dart shape)
+                (ni_center_x + north_indicator_size // 4, ni_center_y + north_indicator_size // 2),  # Bottom-right
+            ]
+            pg.draw.polygon(map_surface, cols.WHITE, arrow_points)
+            draw_text(map_surface, (ni_center_x, ni_center_y - north_indicator_offset_y), 'centre', 'top', "N", cols.WHITE, 25, self.fonts.monospaced)
+
             # Blit the completed map to the main HUD surface
             map_rect = map_surface.get_rect(center=(map_centre))
             hud_surface.blit(map_surface, map_rect)
