@@ -144,6 +144,7 @@ class GameScreen(State):
         # Map setup
         self.map_up: RealNumber = 0  # 1 = fully up, 0 = fully down
         self.map_state: MapState = MapState.HIDDEN
+        self.map_show_advanced_info = False
 
         def height_to_colour(h: float) -> Colour:
             lerp_colour: Callable = cols.lerp_colour
@@ -182,6 +183,8 @@ class GameScreen(State):
             # Above the highest threshold
             return THRESHOLDS[0][1]
 
+        self.map_height_to_colour = height_to_colour
+
         # Precompute height-colour relationship to avoid wasteful function calls
         HEIGHT_COLOUR_LOOKUP = [height_to_colour(h) for h in range(-4_000, 6_001)]
 
@@ -189,6 +192,7 @@ class GameScreen(State):
         self.map_tiles: list[list[pg.Surface]] = []
 
         print(f"Generating map tiles...")
+
         # Loop over tiles
         for tile_z in range(NUM_TILES):
             print(f"Making map tile row {tile_z+1} / {NUM_TILES}...")
@@ -219,6 +223,17 @@ class GameScreen(State):
         self.viewport_zoom = 50  # metres per pixel of map shown
         self.viewport_pos = pg.Vector3(self.plane.pos)
         self.viewport_auto_panning = True
+
+        # Height key setup
+        self.HEIGHT_KEY_W = 30
+        self.HEIGHT_KEY_H = 200
+        self.height_key: pg.Surface = pg.Surface((self.HEIGHT_KEY_W, self.HEIGHT_KEY_H))
+
+        for i in range(self.HEIGHT_KEY_H):
+            # i goes from 0 (top) to self.HEIGHT_KEY_H - 1 (bottom)
+            # We want h to go from 6_000 (top) to -4_000 (bottom)
+            h = 6_000 - (10_000 * i / (self.HEIGHT_KEY_H - 1))
+            pg.draw.rect(self.height_key, HEIGHT_COLOUR_LOOKUP[int(h+4000)], pg.Rect(0, i, self.HEIGHT_KEY_W, 1))
 
         # Building rendering setup
         all_vertices = []
@@ -375,6 +390,8 @@ class GameScreen(State):
             if keys[pg.K_s]:
                 self.plane.throttle_frac -= throttle_speed
             self.plane.throttle_frac = clamp(self.plane.throttle_frac, (0, 1))
+
+        self.map_show_advanced_info = self.map_state == MapState.SHOWN and keys[pg.K_h]
 
         # Turning authority
         base_rot_accel = 20 * dt/1000
@@ -553,32 +570,41 @@ class GameScreen(State):
         # Draw runways
         runways: list[Runway] = self.env.runways
         for runway in runways:
-            # Convert runway world dimensions to map pixel dimensions
-            # Ensure a minimum size of 1 pixel to prevent issues with very small runways
+            # Convert runway world dimensions to map pixel dimensions, 1 pix min size
             runway_width_on_map = max(1, int(runway.w / self.viewport_zoom))
             runway_length_on_map = max(1, int(runway.l / self.viewport_zoom))
 
             # Create a base surface for the runway. Its length (l) will align with the Y-axis when unrotated.
             runway_surface_base = pg.Surface((runway_width_on_map, runway_length_on_map), pg.SRCALPHA)
-            runway_surface_base.fill((80, 80, 80)) # Fill with a grey color for the runway
+            runway_surface_base.fill((175, 175, 175))
 
-            # Rotate the runway surface. Pygame's rotate function rotates counter-clockwise.
-            # Assuming runway.heading 0 points North (up on the map), and positive heading is clockwise,
-            # we negate the heading to get the correct Pygame rotation angle.
             rotated_runway_surface = pg.transform.rotate(runway_surface_base, -runway.heading)
 
             # Calculate the runway's center position on the map_surface in pixels.
-            # (runway.pos.x, runway.pos.z) are world coordinates.
-            # (viewport_top_left_x, viewport_top_left_z) are world coordinates of the map_surface's top-left corner.
             runway_map_center_x = (runway.pos.x - viewport_top_left_x) / self.viewport_zoom
             runway_map_center_y = (runway.pos.z - viewport_top_left_z) / self.viewport_zoom
 
-            # Get the bounding rectangle for the rotated surface and set its center.
-            # This is where it will be blitted onto the map_surface.
+            # Get bounding rectangle for the rotated surface and set its center.
             runway_rect_on_map = rotated_runway_surface.get_rect(center=(runway_map_center_x, runway_map_center_y))
 
-            # Blit the rotated runway onto the main map surface
+            # Blit runway onto map surface
             map_surface.blit(rotated_runway_surface, runway_rect_on_map)
+
+            # Runway information
+            runway_cx, runway_cy = runway_map_center_x, runway_map_center_y  # local alias
+            draw_text(map_surface, (runway_cx, runway_cy - 50), 'centre', 'centre', runway.name, (255, 255, 255), 20, self.fonts.monospaced)
+
+            info_text = f"{runway.heading:03d}°, {convert_units(runway.pos.y, METRES, FEET):,.0f} ft"
+            draw_text(map_surface, (runway_cx, runway_cy - 30), 'centre', 'centre', info_text, (255, 255, 255), 15, self.fonts.monospaced)
+
+            if self.map_show_advanced_info:
+                hud_surface.blit(self.height_key, (C.WN_W//2 - MAP_OVERLAY_SIZE//2 - 50, map_centre[1] - self.HEIGHT_KEY_H//2))
+                draw_text(hud_surface, (C.WN_W//2 - MAP_OVERLAY_SIZE//2 - 70, map_centre[1] - self.HEIGHT_KEY_H//2 - 30), 'centre', 'centre', f"Altitude (ft)", (255, 255, 255), 12, self.fonts.monospaced)
+
+                # Show heightmap labels in feet
+                for h in range(-12_000, 18_001, 2_000):
+                    text_y = map_centre[1] + self.HEIGHT_KEY_H//2 - (self.HEIGHT_KEY_H * (h+12_000)/30_000)
+                    draw_text(hud_surface, (C.WN_W//2 - MAP_OVERLAY_SIZE//2 - 55, text_y), 'right', 'centre', f"{h:,.0f}", (255, 255, 255), 12, self.fonts.monospaced)
 
         # Draw icon
         cx, cz = MAP_OVERLAY_SIZE/2, MAP_OVERLAY_SIZE/2
