@@ -513,6 +513,7 @@ class GameScreen(State):
         map_surface = pg.Surface((MAP_OVERLAY_SIZE, MAP_OVERLAY_SIZE))
         map_surface.fill((0, 0, 0))
 
+        # Draw map tiles
         # World coordinates of the top-left corner of the map viewport
         viewport_half_size_metres = MAP_OVERLAY_SIZE / 2 * self.viewport_zoom
         viewport_top_left_x = px - viewport_half_size_metres
@@ -549,6 +550,36 @@ class GameScreen(State):
 
                 scaled_tile = pg.transform.scale(tile_surface, (int(tile_size_on_screen) + 1, int(tile_size_on_screen) + 1))
                 map_surface.blit(scaled_tile, dest_rect)
+
+        # Draw runways
+        runways: list[Runway] = self.env.runways
+        for runway in runways:
+            # Convert runway world dimensions to map pixel dimensions
+            # Ensure a minimum size of 1 pixel to prevent issues with very small runways
+            runway_width_on_map = max(1, int(runway.w / self.viewport_zoom))
+            runway_length_on_map = max(1, int(runway.l / self.viewport_zoom))
+
+            # Create a base surface for the runway. Its length (l) will align with the Y-axis when unrotated.
+            runway_surface_base = pg.Surface((runway_width_on_map, runway_length_on_map), pg.SRCALPHA)
+            runway_surface_base.fill((80, 80, 80)) # Fill with a grey color for the runway
+
+            # Rotate the runway surface. Pygame's rotate function rotates counter-clockwise.
+            # Assuming runway.heading 0 points North (up on the map), and positive heading is clockwise,
+            # we negate the heading to get the correct Pygame rotation angle.
+            rotated_runway_surface = pg.transform.rotate(runway_surface_base, -runway.heading)
+
+            # Calculate the runway's center position on the map_surface in pixels.
+            # (runway.pos.x, runway.pos.z) are world coordinates.
+            # (viewport_top_left_x, viewport_top_left_z) are world coordinates of the map_surface's top-left corner.
+            runway_map_center_x = (runway.pos.x - viewport_top_left_x) / self.viewport_zoom
+            runway_map_center_y = (runway.pos.z - viewport_top_left_z) / self.viewport_zoom
+
+            # Get the bounding rectangle for the rotated surface and set its center.
+            # This is where it will be blitted onto the map_surface.
+            runway_rect_on_map = rotated_runway_surface.get_rect(center=(runway_map_center_x, runway_map_center_y))
+
+            # Blit the rotated runway onto the main map surface
+            map_surface.blit(rotated_runway_surface, runway_rect_on_map)
 
         # Draw icon
         cx, cz = MAP_OVERLAY_SIZE/2, MAP_OVERLAY_SIZE/2
