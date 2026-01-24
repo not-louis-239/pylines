@@ -219,6 +219,7 @@ class GameScreen(State):
 
         self.viewport_zoom = 50  # metres per pixel of map shown
         self.viewport_pos = pg.Vector3(self.plane.pos)
+        self.viewport_auto_panning = True
 
         # Building rendering setup
         all_vertices = []
@@ -389,20 +390,26 @@ class GameScreen(State):
             # Map shown -> pan map
             if keys[pg.K_UP]:
                 self.viewport_pos.z -= panning_speed * dt/1000
+                self.viewport_auto_panning = False
             if keys[pg.K_DOWN]:
                 self.viewport_pos.z += panning_speed * dt/1000
+                self.viewport_auto_panning = False
             if keys[pg.K_LEFT]:
                 self.viewport_pos.x -= panning_speed * dt/1000
+                self.viewport_auto_panning = False
             if keys[pg.K_RIGHT]:
                 self.viewport_pos.x += panning_speed * dt/1000
+                self.viewport_auto_panning = False
 
             # Reset map viewport pos
             if self.pressed(keys, pg.K_SPACE):
                 self.viewport_pos = self.plane.pos.copy()
+                self.viewport_auto_panning = True
         else:
             # Reset map viewport pos once map goes fully down
             if not self.map_up:
                 self.viewport_pos = self.plane.pos.copy()
+                self.viewport_auto_panning = True
 
             # Pitch
             if keys[pg.K_UP]:
@@ -483,6 +490,95 @@ class GameScreen(State):
         gl.glDisableVertexAttribArray(self.building_emissive_loc)
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
         gl.glUseProgram(0)
+
+    def draw_map(self):
+        hud_surface = self.hud_surface
+        NUM_TILES = math.ceil(C.HALF_WORLD_SIZE*2 / (C.METRES_PER_TILE))
+        MAP_OVERLAY_SIZE = 500  # size of the map overlay in pixels
+
+        if self.viewport_auto_panning:
+            self.viewport_pos = self.plane.pos.copy()
+
+        px, _, pz = self.viewport_pos
+
+        # Render base map
+        map_centre = C.WN_W//2, int(285 + C.WN_H * (1-self.map_up))
+
+        # Map border
+        outer_map_rect = pg.Rect(0, 0, MAP_OVERLAY_SIZE+10, MAP_OVERLAY_SIZE+10)
+        outer_map_rect.center = map_centre
+        pg.draw.rect(hud_surface, (129, 137, 143), outer_map_rect)
+
+        # Base
+        map_surface = pg.Surface((MAP_OVERLAY_SIZE, MAP_OVERLAY_SIZE))
+        map_surface.fill((0, 0, 0))
+
+        # World coordinates of the top-left corner of the map viewport
+        viewport_half_size_metres = MAP_OVERLAY_SIZE / 2 * self.viewport_zoom
+        viewport_top_left_x = px - viewport_half_size_metres
+        viewport_top_left_z = pz - viewport_half_size_metres
+
+        # Tile indices for the visible area
+        start_tile_x = int((viewport_top_left_x + C.HALF_WORLD_SIZE) / C.METRES_PER_TILE)
+        start_tile_z = int((viewport_top_left_z + C.HALF_WORLD_SIZE) / C.METRES_PER_TILE)
+        end_tile_x = int((viewport_top_left_x + 2 * viewport_half_size_metres + C.HALF_WORLD_SIZE) / C.METRES_PER_TILE)
+        end_tile_z = int((viewport_top_left_z + 2 * viewport_half_size_metres + C.HALF_WORLD_SIZE) / C.METRES_PER_TILE)
+
+        for tile_z in range(start_tile_z, end_tile_z + 1):
+            for tile_x in range(start_tile_x, end_tile_x + 1):
+                if not (0 <= tile_x < NUM_TILES and 0 <= tile_z < NUM_TILES):
+                    continue
+
+                tile_surface = self.map_tiles[tile_z][tile_x]
+
+                tile_world_x = -C.HALF_WORLD_SIZE + tile_x * C.METRES_PER_TILE
+                tile_world_z = -C.HALF_WORLD_SIZE + tile_z * C.METRES_PER_TILE
+
+                # Position of the tile on the screen
+                screen_pos_x = (tile_world_x - viewport_top_left_x) / self.viewport_zoom
+                screen_pos_z = (tile_world_z - viewport_top_left_z) / self.viewport_zoom
+
+                tile_size_on_screen = C.METRES_PER_TILE / self.viewport_zoom
+
+                dest_rect = pg.Rect(
+                    screen_pos_x,
+                    screen_pos_z,
+                    tile_size_on_screen,
+                    tile_size_on_screen,
+                )
+
+                scaled_tile = pg.transform.scale(tile_surface, (int(tile_size_on_screen) + 1, int(tile_size_on_screen) + 1))
+                map_surface.blit(scaled_tile, dest_rect)
+
+        # Draw icon
+        cx, cz = MAP_OVERLAY_SIZE/2, MAP_OVERLAY_SIZE/2
+        icon_x = cx - (self.viewport_pos.x - self.plane.pos.x) / self.viewport_zoom
+        icon_z = cz - (self.viewport_pos.z - self.plane.pos.z) / self.viewport_zoom
+
+        icon_rect = self.images.plane_icon.get_rect(center=(icon_x, icon_z))
+        plane_icon_rotated = pg.transform.rotate(self.images.plane_icon, -self.plane.rot.y)
+        map_surface.blit(plane_icon_rotated, icon_rect)
+
+        # North indicator - draw an arrow pointing upwards
+        north_indicator_size = 20
+        north_indicator_offset_x = 12
+        north_indicator_offset_y = 42
+        ni_center_x = north_indicator_offset_x + north_indicator_size // 2
+        ni_center_y = north_indicator_offset_y + north_indicator_size // 2
+
+        # Calculate arrow vertices
+        arrow_points = [
+            (ni_center_x, north_indicator_offset_y),  # Top point
+            (ni_center_x - north_indicator_size // 4, ni_center_y + north_indicator_size // 2),  # Bottom-left
+            (ni_center_x, ni_center_y + north_indicator_size // 4),  # Bottom-middle (for dart shape)
+            (ni_center_x + north_indicator_size // 4, ni_center_y + north_indicator_size // 2),  # Bottom-right
+        ]
+        pg.draw.polygon(map_surface, cols.WHITE, arrow_points)
+        draw_text(map_surface, (ni_center_x, ni_center_y - north_indicator_offset_y), 'centre', 'top', "N", cols.WHITE, 25, self.fonts.monospaced)
+
+        # Blit the completed map to the main HUD surface
+        map_rect = map_surface.get_rect(center=(map_centre))
+        hud_surface.blit(map_surface, map_rect)
 
     def draw_hud(self):
         pitch, yaw, roll = self.plane.rot
@@ -870,89 +966,7 @@ class GameScreen(State):
 
         # Render map
         if self.map_up:
-            NUM_TILES = math.ceil(C.HALF_WORLD_SIZE*2 / (C.METRES_PER_TILE))
-            MAP_OVERLAY_SIZE = 500  # size of the map overlay in pixels
-
-            px, _, pz = self.viewport_pos
-
-            # Render base map
-            map_centre = C.WN_W//2, int(285 + C.WN_H * (1-self.map_up))
-
-            # Map border
-            outer_map_rect = pg.Rect(0, 0, MAP_OVERLAY_SIZE+10, MAP_OVERLAY_SIZE+10)
-            outer_map_rect.center = map_centre
-            pg.draw.rect(hud_surface, (129, 137, 143), outer_map_rect)
-
-            # Base
-            map_surface = pg.Surface((MAP_OVERLAY_SIZE, MAP_OVERLAY_SIZE))
-            map_surface.fill((0, 0, 0))
-
-            # World coordinates of the top-left corner of the map viewport
-            viewport_half_size_metres = MAP_OVERLAY_SIZE / 2 * self.viewport_zoom
-            viewport_top_left_x = px - viewport_half_size_metres
-            viewport_top_left_z = pz - viewport_half_size_metres
-
-            # Tile indices for the visible area
-            start_tile_x = int((viewport_top_left_x + C.HALF_WORLD_SIZE) / C.METRES_PER_TILE)
-            start_tile_z = int((viewport_top_left_z + C.HALF_WORLD_SIZE) / C.METRES_PER_TILE)
-            end_tile_x = int((viewport_top_left_x + 2 * viewport_half_size_metres + C.HALF_WORLD_SIZE) / C.METRES_PER_TILE)
-            end_tile_z = int((viewport_top_left_z + 2 * viewport_half_size_metres + C.HALF_WORLD_SIZE) / C.METRES_PER_TILE)
-
-            for tile_z in range(start_tile_z, end_tile_z + 1):
-                for tile_x in range(start_tile_x, end_tile_x + 1):
-                    if not (0 <= tile_x < NUM_TILES and 0 <= tile_z < NUM_TILES):
-                        continue
-
-                    tile_surface = self.map_tiles[tile_z][tile_x]
-
-                    tile_world_x = -C.HALF_WORLD_SIZE + tile_x * C.METRES_PER_TILE
-                    tile_world_z = -C.HALF_WORLD_SIZE + tile_z * C.METRES_PER_TILE
-
-                    # Position of the tile on the screen
-                    screen_pos_x = (tile_world_x - viewport_top_left_x) / self.viewport_zoom
-                    screen_pos_z = (tile_world_z - viewport_top_left_z) / self.viewport_zoom
-
-                    tile_size_on_screen = C.METRES_PER_TILE / self.viewport_zoom
-
-                    dest_rect = pg.Rect(
-                        screen_pos_x,
-                        screen_pos_z,
-                        tile_size_on_screen,
-                        tile_size_on_screen,
-                    )
-
-                    scaled_tile = pg.transform.scale(tile_surface, (int(tile_size_on_screen) + 1, int(tile_size_on_screen) + 1))
-                    map_surface.blit(scaled_tile, dest_rect)
-
-            # Draw icon
-            cx, cz = MAP_OVERLAY_SIZE/2, MAP_OVERLAY_SIZE/2
-            icon_x = cx - (self.viewport_pos.x - self.plane.pos.x) / self.viewport_zoom
-            icon_z = cz - (self.viewport_pos.z - self.plane.pos.z) / self.viewport_zoom
-
-            icon_rect = self.images.plane_icon.get_rect(center=(icon_x, icon_z))
-            plane_icon_rotated = pg.transform.rotate(self.images.plane_icon, -self.plane.rot.y)
-            map_surface.blit(plane_icon_rotated, icon_rect)
-
-            # North indicator - draw an arrow pointing upwards
-            north_indicator_size = 20
-            north_indicator_offset_x = 12
-            north_indicator_offset_y = 42
-            ni_center_x = north_indicator_offset_x + north_indicator_size // 2
-            ni_center_y = north_indicator_offset_y + north_indicator_size // 2
-
-            # Calculate arrow vertices
-            arrow_points = [
-                (ni_center_x, north_indicator_offset_y),  # Top point
-                (ni_center_x - north_indicator_size // 4, ni_center_y + north_indicator_size // 2),  # Bottom-left
-                (ni_center_x, ni_center_y + north_indicator_size // 4),  # Bottom-middle (for dart shape)
-                (ni_center_x + north_indicator_size // 4, ni_center_y + north_indicator_size // 2),  # Bottom-right
-            ]
-            pg.draw.polygon(map_surface, cols.WHITE, arrow_points)
-            draw_text(map_surface, (ni_center_x, ni_center_y - north_indicator_offset_y), 'centre', 'top', "N", cols.WHITE, 25, self.fonts.monospaced)
-
-            # Blit the completed map to the main HUD surface
-            map_rect = map_surface.get_rect(center=(map_centre))
-            hud_surface.blit(map_surface, map_rect)
+            self.draw_map()
 
         # Show landing feedback
         if self.landing_dialog_box.active_time:
