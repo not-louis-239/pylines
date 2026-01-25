@@ -33,7 +33,7 @@ class Rotation:
 def draw_text(surface: Surface, pos: tuple[float, float],
               horiz_align: Literal['left', 'centre', 'right'],
               vert_align: Literal['top', 'centre', 'bottom'],
-              text: str, colour: Colour,
+              text: str, colour: Colour | AColour,
               font_size: int, font_family: pg.font.Font | Path | str | None = None):
     if isinstance(font_family, pg.font.Font):
         font_obj = font_family

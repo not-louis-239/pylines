@@ -711,7 +711,7 @@ class GameScreen(State):
             # Draw grid
             grid_surface = pg.Surface((MAP_OVERLAY_SIZE, MAP_OVERLAY_SIZE), pg.SRCALPHA)
 
-            def world_to_map(world_x, world_z):
+            def world_to_map(world_x, world_z) -> tuple[float, float]:
                 screen_x = (world_x - viewport_top_left_x) * (1/self.viewport_zoom)
                 screen_y = (world_z - viewport_top_left_z) * (1/self.viewport_zoom)
                 return screen_x, screen_y
@@ -728,10 +728,16 @@ class GameScreen(State):
                 p2 = world_to_map(world_x, viewport_top_left_z + MAP_OVERLAY_SIZE * self.viewport_zoom)
                 pg.draw.line(grid_surface, GRID_MAJOR_COL if abs(world_x % MAJOR_INTERVAL) < C.EPSILON else GRID_MINOR_COL, p1, p2, 1)
 
+                if abs(world_x % MAJOR_INTERVAL) <= C.EPSILON:
+                    draw_text(grid_surface, (p1[0], MAP_OVERLAY_SIZE - 15), 'centre', 'centre', f"{int(world_x):,.0f}", (255, 255, 255), 18, self.fonts.monospaced)
+
             for world_z in range(start_grid_z, end_grid_z, MINOR_INTERVAL):
                 p1 = world_to_map(viewport_top_left_x, world_z)
                 p2 = world_to_map(viewport_top_left_x + MAP_OVERLAY_SIZE * self.viewport_zoom, world_z)
                 pg.draw.line(grid_surface, GRID_MAJOR_COL if abs(world_z % MAJOR_INTERVAL) < C.EPSILON else GRID_MINOR_COL, p1, p2, 1)
+
+                if abs(world_z % MAJOR_INTERVAL) <= C.EPSILON:
+                    draw_text(grid_surface, (5, p1[1]), 'left', 'centre', f"{int(world_z):,.0f}", (255, 255, 255), 18, self.fonts.monospaced)
 
             # Draw origin
             origin_map_x, origin_map_y = world_to_map(0, 0)
