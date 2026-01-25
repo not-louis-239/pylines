@@ -15,6 +15,7 @@
 """Program constants"""
 
 from dataclasses import dataclass
+from enum import IntEnum
 
 
 @dataclass
@@ -41,6 +42,19 @@ class PlaneModel:
     v_ne: float  # Velocity Never Exceed, in m/s
     # Name
     name: str = "UnnamedModel"  # Name is currently owned by the list of PLANE_MODELS
+
+class SFXChannelID(IntEnum):
+    # Music
+    MUSIC = 0
+
+    # Engine
+    ENGINE1 = 1
+    ENGINE2 = 2
+
+    # Warnings
+    STALL = 3
+    OVERSPEED = 4
+    PROHIBITED = 5
 
 # Visuals, tick updates and window size
 FPS = 60

@@ -97,8 +97,9 @@ class GameScreen(State):
         self.show_overspeed_warning: bool = False
         self.time_elapsed: int = 0  # milliseconds
 
-        self.stall_channel = pg.mixer.Channel(3)
-        self.overspeed_channel = pg.mixer.Channel(4)
+        self.stall_channel = pg.mixer.Channel(C.SFXChannelID.STALL)
+        self.overspeed_channel = pg.mixer.Channel(C.SFXChannelID.OVERSPEED)
+        self.prohibited_zone_channel = pg.mixer.Channel(C.SFXChannelID.PROHIBITED)
 
         # Font for text rendering
         self.font = pg.font.Font(assets.fonts.monospaced, 36)

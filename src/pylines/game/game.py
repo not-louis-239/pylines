@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING
 
 import pygame as pg
 
+from pylines.core.constants import SFXChannelID
 from pylines.core.asset_manager import Assets, WorldData
 from pylines.core.data_manager import load_data, save_data
 from pylines.game.environment import Environment
@@ -60,7 +61,7 @@ class Game:
         }
 
         # Music
-        self.music_channel = pg.mixer.Channel(0)
+        self.music_channel = pg.mixer.Channel(SFXChannelID.MUSIC)
 
         # States
         self.state: Game.States = Game.States.TITLE  # Explicitly set initial state
