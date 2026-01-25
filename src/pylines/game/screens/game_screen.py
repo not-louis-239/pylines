@@ -74,7 +74,7 @@ class GameScreen(State):
 
         self._frame_count = 0
         self.env = self.game.env
-        self.landing_dialog_box = DialogMessage()  # Must be before Plane otherwise causes error
+        self.dialog_box = DialogMessage()
         self.sound_manager = SoundManager(assets.sounds)
 
         ground_textures = {
@@ -89,7 +89,7 @@ class GameScreen(State):
         self.ocean = Ocean(assets.images.ocean, game.env)
         self.ground = Ground(ground_textures, game.env)
 
-        self.plane = Plane(assets.sounds, self.landing_dialog_box, game.env)
+        self.plane = Plane(assets.sounds, self.dialog_box, game.env)
         self.sky = Sky()
         self.sun = Sun(assets.images.sun)
         self.moon = Moon(assets.images.moon)
@@ -278,33 +278,36 @@ class GameScreen(State):
         self.sound_manager.stop()
         self.overspeed_channel.stop()
         self.sounds.menu_music.fadeout(1_500)
-        self.landing_dialog_box.reset()
+        self.dialog_box.reset()
         self.time_elapsed = 0
 
     def update(self, dt: int):
         self._frame_count += 1
         self.time_elapsed += dt
-        self.landing_dialog_box.update(dt)
+        self.dialog_box.update(dt)
 
         self.sun.update()
         self.moon.update()
 
         if self.plane.crashed:
-            self.landing_dialog_box.reset()
+            self.dialog_box.reset()
             self.stall_channel.stop()
             self.overspeed_channel.stop()
             self.sound_manager.stop()
             return
 
+        # Map update
         if self.map_state == MapState.HIDDEN:
             self.map_up -= (dt/1000) / C.MAP_TOGGLE_ANIMATION_DURATION
         else:
             self.map_up += (dt/1000) / C.MAP_TOGGLE_ANIMATION_DURATION
         self.map_up = clamp(self.map_up, (0, 1))
 
+        # Sound manager and plane
         self.sound_manager.update(self.plane.throttle_frac)
         self.plane.update(dt)
 
+        # Stall warning
         self.show_stall_warning = self.plane.stalled
         if self.show_stall_warning:
             if not self.stall_channel.get_busy():
@@ -312,12 +315,38 @@ class GameScreen(State):
         else:
             self.stall_channel.stop()
 
+        # Overspeed warning
         self.show_overspeed_warning = self.plane.vel.length() > self.plane.model.v_ne  # Both in m/s
         if self.show_overspeed_warning:
             if not self.overspeed_channel.get_busy():
                 self.overspeed_channel.play(self.sounds.overspeed, loops=-1)
         else:
             self.overspeed_channel.stop()
+
+        # Prohibited zone warning
+        def plane_in_prohibited_zone() -> bool:
+            for zone in self.env.prohibited_zones:
+                px, _, pz = self.plane.pos
+                zone_centre_x, zone_centre_z = zone.pos
+                zone_w, zone_h = zone.dims
+
+                zone_min_x = zone_centre_x - zone_w / 2
+                zone_max_x = zone_centre_x + zone_w / 2
+                zone_min_z = zone_centre_z - zone_h / 2
+                zone_max_z = zone_centre_z + zone_h / 2
+
+                if zone_min_x < px < zone_max_x and zone_min_z < pz < zone_max_z:
+                    return True
+
+            return False
+
+        self.show_prohibited_zone_warning = plane_in_prohibited_zone()
+        if self.show_prohibited_zone_warning:
+            if not self.prohibited_zone_channel.get_busy():
+                self.prohibited_zone_channel.play(self.sounds.prohibited_zone_warning, loops=-1)
+            self.dialog_box.set_message("Immediately exit this zone - penalties may apply", (255, 127, 0), 100)
+        else:
+            self.prohibited_zone_channel.stop()
 
     def _draw_text(self, x: RealNumber, y: RealNumber, text: str,
                   colour: AColour = (255, 255, 255, 255), bg_colour: AColour | None = None):
@@ -1182,14 +1211,21 @@ class GameScreen(State):
         if self.map_up:
             self.draw_map()
 
-        # Show landing feedback
-        if self.landing_dialog_box.active_time:
+        # Show dialog box
+        if self.dialog_box.active_time:
+            text_size = 30
+
+            text_length = len(self.dialog_box.msg)
+            text_length_pix = text_length * text_size/2
+
+            buffer = text_size * 0.7
+
             draw_transparent_rect(
-                self.hud_surface, (C.WN_W//2-300, C.WN_H*0.15), (600, C.WN_H*0.1), (0, 0, 0, 180), 2
+                self.hud_surface, (C.WN_W//2 - text_length_pix/2 - buffer, C.WN_H*0.2 - text_size*1.2), (text_length_pix + 2*buffer, text_size*2.4), (0, 0, 0, 180), 2
             )
             draw_text(
                 self.hud_surface, (C.WN_W//2, C.WN_H*0.2), 'centre', 'centre',
-                self.landing_dialog_box.msg, self.landing_dialog_box.colour, 30, self.fonts.monospaced
+                self.dialog_box.msg, self.dialog_box.colour, text_size, self.fonts.monospaced
             )
 
         def show_crash_reason(reason: CrashReason) -> None:
