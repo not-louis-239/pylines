@@ -377,7 +377,7 @@ class GameScreen(State):
                 self.viewport_zoom /= 2.5 ** (dt/1000)
             if keys[pg.K_s]:
                 self.viewport_zoom *= 2.5 ** (dt/1000)
-            self.viewport_zoom = clamp(self.viewport_zoom, (5, 100))
+            self.viewport_zoom = clamp(self.viewport_zoom, (1, 100))
         else:
             # Throttle controls
             throttle_speed = 0.4 * dt/1000
@@ -640,7 +640,7 @@ class GameScreen(State):
         map_surface.blit(plane_icon_rotated, icon_rect)
 
         # Define scale bar size here as the world length is also used in grid rendering
-        SCALE_BAR_LENGTHS = [500, 1_000, 2_000, 5_000, 10_000]
+        SCALE_BAR_LENGTHS = [25, 100, 500, 1_000, 2_000, 5_000, 10_000]
         MAX_SCALE_BAR_SIZE = 80  # pixels
         target_size = self.viewport_zoom * MAX_SCALE_BAR_SIZE
 
