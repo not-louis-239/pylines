@@ -603,6 +603,11 @@ class GameScreen(State):
             # Draw border (solid red, 2 pixels wide)
             pg.draw.rect(map_surface, ZONE_BORDER_COLOR, zone_rect, 2)
 
+            ZONE_TEXT_COLOUR = (255, 210, 210)
+            if self.map_show_advanced_info:
+                text_centre = (screen_pos_x + screen_w / 2, screen_pos_z + screen_h / 2)
+                draw_text(map_surface, text_centre, 'centre', 'centre', zone.code, ZONE_TEXT_COLOUR, 20, self.fonts.monospaced)
+
         # Draw runways
         for runway in self.env.runways:
             # Convert runway world dimensions to map pixel dimensions, 1 pix min size
