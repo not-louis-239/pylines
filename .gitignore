@@ -57,7 +57,7 @@ dist/
 *.o
 
 # Game-generated caches
-assets/cache/
+cache/
 
 # Python helpers
 scripts/

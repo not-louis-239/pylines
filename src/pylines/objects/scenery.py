@@ -552,18 +552,3 @@ class Star(CelestialObject):
         self.brightness = brightness
         self.colour = colour
         self.size = size
-
-class Building(SmallSceneryObject):
-    def __init__(self, x: float, y: float, z: float, parts: list[BuildingPart]):
-        super().__init__(x, y, z)
-        self.parts = parts
-
-    def get_vertices(self) -> list[float]:
-        all_vertices: list[float] = []
-        for part in self.parts:
-            all_vertices.extend(generate_building_part_vertices(self.pos, part))
-        return all_vertices
-
-    def __repr__(self) -> str:
-        x, y, z = self.pos
-        return f"Building( pos = ({x}, {y}, {z}), parts = {self.parts} )"

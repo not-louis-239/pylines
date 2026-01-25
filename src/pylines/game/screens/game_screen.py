@@ -27,13 +27,12 @@ import pygame as pg
 import numpy as np
 from typing import Callable
 from OpenGL import GL as gl
-from OpenGL import GLU as glu
 
 import pylines.core.colours as cols
 import pylines.core.constants as C
 import pylines.core.paths as paths
 from pylines.shaders.shader_manager import load_shader_script
-from pylines.core.custom_types import AColour, Colour, EventList, RealNumber
+from pylines.core.custom_types import Colour, EventList, RealNumber
 from pylines.core.time_manager import fetch_hour, sky_colour_from_hour, brightness_from_hour
 import pylines.core.units as units
 from pylines.core.utils import clamp, draw_needle, draw_text, draw_transparent_rect
@@ -41,6 +40,7 @@ from pylines.game.engine_sound import SoundManager
 from pylines.game.states import State
 from pylines.objects.objects import CrashReason, Plane, Runway
 from pylines.objects.scenery import Ground, Moon, Ocean, Sky, Sun
+from pylines.objects.buildings import draw_building_icon, BuildingMapIconType, BuildingDefinition
 
 if TYPE_CHECKING:
     from pylines.core.custom_types import ScancodeWrapper, Surface
@@ -193,7 +193,7 @@ class GameScreen(State):
         self.map_tiles: list[list[pg.Surface]] = []
 
         # Make cache directory
-        cache_dir = paths.ASSETS_CACHE_DIR / "map_tiles"
+        cache_dir = paths.CACHE_DIR / "map_tiles"
         cache_dir.mkdir(parents=True, exist_ok=True)
 
         # Loop over tiles
@@ -235,8 +235,8 @@ class GameScreen(State):
         self.viewport_auto_panning = True
 
         # Height key setup
-        self.HEIGHT_KEY_W = 30
-        self.HEIGHT_KEY_H = 200
+        self.HEIGHT_KEY_W = 25
+        self.HEIGHT_KEY_H = 280
         self.height_key: pg.Surface = pg.Surface((self.HEIGHT_KEY_W, self.HEIGHT_KEY_H))
 
         for i in range(self.HEIGHT_KEY_H):
@@ -377,7 +377,7 @@ class GameScreen(State):
                 self.viewport_zoom /= 2.5 ** (dt/1000)
             if keys[pg.K_s]:
                 self.viewport_zoom *= 2.5 ** (dt/1000)
-            self.viewport_zoom = clamp(self.viewport_zoom, (5, 100))
+            self.viewport_zoom = clamp(self.viewport_zoom, (1, 100))
         else:
             # Throttle controls
             throttle_speed = 0.4 * dt/1000
@@ -509,6 +509,7 @@ class GameScreen(State):
         hud_surface = self.hud_surface
         NUM_TILES = math.ceil(C.HALF_WORLD_SIZE*2 / (C.METRES_PER_TILE))
         MAP_OVERLAY_SIZE = 500  # size of the map overlay in pixels
+        MAP_BORDER_COLOUR = (129, 137, 143)
 
         if self.viewport_auto_panning:
             self.viewport_pos = self.plane.pos.copy()
@@ -521,7 +522,7 @@ class GameScreen(State):
         # Map border
         outer_map_rect = pg.Rect(0, 0, MAP_OVERLAY_SIZE+10, MAP_OVERLAY_SIZE+10)
         outer_map_rect.center = map_centre
-        pg.draw.rect(hud_surface, (129, 137, 143), outer_map_rect)
+        pg.draw.rect(hud_surface, MAP_BORDER_COLOUR, outer_map_rect)
 
         # Base
         map_surface = pg.Surface((MAP_OVERLAY_SIZE, MAP_OVERLAY_SIZE))
@@ -539,6 +540,7 @@ class GameScreen(State):
         end_tile_x = int((viewport_top_left_x + 2 * viewport_half_size_metres + C.HALF_WORLD_SIZE) / C.METRES_PER_TILE)
         end_tile_z = int((viewport_top_left_z + 2 * viewport_half_size_metres + C.HALF_WORLD_SIZE) / C.METRES_PER_TILE)
 
+        # Draw tiles
         for tile_z in range(start_tile_z, end_tile_z + 1):
             for tile_x in range(start_tile_x, end_tile_x + 1):
                 if not (0 <= tile_x < NUM_TILES and 0 <= tile_z < NUM_TILES):
@@ -564,6 +566,72 @@ class GameScreen(State):
 
                 scaled_tile = pg.transform.scale(tile_surface, (int(tile_size_on_screen) + 1, int(tile_size_on_screen) + 1))
                 map_surface.blit(scaled_tile, dest_rect)
+
+        # Show buildings
+        if self.viewport_zoom < 10:  # Only show if zoomed in far enough for performance
+            for building in self.env.buildings:
+                # Calculate screen position for the building
+                screen_x = (building.pos.x - viewport_top_left_x) / self.viewport_zoom
+                screen_y = (building.pos.z - viewport_top_left_z) / self.viewport_zoom
+
+                SAFETY_BUFFER = 25  # for smoothness
+                if (-SAFETY_BUFFER < screen_x < MAP_OVERLAY_SIZE + SAFETY_BUFFER
+                and -SAFETY_BUFFER < screen_y < MAP_OVERLAY_SIZE + SAFETY_BUFFER):
+                    # Retrieve building definition
+                    def_ = self.env.building_defs[building.type_]
+
+                    # Draw the building icon
+                    draw_building_icon(map_surface, screen_x, screen_y, def_.appearance, self.viewport_zoom)
+
+        # Show buliding legend if advanced map info is enabled
+        if self.map_show_advanced_info:
+            draw_transparent_rect(
+                hud_surface,
+                (map_centre[0] + MAP_OVERLAY_SIZE/2 + 20, map_centre[1] - 180),
+                (200, 360), border_thickness=2, border_colour=MAP_BORDER_COLOUR
+            )
+
+            draw_text(hud_surface, (map_centre[0] + MAP_OVERLAY_SIZE/2 + 120, map_centre[1] - 155), 'centre', 'centre', f"Buildings", (255, 255, 255), 20, self.fonts.monospaced)
+
+            screen_y = map_centre[1] - 120
+            items = list(self.env.building_defs.items())
+
+            def icon_height(info: BuildingDefinition):
+                icon = info.appearance.icon
+                dims = info.appearance.dims
+                if icon == BuildingMapIconType.POINT:
+                    return 0
+                if icon == BuildingMapIconType.CIRCLE:
+                    return cast(tuple[int], dims)[0] * 2   # radius → diameter
+                if icon == BuildingMapIconType.SQUARE:
+                    return cast(tuple[int, int], dims)[1]
+
+                return 0  # fallback
+
+            for idx, (name, def_) in enumerate(items):
+                # draw icon + label
+                draw_text(
+                    hud_surface,
+                    (map_centre[0] + MAP_OVERLAY_SIZE/2 + 90, screen_y),
+                    'left', 'centre',
+                    f"{name}",
+                    (255, 255, 255), 15,
+                    self.fonts.monospaced
+                )
+                draw_building_icon(
+                    hud_surface,
+                    map_centre[0] + MAP_OVERLAY_SIZE/2 + 55,
+                    screen_y,
+                    def_.appearance
+                )
+
+                # Compute spacing for next line
+                curr_h = icon_height(def_)
+                next_h = icon_height(items[idx + 1][1]) if idx + 1 < len(items) else 0
+
+                # Apply line spacing
+                line_h = max(15, 15 + curr_h//2 + next_h//2)
+                screen_y += line_h
 
         # Draw prohibited zones
         for zone in self.env.prohibited_zones:
@@ -640,7 +708,7 @@ class GameScreen(State):
         map_surface.blit(plane_icon_rotated, icon_rect)
 
         # Define scale bar size here as the world length is also used in grid rendering
-        SCALE_BAR_LENGTHS = [500, 1_000, 2_000, 5_000, 10_000]
+        SCALE_BAR_LENGTHS = [25, 100, 500, 1_000, 2_000, 5_000, 10_000]
         MAX_SCALE_BAR_SIZE = 80  # pixels
         target_size = self.viewport_zoom * MAX_SCALE_BAR_SIZE
 
@@ -770,15 +838,21 @@ class GameScreen(State):
         map_rect = map_surface.get_rect(center=(map_centre))
         hud_surface.blit(map_surface, map_rect)
 
+        # Show height key
         if self.map_show_advanced_info:
-            # Show height key
-            hud_surface.blit(self.height_key, (C.WN_W//2 - MAP_OVERLAY_SIZE//2 - 50, map_centre[1] - self.HEIGHT_KEY_H//2))
-            draw_text(hud_surface, (C.WN_W//2 - MAP_OVERLAY_SIZE//2 - 70, map_centre[1] - self.HEIGHT_KEY_H//2 - 30), 'centre', 'centre', f"Altitude (ft)", (255, 255, 255), 12, self.fonts.monospaced)
+            draw_transparent_rect(
+                hud_surface,
+                (C.WN_W//2 - MAP_OVERLAY_SIZE//2 - 200, map_centre[1] - 180),
+                (180, 360), border_thickness=2, border_colour=MAP_BORDER_COLOUR
+            )
+
+            hud_surface.blit(self.height_key, (C.WN_W//2 - MAP_OVERLAY_SIZE//2 - 95, map_centre[1] - 125))
+            draw_text(hud_surface, (C.WN_W//2 - MAP_OVERLAY_SIZE//2 - 110, map_centre[1] - 155), 'centre', 'centre', f"Altitude (ft)", (255, 255, 255), 20, self.fonts.monospaced)
 
             # Show heightmap labels in feet
             for h in range(-12_000, 18_001, 2_000):
-                text_y = map_centre[1] + self.HEIGHT_KEY_H//2 - (self.HEIGHT_KEY_H * (h+12_000)/30_000)
-                draw_text(hud_surface, (C.WN_W//2 - MAP_OVERLAY_SIZE//2 - 55, text_y), 'right', 'centre', f"{h:,.0f}", (255, 255, 255), 12, self.fonts.monospaced)
+                text_y = map_centre[1] - 125 + (self.HEIGHT_KEY_H * (1 - ((h + 12_000) / 30_000)))
+                draw_text(hud_surface, (C.WN_W//2 - MAP_OVERLAY_SIZE//2 - 100, text_y), 'right', 'centre', f"{h:,.0f}", (255, 255, 255), 15, self.fonts.monospaced)
 
     def draw_hud(self):
         pitch, yaw, roll = self.plane.rot

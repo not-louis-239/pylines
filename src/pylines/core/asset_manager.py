@@ -145,9 +145,17 @@ class WorldData(AssetBank):
             self.SEA_LEVEL = meta["heights"]["sea_lvl"]
 
         # Heightmap raw data and noise
-        img_path = paths.WORLD_DIR / "heightmap.png"
-        img = Image.open(img_path)
-        self.height_array = np.array(img, dtype=np.float32)
+        heightmap_path = paths.WORLD_DIR / "heightmap.png"
+        cached_heightmap_path = paths.CACHE_DIR / "heightmap.npy"
+
+        if cached_heightmap_path.exists():
+            # Load the cached numpy array to save time on startup
+            self.height_array = np.load(cached_heightmap_path)
+        else:
+            # Load PNG and create numpy cache
+            img = Image.open(heightmap_path)
+            self.height_array = np.array(img, dtype=np.float32)
+            np.save(cached_heightmap_path, self.height_array)
 
         self.noise = pg.image.load(paths.WORLD_DIR / "noise.png").convert_alpha()
 

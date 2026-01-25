@@ -26,7 +26,6 @@ from pylines.game.environment import Environment
 from pylines.game.screens.game_screen import GameScreen
 from pylines.game.screens.settings import SettingsScreen
 from pylines.game.screens.title import TitleScreen
-from pylines.objects.objects import Runway
 
 if TYPE_CHECKING:
     from pylines.core.custom_types import EventList, ScancodeWrapper, Surface
