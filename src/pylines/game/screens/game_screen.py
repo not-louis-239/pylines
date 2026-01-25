@@ -193,7 +193,7 @@ class GameScreen(State):
         self.map_tiles: list[list[pg.Surface]] = []
 
         # Make cache directory
-        cache_dir = paths.ASSETS_CACHE_DIR / "map_tiles"
+        cache_dir = paths.CACHE_DIR / "map_tiles"
         cache_dir.mkdir(parents=True, exist_ok=True)
 
         # Loop over tiles
