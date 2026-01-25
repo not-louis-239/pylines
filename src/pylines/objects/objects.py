@@ -78,6 +78,22 @@ class Plane(Entity):
     def stalled(self) -> bool:
         return self.aoa > self.model.stall_angle
 
+    @property
+    def over_runway(self) -> bool:
+        x, _, z = self.pos
+
+        for runway in self.env.runways:
+            rx, _, rz = runway.pos
+            rl, rw = runway.l, runway.w
+
+            # FIXME: don't ask me why I have to swap the length and width around
+
+            inside, _ = point_in_aabb(x, z, rx, rz, rw, rl, runway.heading)
+            if inside:
+                return True
+
+        return False
+
     def reset(self) -> None:
         STARTING_POS = (200, -3_000)
         STARTING_YAW = 130
@@ -101,21 +117,23 @@ class Plane(Entity):
         self.crash_reason: CrashReason | None = None
         self.damage_level = 0
 
-    @property
-    def over_runway(self) -> bool:
-        x, _, z = self.pos
+    def good_landing(self):
+        self.sounds.good_landing.play()
+        self.dialog_box.set_message("Good landing!", (0, 255, 0))
 
-        for runway in self.env.runways:
-            rx, _, rz = runway.pos
-            rl, rw = runway.l, runway.w
+    def hard_landing(self, *, suppress_dialog: bool = False):
+        self.sounds.hard_landing.play()
+        if not suppress_dialog: self.dialog_box.set_message("Hard landing...", (255, 200, 0))
 
-            # FIXME: don't ask me why I have to swap the length and width around
+    def crash(self, *, reason: CrashReason, suppress_dialog: bool = False, damage_taken: float = 0.0, lethal: bool = False):
+        self.damage_level = 1 if lethal else min(self.damage_level + damage_taken, 1)
 
-            inside, _ = point_in_aabb(x, z, rx, rz, rw, rl, runway.heading)
-            if inside:
-                return True
-
-        return False
+        if self.damage_level >= 1:
+            self.sounds.crash.play()
+            self.crash_reason = reason
+        else:
+            self.sounds.hard_landing.play()
+            if not suppress_dialog: self.dialog_box.set_message("Hard landing. Damage sustained.", (255, 80, 0))
 
     def process_landing(self):
         if self.crashed:
@@ -125,26 +143,6 @@ class Plane(Entity):
         self.sounds.good_landing.stop()
         self.sounds.hard_landing.stop()
         self.sounds.crash.stop()
-
-        def good_landing():
-            self.sounds.good_landing.play()
-            self.dialog_box.set_message("Good landing!", (0, 255, 0))
-
-        def hard_landing(*, suppress_dialog: bool = False):
-            self.sounds.hard_landing.play()
-            if not suppress_dialog: self.dialog_box.set_message("Hard landing...", (255, 200, 0))
-
-        # TODO: Collision with buildings should be auto-lethal
-
-        def crash(*, suppress_dialog: bool = False, damage_taken: float = 0.0, lethal: bool = False, reason: CrashReason):
-            self.damage_level = 1 if lethal else min(self.damage_level + damage_taken, 1)
-
-            if self.damage_level >= 1:
-                self.sounds.crash.play()
-                self.crash_reason = reason
-            else:
-                self.sounds.hard_landing.play()
-                if not suppress_dialog: self.dialog_box.set_message("Hard landing. Damage sustained.", (255, 80, 0))
 
         # Check landing for quality
         pitch, yaw, roll = self.rot
@@ -193,20 +191,22 @@ class Plane(Entity):
 
         # Outcome mapping
         if vs > 12 or water_crash:
-            crash(lethal=True, reason=crash_reason)
+            self.crash(lethal=True, reason=crash_reason)
             return
 
         if impact_severity <= MAX_SAFE_IMPACT:
             if self.over_runway:
-                good_landing()
+                self.good_landing()
             else:
-                hard_landing(suppress_dialog=True)
+                self.hard_landing(suppress_dialog=True)
         elif impact_severity <= MAX_OK_IMPACT:
-            hard_landing(suppress_dialog=(not self.over_runway))
+            self.hard_landing(suppress_dialog=(not self.over_runway))
         else:
-            crash(damage_taken=impact_severity-MAX_OK_IMPACT, reason=crash_reason)
+            self.crash(damage_taken=impact_severity-MAX_OK_IMPACT, reason=crash_reason)
 
     def update(self, dt: int):
+        # TODO: Collision with buildings should be auto-lethal
+
         # Sideways movement - convert roll to yaw
         CONVERSION_FACTOR = 30
         self.rot.y += sin(rad(self.rot.z)) * clamp(self.vel.length()/30.87, (0, 1)) * CONVERSION_FACTOR * dt/1000
