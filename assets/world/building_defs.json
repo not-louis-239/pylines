@@ -301,7 +301,7 @@
             "map_appearance": {
                 "colour": [255, 255, 0],
                 "icon": "point",
-                "dims": null
+                "dims": []
             }
         }
     }

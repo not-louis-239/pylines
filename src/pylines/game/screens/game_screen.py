@@ -41,6 +41,7 @@ from pylines.game.engine_sound import SoundManager
 from pylines.game.states import State
 from pylines.objects.objects import CrashReason, Plane, Runway
 from pylines.objects.scenery import Ground, Moon, Ocean, Sky, Sun
+from pylines.objects.buildings import draw_building_icon
 
 if TYPE_CHECKING:
     from pylines.core.custom_types import ScancodeWrapper, Surface
@@ -509,6 +510,7 @@ class GameScreen(State):
         hud_surface = self.hud_surface
         NUM_TILES = math.ceil(C.HALF_WORLD_SIZE*2 / (C.METRES_PER_TILE))
         MAP_OVERLAY_SIZE = 500  # size of the map overlay in pixels
+        MAP_BORDER_COLOUR = (129, 137, 143)
 
         if self.viewport_auto_panning:
             self.viewport_pos = self.plane.pos.copy()
@@ -521,7 +523,7 @@ class GameScreen(State):
         # Map border
         outer_map_rect = pg.Rect(0, 0, MAP_OVERLAY_SIZE+10, MAP_OVERLAY_SIZE+10)
         outer_map_rect.center = map_centre
-        pg.draw.rect(hud_surface, (129, 137, 143), outer_map_rect)
+        pg.draw.rect(hud_surface, MAP_BORDER_COLOUR, outer_map_rect)
 
         # Base
         map_surface = pg.Surface((MAP_OVERLAY_SIZE, MAP_OVERLAY_SIZE))
@@ -539,6 +541,7 @@ class GameScreen(State):
         end_tile_x = int((viewport_top_left_x + 2 * viewport_half_size_metres + C.HALF_WORLD_SIZE) / C.METRES_PER_TILE)
         end_tile_z = int((viewport_top_left_z + 2 * viewport_half_size_metres + C.HALF_WORLD_SIZE) / C.METRES_PER_TILE)
 
+        # Draw tiles
         for tile_z in range(start_tile_z, end_tile_z + 1):
             for tile_x in range(start_tile_x, end_tile_x + 1):
                 if not (0 <= tile_x < NUM_TILES and 0 <= tile_z < NUM_TILES):
@@ -564,6 +567,27 @@ class GameScreen(State):
 
                 scaled_tile = pg.transform.scale(tile_surface, (int(tile_size_on_screen) + 1, int(tile_size_on_screen) + 1))
                 map_surface.blit(scaled_tile, dest_rect)
+
+        # Show buildings
+        if self.viewport_zoom < 10:  # Only show if zoomed in far enough for performance
+            for building in self.env.buildings:
+                # Calculate screen position for the building
+                screen_x = (building.pos.x - viewport_top_left_x) / self.viewport_zoom
+                screen_y = (building.pos.z - viewport_top_left_z) / self.viewport_zoom
+
+                SAFETY_BUFFER = 25  # for smoothness
+                if (-SAFETY_BUFFER < screen_x < MAP_OVERLAY_SIZE + SAFETY_BUFFER
+                and -SAFETY_BUFFER < screen_y < MAP_OVERLAY_SIZE + SAFETY_BUFFER):
+                    # Retrieve building definition
+                    def_ = self.env.building_defs[building.type_]
+
+                    # Draw the building icon
+                    draw_building_icon(map_surface, screen_x, screen_y, def_.appearance, self.viewport_zoom)
+
+        # Show buliding legend if advanced map info is enabled
+        if self.map_show_advanced_info:
+            for def_ in self.env.building_defs:
+                ... # TODO: show building legend to the right of map
 
         # Draw prohibited zones
         for zone in self.env.prohibited_zones:
@@ -770,8 +794,14 @@ class GameScreen(State):
         map_rect = map_surface.get_rect(center=(map_centre))
         hud_surface.blit(map_surface, map_rect)
 
+        # Show height key
         if self.map_show_advanced_info:
-            # Show height key
+            draw_transparent_rect(
+                hud_surface,
+                (C.WN_W//2 - MAP_OVERLAY_SIZE//2 - 120, map_centre[1] - 150),
+                (110, 270), border_thickness=2, border_colour=MAP_BORDER_COLOUR
+            )
+
             hud_surface.blit(self.height_key, (C.WN_W//2 - MAP_OVERLAY_SIZE//2 - 50, map_centre[1] - self.HEIGHT_KEY_H//2))
             draw_text(hud_surface, (C.WN_W//2 - MAP_OVERLAY_SIZE//2 - 70, map_centre[1] - self.HEIGHT_KEY_H//2 - 30), 'centre', 'centre', f"Altitude (ft)", (255, 255, 255), 12, self.fonts.monospaced)
 

@@ -39,11 +39,11 @@ PRIMITIVE_CORRESPONDENCE: dict[str, Primitive] = {
     "sphere": Primitive.SPHERE
 }
 
-def match_primitive(p: str) -> Primitive:
-    if p not in PRIMITIVE_CORRESPONDENCE.keys():
-        raise RuntimeError(f"Invalid primitive: '{p}'")
+def match_primitive(s: str) -> Primitive:
+    if s not in PRIMITIVE_CORRESPONDENCE.keys():
+        raise RuntimeError(f"Primitive missing correspondence: '{s}'")
 
-    return PRIMITIVE_CORRESPONDENCE[p]
+    return PRIMITIVE_CORRESPONDENCE[s]
 
 def get_part_colour(colour: Colour) -> tuple[float, float, float]:
     """Calculates the final color of a part based on its base color."""

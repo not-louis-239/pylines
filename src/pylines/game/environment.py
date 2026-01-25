@@ -14,17 +14,20 @@
 
 from __future__ import annotations
 
+from enum import Enum, auto
 from typing import TYPE_CHECKING, Literal
 from dataclasses import dataclass
 
 import numpy as np
 
 from pylines.core.constants import EPSILON, HALF_WORLD_SIZE
-from pylines.core.custom_types import Coord2
+from pylines.core.custom_types import Coord2, Colour
 from pylines.core.utils import map_value
 from pylines.objects.building_parts import BuildingPart, match_primitive
 from pylines.objects.objects import Runway
-from pylines.objects.scenery import Building
+from pylines.objects.buildings import (
+    Building, BuildingDefinition, BuildingMapAppearance, match_building_icon
+)
 
 if TYPE_CHECKING:
     from pylines.core.asset_manager import WorldData
@@ -75,16 +78,24 @@ class Environment:
         building_defs_raw = world_data.building_defs
         building_placements_raw = world_data.building_placements
 
-        self.building_defs: dict[str, list[BuildingPart]] = {
-            name: [
-                BuildingPart(
-                    part["offset"],
-                    match_primitive(part["primitive"]),
-                    tuple(part["dims"]),
-                    tuple(part["colour"]),
-                    part["emissive"]
-                ) for part in part_list['parts']
-            ] for name, part_list in building_defs_raw.items()
+        self.building_defs: dict[str, BuildingDefinition] = {
+            name: BuildingDefinition(
+                parts=[
+                    BuildingPart(
+                        part["offset"],
+                        match_primitive(part["primitive"]),
+                        tuple(part["dims"]),
+                        tuple(part["colour"]),
+                        part["emissive"]
+                    ) for part in info['parts']
+                ],
+                appearance=BuildingMapAppearance(
+                    tuple(info["map_appearance"]["colour"]),
+                    match_building_icon(info["map_appearance"]["icon"]),
+                    tuple(info["map_appearance"]["dims"])
+                )
+            )
+            for name, info in building_defs_raw.items()
         }
 
         try:
@@ -93,7 +104,8 @@ class Environment:
                     placement["pos"][0],
                     placement["pos"][1],
                     placement["pos"][2],
-                    self.building_defs[placement["type"]]
+                    self.building_defs[placement["type"]].parts,
+                    placement["type"]
                 ) for placement in building_placements_raw
             ]
         except KeyError as e:
