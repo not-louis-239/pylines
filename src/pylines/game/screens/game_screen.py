@@ -578,7 +578,6 @@ class GameScreen(State):
                 scaled_tile = pg.transform.scale(tile_surface, (int(tile_size_on_screen) + 1, int(tile_size_on_screen) + 1))
                 map_surface.blit(scaled_tile, dest_rect)
 
-        # Draw runways
         runways: list[Runway] = self.env.runways
         for runway in runways:
             # Convert runway world dimensions to map pixel dimensions, 1 pix min size
@@ -699,6 +698,48 @@ class GameScreen(State):
 
         draw_text(map_surface, (MAP_OVERLAY_SIZE//2 - 100, 55), 'left', 'centre', 'ETA', (100, 255, 255), 25, self.fonts.monospaced)
         draw_text(map_surface, (MAP_OVERLAY_SIZE//2 - 45, 55), 'left', 'centre', eta_text, (255, 255, 255), 25, self.fonts.monospaced)
+
+        # Show grid
+        if self.map_show_advanced_info:
+            GRID_MINOR_COL = (255, 255, 255, 80)
+            GRID_MAJOR_COL = (255, 255, 255, 140)
+            GREEN = (0, 255, 0)
+
+            MINOR_INTERVAL = scale_bar_length_world
+            MAJOR_INTERVAL = 5 * MINOR_INTERVAL
+
+            # Draw grid
+            grid_surface = pg.Surface((MAP_OVERLAY_SIZE, MAP_OVERLAY_SIZE), pg.SRCALPHA)
+
+            def world_to_map(world_x, world_z):
+                screen_x = (world_x - viewport_top_left_x) * (1/self.viewport_zoom)
+                screen_y = (world_z - viewport_top_left_z) * (1/self.viewport_zoom)
+                return screen_x, screen_y
+
+            # Grid overlay bounds
+            start_grid_x = int(viewport_top_left_x // MINOR_INTERVAL) * MINOR_INTERVAL
+            end_grid_x = int((viewport_top_left_x + MAP_OVERLAY_SIZE * self.viewport_zoom) // MINOR_INTERVAL) * MINOR_INTERVAL + MINOR_INTERVAL
+            start_grid_z = int(viewport_top_left_z // MINOR_INTERVAL) * MINOR_INTERVAL
+            end_grid_z = int((viewport_top_left_z + MAP_OVERLAY_SIZE * self.viewport_zoom) // MINOR_INTERVAL) * MINOR_INTERVAL + MINOR_INTERVAL
+
+            # Draw grid
+            for world_x in range(start_grid_x, end_grid_x, MINOR_INTERVAL):
+                p1 = world_to_map(world_x, viewport_top_left_z)
+                p2 = world_to_map(world_x, viewport_top_left_z + MAP_OVERLAY_SIZE * self.viewport_zoom)
+                pg.draw.line(grid_surface, GRID_MAJOR_COL if abs(world_x % MAJOR_INTERVAL) < C.EPSILON else GRID_MINOR_COL, p1, p2, 1)
+
+            for world_z in range(start_grid_z, end_grid_z, MINOR_INTERVAL):
+                p1 = world_to_map(viewport_top_left_x, world_z)
+                p2 = world_to_map(viewport_top_left_x + MAP_OVERLAY_SIZE * self.viewport_zoom, world_z)
+                pg.draw.line(grid_surface, GRID_MAJOR_COL if abs(world_z % MAJOR_INTERVAL) < C.EPSILON else GRID_MINOR_COL, p1, p2, 1)
+
+            # Draw origin
+            origin_map_x, origin_map_y = world_to_map(0, 0)
+            if 0 <= origin_map_x <= MAP_OVERLAY_SIZE and 0 <= origin_map_y <= MAP_OVERLAY_SIZE:
+                pg.draw.circle(grid_surface, GREEN, (origin_map_x, origin_map_y), 5)
+
+            # Blit grid surface onto map surface
+            map_surface.blit(grid_surface, (0, 0))
 
         # Blit the completed map to the main HUD surface
         map_rect = map_surface.get_rect(center=(map_centre))
