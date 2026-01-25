@@ -5,14 +5,14 @@
 Pylines is a lightweight, open-source flight simulator made in Python with Pygame and OpenGL. With over 39,000 km² of terrain to explore, including vast mountain ranges, rivers and small towns, it uses a simplified flight model and intuitive controls to allow users to explore the mechanics of aviation without being overwhelmed.
 
 **Author:** Louis Masarei-Boulton  
-**Version:** 0.10.3 (semantic)
+**Version:** 0.11.0 (semantic)
 
 ## Features
 
 * Dynamic sky, terrain and building lighting, sun and moon.
-* Simplified (loosely) Cessna 172-inspired flight physics model and cockpit GUI.
+* Simplified, (loosely) Cessna 172-inspired flight physics model and cockpit GUI.
 * Runways, landing feedback, crash and damage mechanics.
-* GPS and map viewer for selecting destinations and navigation assistance.
+* GPS and map viewer for selecting destinations and navigation assistance, with optional advanced map info.
 * Glidescope and AGL indicator for landing assistance.
 * Small towns near runways to explore.
 
@@ -71,9 +71,10 @@ Pylines is a lightweight, open-source flight simulator made in Python with Pygam
     * Estimated time until arrival at the selected GPS destination
 18. Runway information shown on map
 19. GPS destination marker
-20. Altitude-to-colour key
+20. Prohibited zones
+    * Prohibited zones are shown on the map as red boxes.
 21. You!
-    * Map icon showing your location.
+    * Map icon showing your current location.
 
 Note: aviation instruments use real-world aviation units, while navigation uses metric units.
 
@@ -93,12 +94,15 @@ Note: aviation instruments use real-world aviation units, while navigation uses 
   * W/S - zoom in/out
   * Arrows - pan map
   * Space - re-centre
+  * H (hold) - show advanced map info
 
 **Meta Controls**
 * R - restart flight
 * P - return to menu
 
 ## World
+
+### Runways and Towns
 
 * `DCM` - Darculus Metropolis
   * Runway Information:
@@ -116,6 +120,28 @@ Note: aviation instruments use real-world aviation units, while navigation uses 
     * Heading: 108°/288°
   * Low to mid altitude flatlands with a cool breeze coming from the east. It also isn't too far off from some of the best beaches in the region. Darculus residents would be jealous.
 
+### Prohibited Zones
+
+Certain regions enforce operational restrictions for safety, wildlife protection, or military activity. Entering these zones will trigger warnings and may affect pilot standing.
+
+* `DCM-MIL1` – Darculus Airbase Restricted Zone
+
+  * Centre Coordinates: (-2,000, -6,500)
+  * Area: 1,800 m × 1,000 m (1.8 km²)
+  * The Darculus military units are always busy with weapons testing and training, and their captains have a strong temper. Best not to get in their way.
+
+* `CRF-NFZ1` – Central Remote Fields Dense Wildlife Zone
+
+  * Centre Coordinates: (6,000, -16,000)
+  * Area: 1,300 m × 3,200 m (4.16 km²)
+  * A fertile, biodiverse strip of land off to the east of the small town in the Central Remote Fields. Local wildlife enthusiasts love it, but pilots don't. Too many birds that could get into the engines.
+
+* `DCM-HAZ1` – Darculus Fog Zone
+
+  * Centre Coordinates: (-5,000, 13,000)
+  * Area: 3,000 m × 3,000 m (9 km²)
+  * Several planes from the Rebased District that passed through this zone have mysteriously disappeared with unknown cause. Since then, pilots in the region deemed that it's safer to just avoid this area entirely.
+
 ## Project Status
 
 **In Development**
@@ -128,7 +154,6 @@ Note: aviation instruments use real-world aviation units, while navigation uses 
 * Aircraft customisation
 * Unit switching
 * Simple flight exercises, guides, notes
-* Prohibited zones
 * Improved sound effects
 * Improved low-speed turn handling
 

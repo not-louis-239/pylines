@@ -74,7 +74,7 @@ class GameScreen(State):
 
         self._frame_count = 0
         self.env = self.game.env
-        self.landing_dialog_box = DialogMessage()  # Must be before Plane otherwise causes error
+        self.dialog_box = DialogMessage()
         self.sound_manager = SoundManager(assets.sounds)
 
         ground_textures = {
@@ -89,7 +89,7 @@ class GameScreen(State):
         self.ocean = Ocean(assets.images.ocean, game.env)
         self.ground = Ground(ground_textures, game.env)
 
-        self.plane = Plane(assets.sounds, self.landing_dialog_box, game.env)
+        self.plane = Plane(assets.sounds, self.dialog_box, game.env)
         self.sky = Sky()
         self.sun = Sun(assets.images.sun)
         self.moon = Moon(assets.images.moon)
@@ -97,8 +97,9 @@ class GameScreen(State):
         self.show_overspeed_warning: bool = False
         self.time_elapsed: int = 0  # milliseconds
 
-        self.stall_channel = pg.mixer.Channel(3)
-        self.overspeed_channel = pg.mixer.Channel(4)
+        self.stall_channel = pg.mixer.Channel(C.SFXChannelID.STALL)
+        self.overspeed_channel = pg.mixer.Channel(C.SFXChannelID.OVERSPEED)
+        self.prohibited_zone_channel = pg.mixer.Channel(C.SFXChannelID.PROHIBITED)
 
         # Font for text rendering
         self.font = pg.font.Font(assets.fonts.monospaced, 36)
@@ -277,33 +278,36 @@ class GameScreen(State):
         self.sound_manager.stop()
         self.overspeed_channel.stop()
         self.sounds.menu_music.fadeout(1_500)
-        self.landing_dialog_box.reset()
+        self.dialog_box.reset()
         self.time_elapsed = 0
 
     def update(self, dt: int):
         self._frame_count += 1
         self.time_elapsed += dt
-        self.landing_dialog_box.update(dt)
+        self.dialog_box.update(dt)
 
         self.sun.update()
         self.moon.update()
 
         if self.plane.crashed:
-            self.landing_dialog_box.reset()
+            self.dialog_box.reset()
             self.stall_channel.stop()
             self.overspeed_channel.stop()
             self.sound_manager.stop()
             return
 
+        # Map update
         if self.map_state == MapState.HIDDEN:
             self.map_up -= (dt/1000) / C.MAP_TOGGLE_ANIMATION_DURATION
         else:
             self.map_up += (dt/1000) / C.MAP_TOGGLE_ANIMATION_DURATION
         self.map_up = clamp(self.map_up, (0, 1))
 
+        # Sound manager and plane
         self.sound_manager.update(self.plane.throttle_frac)
         self.plane.update(dt)
 
+        # Stall warning
         self.show_stall_warning = self.plane.stalled
         if self.show_stall_warning:
             if not self.stall_channel.get_busy():
@@ -311,6 +315,7 @@ class GameScreen(State):
         else:
             self.stall_channel.stop()
 
+        # Overspeed warning
         self.show_overspeed_warning = self.plane.vel.length() > self.plane.model.v_ne  # Both in m/s
         if self.show_overspeed_warning:
             if not self.overspeed_channel.get_busy():
@@ -318,48 +323,30 @@ class GameScreen(State):
         else:
             self.overspeed_channel.stop()
 
-    def _draw_text(self, x: RealNumber, y: RealNumber, text: str,
-                  colour: AColour = (255, 255, 255, 255), bg_colour: AColour | None = None):
-        if bg_colour is None:
-            text_surface = self.font.render(text, True, colour)
+        # Prohibited zone warning
+        def plane_in_prohibited_zone() -> bool:
+            for zone in self.env.prohibited_zones:
+                px, _, pz = self.plane.pos
+                zone_centre_x, zone_centre_z = zone.pos
+                zone_w, zone_h = zone.dims
+
+                zone_min_x = zone_centre_x - zone_w / 2
+                zone_max_x = zone_centre_x + zone_w / 2
+                zone_min_z = zone_centre_z - zone_h / 2
+                zone_max_z = zone_centre_z + zone_h / 2
+
+                if zone_min_x < px < zone_max_x and zone_min_z < pz < zone_max_z:
+                    return True
+
+            return False
+
+        self.show_prohibited_zone_warning = plane_in_prohibited_zone()
+        if self.show_prohibited_zone_warning:
+            if not self.prohibited_zone_channel.get_busy():
+                self.prohibited_zone_channel.play(self.sounds.prohibited_zone_warning, loops=-1)
+            self.dialog_box.set_message("Immediately exit this zone - penalties may apply", (255, 127, 0), 100)
         else:
-            text_surface = self.font.render(text, True, colour, bg_colour)
-        text_surface = pg.transform.flip(text_surface, False, True) # Flip vertically
-        text_data = pg.image.tostring(text_surface, "RGBA", True)
-
-        gl.glMatrixMode(gl.GL_PROJECTION)
-        gl.glPushMatrix()
-        gl.glLoadIdentity()
-        glu.gluOrtho2D(0, C.WN_W, C.WN_H, 0)
-        gl.glMatrixMode(gl.GL_MODELVIEW)
-        gl.glPushMatrix()
-        gl.glLoadIdentity()
-
-        gl.glEnable(gl.GL_TEXTURE_2D)
-        gl.glEnable(gl.GL_BLEND)
-        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
-
-        texid = gl.glGenTextures(1)
-        gl.glBindTexture(gl.GL_TEXTURE_2D, texid)
-        gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGBA, text_surface.get_width(), text_surface.get_height(), 0, gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, text_data)
-        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR)
-        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR)
-
-        gl.glBegin(gl.GL_QUADS)
-        gl.glTexCoord2f(0, 0); gl.glVertex2f(x, y)
-        gl.glTexCoord2f(1, 0); gl.glVertex2f(x + text_surface.get_width(), y)
-        gl.glTexCoord2f(1, 1); gl.glVertex2f(x + text_surface.get_width(), y + text_surface.get_height())
-        gl.glTexCoord2f(0, 1); gl.glVertex2f(x, y + text_surface.get_height())
-        gl.glEnd()
-
-        gl.glDisable(gl.GL_TEXTURE_2D)
-        gl.glDisable(gl.GL_BLEND)
-        gl.glDeleteTextures(1, [texid])
-
-        gl.glPopMatrix()
-        gl.glMatrixMode(gl.GL_PROJECTION)
-        gl.glPopMatrix()
-        gl.glMatrixMode(gl.GL_MODELVIEW)
+            self.prohibited_zone_channel.stop()
 
     def take_input(self, keys: ScancodeWrapper, events: EventList, dt: int) -> None:
         # Meta controls
@@ -578,8 +565,38 @@ class GameScreen(State):
                 scaled_tile = pg.transform.scale(tile_surface, (int(tile_size_on_screen) + 1, int(tile_size_on_screen) + 1))
                 map_surface.blit(scaled_tile, dest_rect)
 
-        runways: list[Runway] = self.env.runways
-        for runway in runways:
+        # Draw prohibited zones
+        for zone in self.env.prohibited_zones:
+            ZONE_FILL_COLOR = (255, 0, 0, 51)
+            ZONE_BORDER_COLOR = (255, 0, 0, 255)
+
+            # Calculate top-left corner in world coordinates
+            zone_top_left_wld = zone.pos[0] - zone.dims[0] / 2, zone.pos[1] - zone.dims[1] / 2
+
+            # Calculate screen position and dimensions
+            screen_pos_x = (zone_top_left_wld[0] - viewport_top_left_x) / self.viewport_zoom
+            screen_pos_z = (zone_top_left_wld[1] - viewport_top_left_z) / self.viewport_zoom
+            screen_w = zone.dims[0] / self.viewport_zoom
+            screen_h = zone.dims[1] / self.viewport_zoom
+
+            zone_rect = pg.Rect(screen_pos_x, screen_pos_z, screen_w, screen_h)
+
+            # Draw filled rectangle (20% opacity)
+            # Create a semi-transparent surface for the fill
+            zone_fill_surface = pg.Surface(zone_rect.size, pg.SRCALPHA)
+            zone_fill_surface.fill(ZONE_FILL_COLOR)
+            map_surface.blit(zone_fill_surface, zone_rect.topleft)
+
+            # Draw border (solid red, 2 pixels wide)
+            pg.draw.rect(map_surface, ZONE_BORDER_COLOR, zone_rect, 2)
+
+            ZONE_TEXT_COLOUR = (255, 210, 210)
+            if self.map_show_advanced_info:
+                text_centre = (screen_pos_x + screen_w / 2, screen_pos_z + screen_h / 2)
+                draw_text(map_surface, text_centre, 'centre', 'centre', zone.code, ZONE_TEXT_COLOUR, 20, self.fonts.monospaced)
+
+        # Draw runways
+        for runway in self.env.runways:
             # Convert runway world dimensions to map pixel dimensions, 1 pix min size
             runway_width_on_map = max(1, int(runway.w / self.viewport_zoom))
             runway_length_on_map = max(1, int(runway.l / self.viewport_zoom))
@@ -622,6 +639,61 @@ class GameScreen(State):
         plane_icon_rotated = pg.transform.rotate(self.images.plane_icon, -self.plane.rot.y)
         map_surface.blit(plane_icon_rotated, icon_rect)
 
+        # Define scale bar size here as the world length is also used in grid rendering
+        SCALE_BAR_LENGTHS = [500, 1_000, 2_000, 5_000, 10_000]
+        MAX_SCALE_BAR_SIZE = 80  # pixels
+        target_size = self.viewport_zoom * MAX_SCALE_BAR_SIZE
+
+        scale_bar_length_world = max([l for l in SCALE_BAR_LENGTHS if l <= target_size], default=SCALE_BAR_LENGTHS[0])
+
+        # Show grid
+        if self.map_show_advanced_info:
+            GRID_MINOR_COL = (255, 255, 255, 80)
+            GRID_MAJOR_COL = (255, 255, 255, 140)
+            GREEN = (0, 255, 0)
+
+            MINOR_INTERVAL = scale_bar_length_world
+            MAJOR_INTERVAL = 5 * MINOR_INTERVAL
+
+            # Draw grid
+            grid_surface = pg.Surface((MAP_OVERLAY_SIZE, MAP_OVERLAY_SIZE), pg.SRCALPHA)
+
+            def world_to_map(world_x, world_z) -> tuple[float, float]:
+                screen_x = (world_x - viewport_top_left_x) * (1/self.viewport_zoom)
+                screen_y = (world_z - viewport_top_left_z) * (1/self.viewport_zoom)
+                return screen_x, screen_y
+
+            # Grid overlay bounds
+            start_grid_x = int(viewport_top_left_x // MINOR_INTERVAL) * MINOR_INTERVAL
+            end_grid_x = int((viewport_top_left_x + MAP_OVERLAY_SIZE * self.viewport_zoom) // MINOR_INTERVAL) * MINOR_INTERVAL + MINOR_INTERVAL
+            start_grid_z = int(viewport_top_left_z // MINOR_INTERVAL) * MINOR_INTERVAL
+            end_grid_z = int((viewport_top_left_z + MAP_OVERLAY_SIZE * self.viewport_zoom) // MINOR_INTERVAL) * MINOR_INTERVAL + MINOR_INTERVAL
+
+            # Draw grid
+            for world_x in range(start_grid_x, end_grid_x, MINOR_INTERVAL):
+                p1 = world_to_map(world_x, viewport_top_left_z)
+                p2 = world_to_map(world_x, viewport_top_left_z + MAP_OVERLAY_SIZE * self.viewport_zoom)
+                pg.draw.line(grid_surface, GRID_MAJOR_COL if abs(world_x % MAJOR_INTERVAL) < C.EPSILON else GRID_MINOR_COL, p1, p2, 1)
+
+                if abs(world_x % MAJOR_INTERVAL) <= C.EPSILON:
+                    draw_text(grid_surface, (p1[0], MAP_OVERLAY_SIZE - 15), 'centre', 'centre', f"{int(world_x):,.0f}", (255, 255, 255), 18, self.fonts.monospaced)
+
+            for world_z in range(start_grid_z, end_grid_z, MINOR_INTERVAL):
+                p1 = world_to_map(viewport_top_left_x, world_z)
+                p2 = world_to_map(viewport_top_left_x + MAP_OVERLAY_SIZE * self.viewport_zoom, world_z)
+                pg.draw.line(grid_surface, GRID_MAJOR_COL if abs(world_z % MAJOR_INTERVAL) < C.EPSILON else GRID_MINOR_COL, p1, p2, 1)
+
+                if abs(world_z % MAJOR_INTERVAL) <= C.EPSILON:
+                    draw_text(grid_surface, (5, p1[1]), 'left', 'centre', f"{int(world_z):,.0f}", (255, 255, 255), 18, self.fonts.monospaced)
+
+            # Draw origin
+            origin_map_x, origin_map_y = world_to_map(0, 0)
+            if 0 <= origin_map_x <= MAP_OVERLAY_SIZE and 0 <= origin_map_y <= MAP_OVERLAY_SIZE:
+                pg.draw.circle(grid_surface, GREEN, (origin_map_x, origin_map_y), 5)
+
+            # Blit grid surface onto map surface
+            map_surface.blit(grid_surface, (0, 0))
+
         # North indicator - draw an arrow pointing upwards
         north_indicator_size = 20
         north_indicator_offset_x = 12
@@ -639,12 +711,7 @@ class GameScreen(State):
         pg.draw.polygon(map_surface, cols.WHITE, arrow_points)
         draw_text(map_surface, (ni_center_x, ni_center_y - north_indicator_offset_y), 'centre', 'top', "N", cols.WHITE, 25, self.fonts.monospaced)
 
-        # Scale bar
-        SCALE_BAR_LENGTHS = [500, 1_000, 2_000, 5_000, 10_000]
-        MAX_SCALE_BAR_SIZE = 80  # pixels
-        target_size = self.viewport_zoom * MAX_SCALE_BAR_SIZE
-
-        scale_bar_length_world = max([l for l in SCALE_BAR_LENGTHS if l <= target_size], default=SCALE_BAR_LENGTHS[0])
+        # Draw scale bar
         scale_bar_offset = (12, 80)
 
         scale_bar_length_pix = scale_bar_length_world / self.viewport_zoom
@@ -698,54 +765,6 @@ class GameScreen(State):
 
         draw_text(map_surface, (MAP_OVERLAY_SIZE//2 - 100, 55), 'left', 'centre', 'ETA', (100, 255, 255), 25, self.fonts.monospaced)
         draw_text(map_surface, (MAP_OVERLAY_SIZE//2 - 45, 55), 'left', 'centre', eta_text, (255, 255, 255), 25, self.fonts.monospaced)
-
-        # Show grid
-        if self.map_show_advanced_info:
-            GRID_MINOR_COL = (255, 255, 255, 80)
-            GRID_MAJOR_COL = (255, 255, 255, 140)
-            GREEN = (0, 255, 0)
-
-            MINOR_INTERVAL = scale_bar_length_world
-            MAJOR_INTERVAL = 5 * MINOR_INTERVAL
-
-            # Draw grid
-            grid_surface = pg.Surface((MAP_OVERLAY_SIZE, MAP_OVERLAY_SIZE), pg.SRCALPHA)
-
-            def world_to_map(world_x, world_z) -> tuple[float, float]:
-                screen_x = (world_x - viewport_top_left_x) * (1/self.viewport_zoom)
-                screen_y = (world_z - viewport_top_left_z) * (1/self.viewport_zoom)
-                return screen_x, screen_y
-
-            # Grid overlay bounds
-            start_grid_x = int(viewport_top_left_x // MINOR_INTERVAL) * MINOR_INTERVAL
-            end_grid_x = int((viewport_top_left_x + MAP_OVERLAY_SIZE * self.viewport_zoom) // MINOR_INTERVAL) * MINOR_INTERVAL + MINOR_INTERVAL
-            start_grid_z = int(viewport_top_left_z // MINOR_INTERVAL) * MINOR_INTERVAL
-            end_grid_z = int((viewport_top_left_z + MAP_OVERLAY_SIZE * self.viewport_zoom) // MINOR_INTERVAL) * MINOR_INTERVAL + MINOR_INTERVAL
-
-            # Draw grid
-            for world_x in range(start_grid_x, end_grid_x, MINOR_INTERVAL):
-                p1 = world_to_map(world_x, viewport_top_left_z)
-                p2 = world_to_map(world_x, viewport_top_left_z + MAP_OVERLAY_SIZE * self.viewport_zoom)
-                pg.draw.line(grid_surface, GRID_MAJOR_COL if abs(world_x % MAJOR_INTERVAL) < C.EPSILON else GRID_MINOR_COL, p1, p2, 1)
-
-                if abs(world_x % MAJOR_INTERVAL) <= C.EPSILON:
-                    draw_text(grid_surface, (p1[0], MAP_OVERLAY_SIZE - 15), 'centre', 'centre', f"{int(world_x):,.0f}", (255, 255, 255), 18, self.fonts.monospaced)
-
-            for world_z in range(start_grid_z, end_grid_z, MINOR_INTERVAL):
-                p1 = world_to_map(viewport_top_left_x, world_z)
-                p2 = world_to_map(viewport_top_left_x + MAP_OVERLAY_SIZE * self.viewport_zoom, world_z)
-                pg.draw.line(grid_surface, GRID_MAJOR_COL if abs(world_z % MAJOR_INTERVAL) < C.EPSILON else GRID_MINOR_COL, p1, p2, 1)
-
-                if abs(world_z % MAJOR_INTERVAL) <= C.EPSILON:
-                    draw_text(grid_surface, (5, p1[1]), 'left', 'centre', f"{int(world_z):,.0f}", (255, 255, 255), 18, self.fonts.monospaced)
-
-            # Draw origin
-            origin_map_x, origin_map_y = world_to_map(0, 0)
-            if 0 <= origin_map_x <= MAP_OVERLAY_SIZE and 0 <= origin_map_y <= MAP_OVERLAY_SIZE:
-                pg.draw.circle(grid_surface, GREEN, (origin_map_x, origin_map_y), 5)
-
-            # Blit grid surface onto map surface
-            map_surface.blit(grid_surface, (0, 0))
 
         # Blit the completed map to the main HUD surface
         map_rect = map_surface.get_rect(center=(map_centre))
@@ -1149,14 +1168,21 @@ class GameScreen(State):
         if self.map_up:
             self.draw_map()
 
-        # Show landing feedback
-        if self.landing_dialog_box.active_time:
+        # Show dialog box
+        if self.dialog_box.active_time:
+            text_size = 30
+
+            text_length = len(self.dialog_box.msg)
+            text_length_pix = text_length * text_size/2
+
+            buffer = text_size * 0.7
+
             draw_transparent_rect(
-                self.hud_surface, (C.WN_W//2-300, C.WN_H*0.15), (600, C.WN_H*0.1), (0, 0, 0, 180), 2
+                self.hud_surface, (C.WN_W//2 - text_length_pix/2 - buffer, C.WN_H*0.2 - text_size*1.2), (text_length_pix + 2*buffer, text_size*2.4), (0, 0, 0, 180), 2
             )
             draw_text(
                 self.hud_surface, (C.WN_W//2, C.WN_H*0.2), 'centre', 'centre',
-                self.landing_dialog_box.msg, self.landing_dialog_box.colour, 30, self.fonts.monospaced
+                self.dialog_box.msg, self.dialog_box.colour, text_size, self.fonts.monospaced
             )
 
         def show_crash_reason(reason: CrashReason) -> None:

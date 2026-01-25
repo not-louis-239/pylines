@@ -1,0 +1,22 @@
+{
+    "prohibited_zones": [
+        {
+            "code": "DCM-MIL1",
+            "name": "Darculus Airbase Restricted Zone",
+            "pos": [-2000, -6500],
+            "dims": [1800, 1000]
+        },
+        {
+            "code": "CRF-NFZ1",
+            "name": "Central Remote Fields Dense Wildlife Zone",
+            "pos": [6000, -16000],
+            "dims": [1300, 3200]
+        },
+        {
+            "code": "DCM-HAZ1",
+            "name": "Darculus Fog Zone",
+            "pos": [-5000, 13000],
+            "dims": [3000, 3000]
+        }
+    ]
+}

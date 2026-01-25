@@ -103,6 +103,7 @@ class Sounds(AssetBank):
     def __init__(self) -> None:
         # UI
         self.click: Sound = self._load("click.ogg")
+
         # Engine
         self.engine_idle_loop: Sound = self._load("engine_idle_loop.ogg")
         self.engine_20p_loop: Sound = self._load("engine_20p_loop.ogg")
@@ -110,13 +111,18 @@ class Sounds(AssetBank):
         self.engine_60p_loop: Sound = self._load("engine_60p_loop.ogg")
         self.engine_80p_loop: Sound = self._load("engine_80p_loop.ogg")
         self.engine_full_loop: Sound = self._load("engine_full_loop.ogg")
+
         # Landing sounds
         self.good_landing: Sound = self._load("good_landing.ogg")
         self.hard_landing: Sound = self._load("hard_landing.ogg")
         self.crash: Sound = self._load("crash.ogg")
+
         # Warnings
         self.overspeed: Sound = self._load("overspeed.ogg")
         self.stall_warning: Sound = self._load("stall_warning.ogg")
+        self.prohibited_zone_warning: Sound = self._load("prohibited_zone_warning.ogg")
+
+        # Menu music
         self.menu_music: Sound = self._load("menu_music.ogg")
 
         self.augment()
@@ -149,12 +155,17 @@ class WorldData(AssetBank):
         with open(paths.WORLD_DIR / "runways.json") as f:
             self.runway_data: list = json.load(f)["runways"]
 
-        # Building data
+        # Building definitions
         with open(paths.WORLD_DIR / "building_defs.json") as f:
             self.building_defs: dict = json.load(f)["building_defs"]
 
+        # Building placements
         with open(paths.WORLD_DIR / "building_placements.json") as f:
             self.building_placements: dict = json.load(f)["buildings"]
+
+        # Prohibited zones
+        with open(paths.WORLD_DIR / "prohibited_zones.json") as f:
+            self.prohibited_zones: dict = json.load(f)["prohibited_zones"]
 
     def _load(self, name: str) -> Path:
         return paths.WORLD_DIR / name
