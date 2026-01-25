@@ -5,7 +5,7 @@
 Pylines is a lightweight, open-source flight simulator made in Python with Pygame and OpenGL. With over 39,000 km² of terrain to explore, including vast mountain ranges, rivers and small towns, it uses a simplified flight model and intuitive controls to allow users to explore the mechanics of aviation without being overwhelmed.
 
 **Author:** Louis Masarei-Boulton  
-**Version:** 0.10.0 (semantic)
+**Version:** 0.10.1 (semantic)
 
 ## Features
 

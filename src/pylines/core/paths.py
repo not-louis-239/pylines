@@ -24,3 +24,5 @@ SOUNDS_DIR: Path = ASSETS_DIR / "sounds"
 WORLD_DIR: Path = ASSETS_DIR / "world"
 
 SHADERS_DIR: Path = ROOT_DIR / "src" / "pylines" / "shaders"
+
+ASSETS_CACHE_DIR: Path = ASSETS_DIR / "cache"

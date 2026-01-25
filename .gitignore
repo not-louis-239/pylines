@@ -56,5 +56,8 @@ dist/
 *.obj
 *.o
 
+# Game-generated caches
+assets/cache/
+
 # Python helpers
 scripts/

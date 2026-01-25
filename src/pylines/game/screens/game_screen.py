@@ -191,14 +191,22 @@ class GameScreen(State):
         NUM_TILES = math.ceil(C.HALF_WORLD_SIZE*2 / (C.METRES_PER_TILE))
         self.map_tiles: list[list[pg.Surface]] = []
 
-        print(f"Generating map tiles...")
+        # Make cache directory
+        cache_dir = paths.ASSETS_CACHE_DIR / "map_tiles"
+        cache_dir.mkdir(parents=True, exist_ok=True)
 
         # Loop over tiles
         for tile_z in range(NUM_TILES):
-            print(f"Making map tile row {tile_z+1} / {NUM_TILES}...")
-
             tile_row: list[pg.Surface] = []
             for tile_x in range(NUM_TILES):
+                tile_filename = f"tile_{tile_x}_{tile_z}.png"
+                tile_cache_path = cache_dir / tile_filename
+
+                if tile_cache_path.exists():
+                    current_tile = pg.image.load(str(tile_cache_path)).convert()
+                    tile_row.append(current_tile)
+                    continue
+
                 tile_start_x = -C.HALF_WORLD_SIZE + C.METRES_PER_TILE * tile_x
                 tile_start_z = -C.HALF_WORLD_SIZE + C.METRES_PER_TILE * tile_z
 
@@ -216,6 +224,7 @@ class GameScreen(State):
                         ) + 4_000]
 
                 del pix_array  # Unlock the Surface so it can be used
+                pg.image.save(current_tile, str(tile_cache_path))
 
                 tile_row.append(current_tile)
             self.map_tiles.append(tile_row)
