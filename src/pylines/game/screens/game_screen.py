@@ -348,49 +348,6 @@ class GameScreen(State):
         else:
             self.prohibited_zone_channel.stop()
 
-    def _draw_text(self, x: RealNumber, y: RealNumber, text: str,
-                  colour: AColour = (255, 255, 255, 255), bg_colour: AColour | None = None):
-        if bg_colour is None:
-            text_surface = self.font.render(text, True, colour)
-        else:
-            text_surface = self.font.render(text, True, colour, bg_colour)
-        text_surface = pg.transform.flip(text_surface, False, True) # Flip vertically
-        text_data = pg.image.tostring(text_surface, "RGBA", True)
-
-        gl.glMatrixMode(gl.GL_PROJECTION)
-        gl.glPushMatrix()
-        gl.glLoadIdentity()
-        glu.gluOrtho2D(0, C.WN_W, C.WN_H, 0)
-        gl.glMatrixMode(gl.GL_MODELVIEW)
-        gl.glPushMatrix()
-        gl.glLoadIdentity()
-
-        gl.glEnable(gl.GL_TEXTURE_2D)
-        gl.glEnable(gl.GL_BLEND)
-        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
-
-        texid = gl.glGenTextures(1)
-        gl.glBindTexture(gl.GL_TEXTURE_2D, texid)
-        gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGBA, text_surface.get_width(), text_surface.get_height(), 0, gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, text_data)
-        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR)
-        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR)
-
-        gl.glBegin(gl.GL_QUADS)
-        gl.glTexCoord2f(0, 0); gl.glVertex2f(x, y)
-        gl.glTexCoord2f(1, 0); gl.glVertex2f(x + text_surface.get_width(), y)
-        gl.glTexCoord2f(1, 1); gl.glVertex2f(x + text_surface.get_width(), y + text_surface.get_height())
-        gl.glTexCoord2f(0, 1); gl.glVertex2f(x, y + text_surface.get_height())
-        gl.glEnd()
-
-        gl.glDisable(gl.GL_TEXTURE_2D)
-        gl.glDisable(gl.GL_BLEND)
-        gl.glDeleteTextures(1, [texid])
-
-        gl.glPopMatrix()
-        gl.glMatrixMode(gl.GL_PROJECTION)
-        gl.glPopMatrix()
-        gl.glMatrixMode(gl.GL_MODELVIEW)
-
     def take_input(self, keys: ScancodeWrapper, events: EventList, dt: int) -> None:
         # Meta controls
         if self.pressed(keys, pg.K_p):
