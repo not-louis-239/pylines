@@ -149,12 +149,17 @@ class WorldData(AssetBank):
         with open(paths.WORLD_DIR / "runways.json") as f:
             self.runway_data: list = json.load(f)["runways"]
 
-        # Building data
+        # Building definitions
         with open(paths.WORLD_DIR / "building_defs.json") as f:
             self.building_defs: dict = json.load(f)["building_defs"]
 
+        # Building placements
         with open(paths.WORLD_DIR / "building_placements.json") as f:
             self.building_placements: dict = json.load(f)["buildings"]
+
+        # Prohibited zones
+        with open(paths.WORLD_DIR / "prohibited_zones.json") as f:
+            self.prohibited_zones: dict = json.load(f)["prohibited_zones"]
 
     def _load(self, name: str) -> Path:
         return paths.WORLD_DIR / name

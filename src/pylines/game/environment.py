@@ -15,21 +15,27 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal
+from dataclasses import dataclass
 
 import numpy as np
-from OpenGL import GL as gl
 
-import pylines.core.paths as paths
 from pylines.core.constants import EPSILON, HALF_WORLD_SIZE
+from pylines.core.custom_types import Coord2
 from pylines.core.utils import map_value
 from pylines.objects.building_parts import BuildingPart, match_primitive
 from pylines.objects.objects import Runway
 from pylines.objects.scenery import Building
-from pylines.shaders.shader_manager import load_shader_script
 
 if TYPE_CHECKING:
     from pylines.core.asset_manager import WorldData
 
+
+@dataclass
+class ProhibitedZoneData:
+    code: str
+    name: str
+    pos: Coord2
+    dims: Coord2
 
 class Environment:
     """A class to own and store terrain, structure and building
@@ -93,6 +99,18 @@ class Environment:
         except KeyError as e:
             offender = str(e).strip("'")
             raise RuntimeError(f"Building definition missing for type: '{offender}'")
+
+        # Prohibited zones
+        prohibited_zones_raw = world_data.prohibited_zones
+
+        self.prohibited_zones = [
+            ProhibitedZoneData(
+                zone["code"],
+                zone["name"],
+                tuple(zone["pos"]),
+                tuple(zone["dims"])
+            ) for zone in prohibited_zones_raw
+        ]
 
     def _world_to_map(self, x: float, z: float) -> tuple[float, float]:
         # Must map to 0 - w or height or else causes camera to go underground
