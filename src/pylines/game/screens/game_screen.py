@@ -27,13 +27,12 @@ import pygame as pg
 import numpy as np
 from typing import Callable
 from OpenGL import GL as gl
-from OpenGL import GLU as glu
 
 import pylines.core.colours as cols
 import pylines.core.constants as C
 import pylines.core.paths as paths
 from pylines.shaders.shader_manager import load_shader_script
-from pylines.core.custom_types import AColour, Colour, EventList, RealNumber
+from pylines.core.custom_types import Colour, EventList, RealNumber
 from pylines.core.time_manager import fetch_hour, sky_colour_from_hour, brightness_from_hour
 import pylines.core.units as units
 from pylines.core.utils import clamp, draw_needle, draw_text, draw_transparent_rect
@@ -41,7 +40,7 @@ from pylines.game.engine_sound import SoundManager
 from pylines.game.states import State
 from pylines.objects.objects import CrashReason, Plane, Runway
 from pylines.objects.scenery import Ground, Moon, Ocean, Sky, Sun
-from pylines.objects.buildings import draw_building_icon
+from pylines.objects.buildings import draw_building_icon, BuildingMapIconType, BuildingDefinition
 
 if TYPE_CHECKING:
     from pylines.core.custom_types import ScancodeWrapper, Surface
@@ -236,8 +235,8 @@ class GameScreen(State):
         self.viewport_auto_panning = True
 
         # Height key setup
-        self.HEIGHT_KEY_W = 30
-        self.HEIGHT_KEY_H = 200
+        self.HEIGHT_KEY_W = 25
+        self.HEIGHT_KEY_H = 280
         self.height_key: pg.Surface = pg.Surface((self.HEIGHT_KEY_W, self.HEIGHT_KEY_H))
 
         for i in range(self.HEIGHT_KEY_H):
@@ -586,8 +585,53 @@ class GameScreen(State):
 
         # Show buliding legend if advanced map info is enabled
         if self.map_show_advanced_info:
-            for def_ in self.env.building_defs:
-                ... # TODO: show building legend to the right of map
+            draw_transparent_rect(
+                hud_surface,
+                (map_centre[0] + MAP_OVERLAY_SIZE/2 + 20, map_centre[1] - 180),
+                (200, 360), border_thickness=2, border_colour=MAP_BORDER_COLOUR
+            )
+
+            draw_text(hud_surface, (map_centre[0] + MAP_OVERLAY_SIZE/2 + 120, map_centre[1] - 155), 'centre', 'centre', f"Buildings", (255, 255, 255), 20, self.fonts.monospaced)
+
+            screen_y = map_centre[1] - 120
+            items = list(self.env.building_defs.items())
+
+            def icon_height(info: BuildingDefinition):
+                icon = info.appearance.icon
+                dims = info.appearance.dims
+                if icon == BuildingMapIconType.POINT:
+                    return 0
+                if icon == BuildingMapIconType.CIRCLE:
+                    return cast(tuple[int], dims)[0] * 2   # radius → diameter
+                if icon == BuildingMapIconType.SQUARE:
+                    return cast(tuple[int, int], dims)[1]
+
+                return 0  # fallback
+
+            for idx, (name, def_) in enumerate(items):
+                # draw icon + label
+                draw_text(
+                    hud_surface,
+                    (map_centre[0] + MAP_OVERLAY_SIZE/2 + 90, screen_y),
+                    'left', 'centre',
+                    f"{name}",
+                    (255, 255, 255), 15,
+                    self.fonts.monospaced
+                )
+                draw_building_icon(
+                    hud_surface,
+                    map_centre[0] + MAP_OVERLAY_SIZE/2 + 55,
+                    screen_y,
+                    def_.appearance
+                )
+
+                # Compute spacing for next line
+                curr_h = icon_height(def_)
+                next_h = icon_height(items[idx + 1][1]) if idx + 1 < len(items) else 0
+
+                # Apply line spacing
+                line_h = max(15, 15 + curr_h//2 + next_h//2)
+                screen_y += line_h
 
         # Draw prohibited zones
         for zone in self.env.prohibited_zones:
@@ -798,17 +842,17 @@ class GameScreen(State):
         if self.map_show_advanced_info:
             draw_transparent_rect(
                 hud_surface,
-                (C.WN_W//2 - MAP_OVERLAY_SIZE//2 - 120, map_centre[1] - 150),
-                (110, 270), border_thickness=2, border_colour=MAP_BORDER_COLOUR
+                (C.WN_W//2 - MAP_OVERLAY_SIZE//2 - 200, map_centre[1] - 180),
+                (180, 360), border_thickness=2, border_colour=MAP_BORDER_COLOUR
             )
 
-            hud_surface.blit(self.height_key, (C.WN_W//2 - MAP_OVERLAY_SIZE//2 - 50, map_centre[1] - self.HEIGHT_KEY_H//2))
-            draw_text(hud_surface, (C.WN_W//2 - MAP_OVERLAY_SIZE//2 - 70, map_centre[1] - self.HEIGHT_KEY_H//2 - 30), 'centre', 'centre', f"Altitude (ft)", (255, 255, 255), 12, self.fonts.monospaced)
+            hud_surface.blit(self.height_key, (C.WN_W//2 - MAP_OVERLAY_SIZE//2 - 95, map_centre[1] - 125))
+            draw_text(hud_surface, (C.WN_W//2 - MAP_OVERLAY_SIZE//2 - 110, map_centre[1] - 155), 'centre', 'centre', f"Altitude (ft)", (255, 255, 255), 20, self.fonts.monospaced)
 
             # Show heightmap labels in feet
             for h in range(-12_000, 18_001, 2_000):
-                text_y = map_centre[1] + self.HEIGHT_KEY_H//2 - (self.HEIGHT_KEY_H * (h+12_000)/30_000)
-                draw_text(hud_surface, (C.WN_W//2 - MAP_OVERLAY_SIZE//2 - 55, text_y), 'right', 'centre', f"{h:,.0f}", (255, 255, 255), 12, self.fonts.monospaced)
+                text_y = map_centre[1] - 125 + (self.HEIGHT_KEY_H * (1 - ((h + 12_000) / 30_000)))
+                draw_text(hud_surface, (C.WN_W//2 - MAP_OVERLAY_SIZE//2 - 100, text_y), 'right', 'centre', f"{h:,.0f}", (255, 255, 255), 15, self.fonts.monospaced)
 
     def draw_hud(self):
         pitch, yaw, roll = self.plane.rot

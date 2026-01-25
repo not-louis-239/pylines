@@ -58,7 +58,7 @@ def match_building_icon(s: str) -> BuildingMapIconType:
 
     return BUILDING_ICON_CORRESPONDENCE[s]
 
-def draw_building_icon(surface: Surface, x: RealNumber, y: RealNumber, appearance: BuildingMapAppearance, viewport_zoom: RealNumber):
+def draw_building_icon(surface: Surface, x: RealNumber, y: RealNumber, appearance: BuildingMapAppearance, viewport_zoom: RealNumber = 1):
     if appearance.icon == BuildingMapIconType.CIRCLE:
         if len(appearance.dims) != 1:
             raise ValueError(f"Invalid dimensions: {appearance.dims} for icon type {appearance.icon}. Expected (radius,).")
