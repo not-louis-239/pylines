@@ -28,8 +28,9 @@ import pygame as pg
 from PIL import Image
 from pygame.transform import scale, scale_by
 
-from pylines.core.custom_types import Sound, Surface
 import pylines.core.paths as paths
+from pylines.core.custom_types import Sound, Surface
+
 
 class AssetBank:
     """Base class to store assets. Objects of this type should be

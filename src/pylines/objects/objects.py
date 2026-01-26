@@ -18,18 +18,20 @@ from __future__ import annotations
 from enum import Enum
 from math import asin, cos, degrees, sin
 from math import radians as rad
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 import pygame as pg
-from OpenGL import GL as gl
 
 import pylines.core.constants as C
 from pylines.core.asset_manager import Sounds
-from pylines.core.custom_types import Surface, Coord3
-from pylines.core.time_manager import brightness_from_hour, fetch_hour
+from pylines.core.collision_checkers import (
+    point_in_cuboid,
+    point_in_cylinder,
+    point_in_sphere,
+)
+from pylines.core.custom_types import Surface
 from pylines.core.utils import clamp, point_in_aabb
 from pylines.objects.building_parts import Primitive
-from pylines.core.collision_checkers import point_in_cuboid, point_in_cylinder, point_in_sphere
 
 if TYPE_CHECKING:
     from pylines.game.environment import Environment
@@ -37,7 +39,7 @@ if TYPE_CHECKING:
 
 class CrashReason(Enum):
     TERRAIN = "terrain"
-    BUILDING = "building"
+    OBSTACLE = "building"
     OCEAN = "ocean"
     RUNWAY = "runway"  # reserved for fatal improper landing on runway, e.g. excessive sink rate, bad attitude
 
@@ -255,7 +257,7 @@ class Plane(Entity):
                     )
 
                 if collided:
-                    self.crash(lethal=True, reason=CrashReason.BUILDING)
+                    self.crash(lethal=True, reason=CrashReason.OBSTACLE)
                     return
 
         # Sideways movement - convert roll to yaw
@@ -437,42 +439,3 @@ class Plane(Entity):
             self.on_ground = False
 
         self.damage_level = clamp(self.damage_level, (0, 1))
-
-# XXX: The Runway class should be moved to scenery.py as it
-#      is a scenery object for all practical purposes.
-#      It is not a living entity.
-class Runway(Entity):
-    def __init__(self, name: str, x: float, y: float, z: float, w: float, l: float, heading: float):
-        super().__init__(x, y, z)
-        self.name = name
-        self.w = w
-        self.l = l
-        self.heading = heading
-
-    def draw(self):
-        brightness = brightness_from_hour(fetch_hour())
-        gl.glPushMatrix()
-
-        # Enable polygon offset to "pull" the runway towards the camera
-        gl.glEnable(gl.GL_POLYGON_OFFSET_FILL)
-        gl.glPolygonOffset(-1.0, -1.0)
-
-        # Translate and rotate to runway's position and heading
-        gl.glTranslatef(self.pos.x, 0.1 + self.pos.y, self.pos.z)
-        gl.glRotatef(-self.heading, 0, 1, 0)  # rotation flipped in OpenGL
-        gl.glColor3f(0.2*brightness, 0.2*brightness, 0.2*brightness)
-
-        half_width = self.w / 2
-        half_length = self.l / 2
-
-        gl.glBegin(gl.GL_QUADS)
-        gl.glVertex3f(-half_width, 0, -half_length)
-        gl.glVertex3f(half_width, 0, -half_length)
-        gl.glVertex3f(half_width, 0, half_length)
-        gl.glVertex3f(-half_width, 0, half_length)
-        gl.glEnd()
-
-        # Disable polygon offset
-        gl.glDisable(gl.GL_POLYGON_OFFSET_FILL)
-
-        gl.glPopMatrix()

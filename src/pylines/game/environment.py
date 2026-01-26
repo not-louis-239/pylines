@@ -14,23 +14,25 @@
 
 from __future__ import annotations
 
-from enum import Enum, auto
-from typing import TYPE_CHECKING, Literal
 from dataclasses import dataclass
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 
 from pylines.core.constants import EPSILON, HALF_WORLD_SIZE
-from pylines.core.custom_types import Coord2, Colour
+from pylines.core.custom_types import Coord2
 from pylines.core.utils import map_value
 from pylines.objects.building_parts import BuildingPart, match_primitive
-from pylines.objects.objects import Runway
 from pylines.objects.buildings import (
-    Building, BuildingDefinition, BuildingMapAppearance, match_building_icon
+    Building,
+    BuildingDefinition,
+    BuildingMapAppearance,
+    match_building_icon,
 )
+from pylines.objects.scenery.runway import Runway
 
 if TYPE_CHECKING:
-    from pylines.core.asset_manager import WorldData
+    from pylines.core.asset_manager import WorldData, Fonts
 
 
 @dataclass
@@ -47,6 +49,7 @@ class Environment:
     def __init__(
             self,
             world_data: WorldData,
+            fonts: Fonts,
             diagonal_split: Literal['AD', 'BC'] = 'AD',
         ) -> None:
 
@@ -62,6 +65,7 @@ class Environment:
         self.h, self.w = self.height_array.shape
 
         # Convert runway JSON to runway objects
+        self.fonts = fonts  # Used for runway text
         self.runways: list[Runway] = [
             Runway(
                 runway["name"],
@@ -71,6 +75,7 @@ class Environment:
                 runway["width"],
                 runway["length"],
                 runway["heading"],
+                self.fonts
             ) for runway in world_data.runway_data
         ]
 

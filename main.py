@@ -44,6 +44,7 @@ def main():
 
     wn = pg.display.set_mode((WN_W, WN_H), pg.DOUBLEBUF | pg.OPENGL)
     pg.display.set_caption("Pylines")
+    pg.mixer.set_num_channels(32)
 
     # Initialize OpenGL
     gl.glViewport(0, 0, WN_W, WN_H)

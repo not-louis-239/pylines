@@ -63,7 +63,7 @@ class TitleScreen(State):
         rect = self.images.logo.get_rect(center=(C.WN_W//2, C.WN_H*0.15
                                                  ))
         self.display_surface.blit(self.images.logo, rect)
-        draw_text(self.display_surface, (C.WN_W//2, C.WN_H*0.8), 'centre', 'centre', "Press Space for briefing.", (255, 255, 255), 30, self.fonts.monospaced)
+        draw_text(self.display_surface, (C.WN_W//2, C.WN_H*0.8), 'centre', 'centre', "Press Space to start", (255, 255, 255), 30, self.fonts.monospaced)
         draw_text(self.display_surface, (C.WN_W//2, 0.95*C.WN_H), 'centre', 'centre', "Copyright (C) 2025-2026 Louis Masarei-Boulton.", (127, 127, 127), 15, self.fonts.monospaced)
 
         draw_text(self.display_surface, (C.WN_W//2, C.WN_H*0.3), 'centre', 'centre', "Flight Notes", (0, 192, 255), 40, self.fonts.monospaced)
