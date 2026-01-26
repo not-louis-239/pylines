@@ -37,7 +37,7 @@ if TYPE_CHECKING:
 
 class CrashReason(Enum):
     TERRAIN = "terrain"
-    BUILDING = "building"
+    OBSTACLE = "building"
     OCEAN = "ocean"
     RUNWAY = "runway"  # reserved for fatal improper landing on runway, e.g. excessive sink rate, bad attitude
 
@@ -255,7 +255,7 @@ class Plane(Entity):
                     )
 
                 if collided:
-                    self.crash(lethal=True, reason=CrashReason.BUILDING)
+                    self.crash(lethal=True, reason=CrashReason.OBSTACLE)
                     return
 
         # Sideways movement - convert roll to yaw

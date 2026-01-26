@@ -192,7 +192,7 @@ class Ground(LargeSceneryObject):
 
         # Load and compile the shader program
         self.shader = load_shader_script(
-            str(paths.SHADERS_DIR / "terrain.vert"),  # TODO: test shader loading func for Path compatibility
+            str(paths.SHADERS_DIR / "terrain.vert"),
             str(paths.SHADERS_DIR / "terrain.frag")
         )
         self.position_loc = gl.glGetAttribLocation(self.shader, "position")
