@@ -34,7 +34,8 @@ def draw_text(surface: Surface, pos: tuple[float, float],
               horiz_align: Literal['left', 'centre', 'right'],
               vert_align: Literal['top', 'centre', 'bottom'],
               text: str, colour: Colour | AColour,
-              font_size: int, font_family: pg.font.Font | Path | str | None = None):
+              font_size: int, font_family: pg.font.Font | Path | str | None = None,
+              rotation: float = 0):
     if isinstance(font_family, pg.font.Font):
         font_obj = font_family
     elif isinstance(font_family, (str, Path)):
@@ -43,6 +44,8 @@ def draw_text(surface: Surface, pos: tuple[float, float],
         font_obj = pg.font.Font(None, font_size)
 
     img = font_obj.render(text, True, colour)
+    if rotation != 0:
+        img = pg.transform.rotate(img, rotation)
     r = img.get_rect()
 
     # Horizontal

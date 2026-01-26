@@ -32,7 +32,7 @@ from pylines.objects.buildings import (
 from pylines.objects.scenery.runway import Runway
 
 if TYPE_CHECKING:
-    from pylines.core.asset_manager import WorldData
+    from pylines.core.asset_manager import WorldData, Fonts
 
 
 @dataclass
@@ -49,6 +49,7 @@ class Environment:
     def __init__(
             self,
             world_data: WorldData,
+            fonts: Fonts,
             diagonal_split: Literal['AD', 'BC'] = 'AD',
         ) -> None:
 
@@ -64,6 +65,7 @@ class Environment:
         self.h, self.w = self.height_array.shape
 
         # Convert runway JSON to runway objects
+        self.fonts = fonts  # Used for runway text
         self.runways: list[Runway] = [
             Runway(
                 runway["name"],
@@ -73,6 +75,7 @@ class Environment:
                 runway["width"],
                 runway["length"],
                 runway["heading"],
+                self.fonts
             ) for runway in world_data.runway_data
         ]
 
