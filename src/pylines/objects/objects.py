@@ -18,16 +18,18 @@ from __future__ import annotations
 from enum import Enum
 from math import asin, cos, degrees, sin
 from math import radians as rad
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import pygame as pg
 from OpenGL import GL as gl
 
 import pylines.core.constants as C
 from pylines.core.asset_manager import Sounds
-from pylines.core.custom_types import Surface
+from pylines.core.custom_types import Surface, Coord3
 from pylines.core.time_manager import brightness_from_hour, fetch_hour
 from pylines.core.utils import clamp, point_in_aabb
+from pylines.objects.building_parts import Primitive
+from pylines.core.collision_checkers import point_in_cuboid, point_in_cylinder, point_in_sphere
 
 if TYPE_CHECKING:
     from pylines.game.environment import Environment
@@ -78,6 +80,22 @@ class Plane(Entity):
     def stalled(self) -> bool:
         return self.aoa > self.model.stall_angle
 
+    @property
+    def over_runway(self) -> bool:
+        x, _, z = self.pos
+
+        for runway in self.env.runways:
+            rx, _, rz = runway.pos
+            rl, rw = runway.l, runway.w
+
+            # FIXME: don't ask me why I have to swap the length and width around
+
+            inside, _ = point_in_aabb(x, z, rx, rz, rw, rl, runway.heading)
+            if inside:
+                return True
+
+        return False
+
     def reset(self) -> None:
         STARTING_POS = (200, -3_000)
         STARTING_YAW = 130
@@ -101,21 +119,23 @@ class Plane(Entity):
         self.crash_reason: CrashReason | None = None
         self.damage_level = 0
 
-    @property
-    def over_runway(self) -> bool:
-        x, _, z = self.pos
+    def good_landing(self):
+        self.sounds.good_landing.play()
+        self.dialog_box.set_message("Good landing!", (0, 255, 0))
 
-        for runway in self.env.runways:
-            rx, _, rz = runway.pos
-            rl, rw = runway.l, runway.w
+    def hard_landing(self, *, suppress_dialog: bool = False):
+        self.sounds.hard_landing.play()
+        if not suppress_dialog: self.dialog_box.set_message("Hard landing...", (255, 200, 0))
 
-            # FIXME: don't ask me why I have to swap the length and width around
+    def crash(self, *, reason: CrashReason, suppress_dialog: bool = False, damage_taken: float = 0.0, lethal: bool = False):
+        self.damage_level = 1 if lethal else min(self.damage_level + damage_taken, 1)
 
-            inside, _ = point_in_aabb(x, z, rx, rz, rw, rl, runway.heading)
-            if inside:
-                return True
-
-        return False
+        if self.damage_level >= 1:
+            self.sounds.crash.play()
+            self.crash_reason = reason
+        else:
+            self.sounds.hard_landing.play()
+            if not suppress_dialog: self.dialog_box.set_message("Hard landing. Damage sustained.", (255, 80, 0))
 
     def process_landing(self):
         if self.crashed:
@@ -125,26 +145,6 @@ class Plane(Entity):
         self.sounds.good_landing.stop()
         self.sounds.hard_landing.stop()
         self.sounds.crash.stop()
-
-        def good_landing():
-            self.sounds.good_landing.play()
-            self.dialog_box.set_message("Good landing!", (0, 255, 0))
-
-        def hard_landing(*, suppress_dialog: bool = False):
-            self.sounds.hard_landing.play()
-            if not suppress_dialog: self.dialog_box.set_message("Hard landing...", (255, 200, 0))
-
-        # TODO: Collision with buildings should be auto-lethal
-
-        def crash(*, suppress_dialog: bool = False, damage_taken: float = 0.0, lethal: bool = False, reason: CrashReason):
-            self.damage_level = 1 if lethal else min(self.damage_level + damage_taken, 1)
-
-            if self.damage_level >= 1:
-                self.sounds.crash.play()
-                self.crash_reason = reason
-            else:
-                self.sounds.hard_landing.play()
-                if not suppress_dialog: self.dialog_box.set_message("Hard landing. Damage sustained.", (255, 80, 0))
 
         # Check landing for quality
         pitch, yaw, roll = self.rot
@@ -193,20 +193,71 @@ class Plane(Entity):
 
         # Outcome mapping
         if vs > 12 or water_crash:
-            crash(lethal=True, reason=crash_reason)
+            self.crash(lethal=True, reason=crash_reason)
             return
 
         if impact_severity <= MAX_SAFE_IMPACT:
             if self.over_runway:
-                good_landing()
+                self.good_landing()
             else:
-                hard_landing(suppress_dialog=True)
+                self.hard_landing(suppress_dialog=True)
         elif impact_severity <= MAX_OK_IMPACT:
-            hard_landing(suppress_dialog=(not self.over_runway))
+            self.hard_landing(suppress_dialog=(not self.over_runway))
         else:
-            crash(damage_taken=impact_severity-MAX_OK_IMPACT, reason=crash_reason)
+            self.crash(damage_taken=impact_severity-MAX_OK_IMPACT, reason=crash_reason)
 
     def update(self, dt: int):
+        COLLISION_CULL_RADIUS = 125  # skip building parts too far away to potentially collide
+
+        for building in self.env.buildings:
+            COLLISION_BUFFER = 4.0  # account for height gaps, prevent phasing
+            # This acts as a "hitbox" for the plane, even though it affects
+            # only building dimensions
+
+            for part in building.parts:
+                # Calculate the part's absolute world position
+                part_world_pos_tuple = (
+                    building.pos.x + part.offset.x,
+                    building.pos.y + part.offset.y,
+                    building.pos.z + part.offset.z
+                )
+
+                part_world_pos_vec = pg.Vector3(part_world_pos_tuple)
+                if (part_world_pos_vec - self.pos).length() > COLLISION_CULL_RADIUS:
+                    continue  # skip over far away building parts for performance
+
+                collided = False
+                if part.primitive == Primitive.CUBOID:
+                    l, h, w = part.dims
+                    cuboid_center = part_world_pos_tuple
+                    cuboid_dims = (l, h, w)
+
+                    collided = point_in_cuboid(
+                        (self.pos.x, self.pos.y, self.pos.z),
+                        cuboid_center,
+                        (cuboid_dims[0] + COLLISION_BUFFER*2, cuboid_dims[1] + COLLISION_BUFFER*2, cuboid_dims[2] + COLLISION_BUFFER*2)
+                    )
+                elif part.primitive == Primitive.CYLINDER:
+                    r, h = part.dims
+                    cylinder_center = part_world_pos_tuple
+                    collided = point_in_cylinder(
+                        (self.pos.x, self.pos.y, self.pos.z),
+                        cylinder_center,
+                        r + COLLISION_BUFFER, h + COLLISION_BUFFER*2
+                    )
+                elif part.primitive == Primitive.SPHERE:
+                    r = part.dims[0]
+                    sphere_center = part_world_pos_tuple
+                    collided = point_in_sphere(
+                        (self.pos.x, self.pos.y, self.pos.z),
+                        sphere_center,
+                        r + COLLISION_BUFFER
+                    )
+
+                if collided:
+                    self.crash(lethal=True, reason=CrashReason.BUILDING)
+                    return
+
         # Sideways movement - convert roll to yaw
         CONVERSION_FACTOR = 30
         self.rot.y += sin(rad(self.rot.z)) * clamp(self.vel.length()/30.87, (0, 1)) * CONVERSION_FACTOR * dt/1000
