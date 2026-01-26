@@ -64,12 +64,6 @@ class LargeSceneryObject(SceneryObject):
 
     def __init__(self, x, y, z):
         super().__init__(x, y, z)
-        self.vertices: list[Coord3] | np.ndarray = [
-            (-C.HALF_WORLD_SIZE, 0, -C.HALF_WORLD_SIZE),
-            (-C.HALF_WORLD_SIZE, 0, C.HALF_WORLD_SIZE),
-            (C.HALF_WORLD_SIZE, 0, -C.HALF_WORLD_SIZE),
-            (C.HALF_WORLD_SIZE, 0, C.HALF_WORLD_SIZE)
-        ]
 
     def draw(self):
         raise NotImplementedError
@@ -488,6 +482,42 @@ class Ocean(LargeSceneryObject):
         gl.glDepthMask(gl.GL_TRUE) # Re-enable depth writing
         if not was_blend_enabled:
             gl.glDisable(gl.GL_BLEND)
+
+        gl.glPopMatrix()
+
+class Runway(LargeSceneryObject):
+    def __init__(self, name: str, x: float, y: float, z: float, w: float, l: float, heading: float):
+        super().__init__(x, y, z)
+        self.name = name
+        self.w = w
+        self.l = l
+        self.heading = heading
+
+    def draw(self):
+        brightness = brightness_from_hour(fetch_hour())
+        gl.glPushMatrix()
+
+        # Enable polygon offset to "pull" the runway towards the camera
+        gl.glEnable(gl.GL_POLYGON_OFFSET_FILL)
+        gl.glPolygonOffset(-1.0, -1.0)
+
+        # Translate and rotate to runway's position and heading
+        gl.glTranslatef(self.pos.x, 0.1 + self.pos.y, self.pos.z)
+        gl.glRotatef(-self.heading, 0, 1, 0)  # rotation flipped in OpenGL
+        gl.glColor3f(0.2*brightness, 0.2*brightness, 0.2*brightness)
+
+        half_width = self.w / 2
+        half_length = self.l / 2
+
+        gl.glBegin(gl.GL_QUADS)
+        gl.glVertex3f(-half_width, 0, -half_length)
+        gl.glVertex3f(half_width, 0, -half_length)
+        gl.glVertex3f(half_width, 0, half_length)
+        gl.glVertex3f(-half_width, 0, half_length)
+        gl.glEnd()
+
+        # Disable polygon offset
+        gl.glDisable(gl.GL_POLYGON_OFFSET_FILL)
 
         gl.glPopMatrix()
 

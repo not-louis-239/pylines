@@ -24,7 +24,7 @@ from pylines.core.constants import EPSILON, HALF_WORLD_SIZE
 from pylines.core.custom_types import Coord2, Colour
 from pylines.core.utils import map_value
 from pylines.objects.building_parts import BuildingPart, match_primitive
-from pylines.objects.objects import Runway
+from pylines.objects.scenery import Runway
 from pylines.objects.buildings import (
     Building, BuildingDefinition, BuildingMapAppearance, match_building_icon
 )
