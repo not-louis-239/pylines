@@ -38,7 +38,10 @@ import pylines.core.units as units
 from pylines.core.utils import clamp, draw_needle, draw_text, draw_transparent_rect
 from pylines.game.states import State
 from pylines.objects.objects import CrashReason, Plane
-from pylines.objects.scenery import Ground, Moon, Ocean, Sky, Sun, Runway
+from pylines.objects.scenery.ground import Ground
+from pylines.objects.scenery.sky import Sky, Sun, Moon
+from pylines.objects.scenery.ocean import Ocean
+from pylines.objects.scenery.runway import Runway
 from pylines.objects.buildings import draw_building_icon, BuildingMapIconType, BuildingDefinition
 
 if TYPE_CHECKING:
