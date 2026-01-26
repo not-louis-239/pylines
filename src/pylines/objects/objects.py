@@ -18,14 +18,14 @@ from __future__ import annotations
 from enum import Enum
 from math import asin, cos, degrees, sin
 from math import radians as rad
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import pygame as pg
 from OpenGL import GL as gl
 
 import pylines.core.constants as C
 from pylines.core.asset_manager import Sounds
-from pylines.core.custom_types import Surface
+from pylines.core.custom_types import Surface, Coord3
 from pylines.core.time_manager import brightness_from_hour, fetch_hour
 from pylines.core.utils import clamp, point_in_aabb
 from pylines.objects.building_parts import Primitive
@@ -207,7 +207,13 @@ class Plane(Entity):
             self.crash(damage_taken=impact_severity-MAX_OK_IMPACT, reason=crash_reason)
 
     def update(self, dt: int):
+        COLLISION_CULL_RADIUS = 125  # skip building parts too far away to potentially collide
+
         for building in self.env.buildings:
+            COLLISION_BUFFER = 4.0  # account for height gaps, prevent phasing
+            # This acts as a "hitbox" for the plane, even though it affects
+            # only building dimensions
+
             for part in building.parts:
                 # Calculate the part's absolute world position
                 part_world_pos_tuple = (
@@ -216,31 +222,36 @@ class Plane(Entity):
                     building.pos.z + part.offset.z
                 )
 
+                part_world_pos_vec = pg.Vector3(part_world_pos_tuple)
+                if (part_world_pos_vec - self.pos).length() > COLLISION_CULL_RADIUS:
+                    continue  # skip over far away building parts for performance
+
                 collided = False
                 if part.primitive == Primitive.CUBOID:
                     l, h, w = part.dims
-                    cuboid_center = (part_world_pos_tuple[0], part_world_pos_tuple[1], part_world_pos_tuple[2])
+                    cuboid_center = part_world_pos_tuple
                     cuboid_dims = (l, h, w)
+
                     collided = point_in_cuboid(
-                        (self.pos.x, self.pos.y + C.EPSILON, self.pos.z),
+                        (self.pos.x, self.pos.y, self.pos.z),
                         cuboid_center,
-                        cuboid_dims
+                        (cuboid_dims[0] + COLLISION_BUFFER*2, cuboid_dims[1] + COLLISION_BUFFER*2, cuboid_dims[2] + COLLISION_BUFFER*2)
                     )
                 elif part.primitive == Primitive.CYLINDER:
                     r, h = part.dims
                     cylinder_center = part_world_pos_tuple
                     collided = point_in_cylinder(
-                        (self.pos.x, self.pos.y + C.EPSILON, self.pos.z),
+                        (self.pos.x, self.pos.y, self.pos.z),
                         cylinder_center,
-                        r, h
+                        r + COLLISION_BUFFER, h + COLLISION_BUFFER*2
                     )
                 elif part.primitive == Primitive.SPHERE:
                     r = part.dims[0]
                     sphere_center = part_world_pos_tuple
                     collided = point_in_sphere(
-                        (self.pos.x, self.pos.y + C.EPSILON, self.pos.z),
+                        (self.pos.x, self.pos.y, self.pos.z),
                         sphere_center,
-                        r
+                        r + COLLISION_BUFFER
                     )
 
                 if collided:
