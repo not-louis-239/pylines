@@ -28,6 +28,8 @@ from pylines.core.asset_manager import Sounds
 from pylines.core.custom_types import Surface
 from pylines.core.time_manager import brightness_from_hour, fetch_hour
 from pylines.core.utils import clamp, point_in_aabb
+from pylines.objects.building_parts import Primitive
+from pylines.core.collision_checkers import point_in_cuboid, point_in_cylinder, point_in_sphere
 
 if TYPE_CHECKING:
     from pylines.game.environment import Environment
@@ -205,7 +207,45 @@ class Plane(Entity):
             self.crash(damage_taken=impact_severity-MAX_OK_IMPACT, reason=crash_reason)
 
     def update(self, dt: int):
-        # TODO: Collision with buildings should be auto-lethal
+        for building in self.env.buildings:
+            for part in building.parts:
+                # Calculate the part's absolute world position
+                part_world_pos_tuple = (
+                    building.pos.x + part.offset.x,
+                    building.pos.y + part.offset.y,
+                    building.pos.z + part.offset.z
+                )
+
+                collided = False
+                if part.primitive == Primitive.CUBOID:
+                    l, h, w = part.dims
+                    cuboid_center = (part_world_pos_tuple[0], part_world_pos_tuple[1], part_world_pos_tuple[2])
+                    cuboid_dims = (l, h, w)
+                    collided = point_in_cuboid(
+                        (self.pos.x, self.pos.y + C.EPSILON, self.pos.z),
+                        cuboid_center,
+                        cuboid_dims
+                    )
+                elif part.primitive == Primitive.CYLINDER:
+                    r, h = part.dims
+                    cylinder_center = part_world_pos_tuple
+                    collided = point_in_cylinder(
+                        (self.pos.x, self.pos.y + C.EPSILON, self.pos.z),
+                        cylinder_center,
+                        r, h
+                    )
+                elif part.primitive == Primitive.SPHERE:
+                    r = part.dims[0]
+                    sphere_center = part_world_pos_tuple
+                    collided = point_in_sphere(
+                        (self.pos.x, self.pos.y + C.EPSILON, self.pos.z),
+                        sphere_center,
+                        r
+                    )
+
+                if collided:
+                    self.crash(lethal=True, reason=CrashReason.BUILDING)
+                    return
 
         # Sideways movement - convert roll to yaw
         CONVERSION_FACTOR = 30
