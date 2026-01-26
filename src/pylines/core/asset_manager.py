@@ -28,7 +28,7 @@ import pygame as pg
 from PIL import Image
 from pygame.transform import scale, scale_by
 
-from pylines.core.custom_types import Sound
+from pylines.core.custom_types import Sound, Surface
 import pylines.core.paths as paths
 
 class AssetBank:
@@ -75,7 +75,7 @@ class Images(AssetBank):
 
         self.logo = self._load("logo.png")
 
-        self.damage_overlays: tuple = (
+        self.damage_overlays: tuple[Surface, ...] = (
             self._load("damage_1.png"),
             self._load("damage_2.png"),
             self._load("damage_3.png"),
@@ -105,12 +105,9 @@ class Sounds(AssetBank):
         self.click: Sound = self._load("click.ogg")
 
         # Engine
-        self.engine_idle_loop: Sound = self._load("engine_idle_loop.ogg")
-        self.engine_20p_loop: Sound = self._load("engine_20p_loop.ogg")
-        self.engine_40p_loop: Sound = self._load("engine_40p_loop.ogg")
-        self.engine_60p_loop: Sound = self._load("engine_60p_loop.ogg")
-        self.engine_80p_loop: Sound = self._load("engine_80p_loop.ogg")
-        self.engine_full_loop: Sound = self._load("engine_full_loop.ogg")
+        self.engine_loop_idle: Sound = self._load("engine_loop_idle.ogg")
+        self.engine_loop_active: Sound = self._load("engine_loop_active.ogg")
+        self.wind: Sound = self._load("wind.ogg")
 
         # Landing sounds
         self.good_landing: Sound = self._load("good_landing.ogg")
@@ -128,7 +125,7 @@ class Sounds(AssetBank):
         self.augment()
 
     def augment(self):
-        self.good_landing.set_volume(10)
+        pass
 
     def _load(self, name: str) -> pg.mixer.Sound:
         return pg.mixer.Sound(paths.SOUNDS_DIR / name)

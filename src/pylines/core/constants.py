@@ -48,13 +48,14 @@ class SFXChannelID(IntEnum):
     MUSIC = 0
 
     # Engine
-    ENGINE1 = 1
-    ENGINE2 = 2
+    ENGINE_IDLE = 1
+    ENGINE_ACTIVE = 2
+    WIND = 3
 
     # Warnings
-    STALL = 3
-    OVERSPEED = 4
-    PROHIBITED = 5
+    STALL = 4
+    OVERSPEED = 5
+    PROHIBITED = 6
 
 # Visuals, tick updates and window size
 FPS = 60
