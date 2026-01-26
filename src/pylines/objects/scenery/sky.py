@@ -14,13 +14,17 @@
 
 
 import math
-from math import sin, cos
-import pylines.core.constants as C
-from .bases import LargeSceneryObject, CelestialObject
+from math import cos, sin
+
 import OpenGL.GL as gl
 import OpenGL.GLU as glu
 import pygame as pg
+
+import pylines.core.constants as C
 from pylines.core.time_manager import fetch_hour
+
+from .bases import CelestialObject, LargeSceneryObject
+
 
 class Sky(LargeSceneryObject):
     def __init__(self) -> None:

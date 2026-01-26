@@ -19,8 +19,8 @@ from typing import TYPE_CHECKING
 
 import pygame as pg
 
-from pylines.core.constants import SFXChannelID
 from pylines.core.asset_manager import Assets, WorldData
+from pylines.core.constants import SFXChannelID
 from pylines.core.data_manager import load_data, save_data
 from pylines.game.environment import Environment
 from pylines.game.screens.game_screen import GameScreen

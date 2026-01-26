@@ -19,13 +19,12 @@ contains the ingredients to make buildings
 and generate their vertex data for batched rendering.
 """
 
-from enum import Enum, auto
 import math
-import numpy as np
+from enum import Enum, auto
+
 import pygame as pg
 
 from pylines.core.custom_types import Colour, Coord3
-from pylines.core.time_manager import brightness_from_hour, fetch_hour
 
 
 class Primitive(Enum):

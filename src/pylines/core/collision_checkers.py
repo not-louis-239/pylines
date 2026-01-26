@@ -14,6 +14,7 @@
 
 from pylines.core.custom_types import Coord3, RealNumber
 
+
 def point_in_cuboid(point: Coord3, cuboid_centre: Coord3, cuboid_dims: Coord3) -> bool:
     x, y, z = point
     cx, cy, cz = cuboid_centre

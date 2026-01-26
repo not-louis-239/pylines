@@ -12,11 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .bases import LargeSceneryObject
 import OpenGL.GL as gl
-import OpenGL.GLU as glu
 import pygame as pg
+
 from pylines.core.time_manager import brightness_from_hour, fetch_hour
+
+from .bases import LargeSceneryObject
+
 
 class Runway(LargeSceneryObject):
     def __init__(self, name: str, x: float, y: float, z: float, w: float, l: float, heading: float):

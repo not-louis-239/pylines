@@ -14,18 +14,20 @@
 
 from __future__ import annotations
 
+import ctypes
 from typing import TYPE_CHECKING
-from .bases import LargeSceneryObject
+
+import numpy as np
 import OpenGL.GL as gl
-import OpenGL.GLU as glu
+import pygame as pg
+
+import pylines.core.constants as C
 import pylines.core.paths as paths
 from pylines.core.custom_types import Surface
-from pylines.shaders.shader_manager import load_shader_script
-import numpy as np
-import pygame as pg
-import pylines.core.constants as C
-import ctypes
 from pylines.core.time_manager import brightness_from_hour, fetch_hour
+from pylines.shaders.shader_manager import load_shader_script
+
+from .bases import LargeSceneryObject
 
 if TYPE_CHECKING:
     from pylines.game.environment import Environment

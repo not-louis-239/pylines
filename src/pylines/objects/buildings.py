@@ -13,15 +13,16 @@
 # limitations under the License.
 
 
-from typing import TYPE_CHECKING
-from enum import Enum, auto
 from dataclasses import dataclass
+from enum import Enum, auto
+from typing import TYPE_CHECKING
 
 import pygame as pg
 
-from .building_parts import generate_building_part_vertices
-from pylines.objects.scenery.bases import SmallSceneryObject
 from pylines.core.custom_types import Colour, RealNumber, Surface
+from pylines.objects.scenery.bases import SmallSceneryObject
+
+from .building_parts import generate_building_part_vertices
 
 if TYPE_CHECKING:
     from .building_parts import BuildingPart

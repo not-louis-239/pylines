@@ -20,29 +20,36 @@ import ctypes
 import math
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, cast
-
 from enum import Enum
-import pygame as pg
+from typing import TYPE_CHECKING, Callable, cast
+
 import numpy as np
-from typing import Callable
+import pygame as pg
 from OpenGL import GL as gl
 
 import pylines.core.colours as cols
 import pylines.core.constants as C
 import pylines.core.paths as paths
-from pylines.shaders.shader_manager import load_shader_script
-from pylines.core.custom_types import Colour, EventList, RealNumber
-from pylines.core.time_manager import fetch_hour, sky_colour_from_hour, brightness_from_hour
 import pylines.core.units as units
+from pylines.core.custom_types import Colour, EventList, RealNumber
+from pylines.core.time_manager import (
+    brightness_from_hour,
+    fetch_hour,
+    sky_colour_from_hour,
+)
 from pylines.core.utils import clamp, draw_needle, draw_text, draw_transparent_rect
 from pylines.game.states import State
+from pylines.objects.buildings import (
+    BuildingDefinition,
+    BuildingMapIconType,
+    draw_building_icon,
+)
 from pylines.objects.objects import CrashReason, Plane
 from pylines.objects.scenery.ground import Ground
-from pylines.objects.scenery.sky import Sky, Sun, Moon
 from pylines.objects.scenery.ocean import Ocean
 from pylines.objects.scenery.runway import Runway
-from pylines.objects.buildings import draw_building_icon, BuildingMapIconType, BuildingDefinition
+from pylines.objects.scenery.sky import Moon, Sky, Sun
+from pylines.shaders.shader_manager import load_shader_script
 
 if TYPE_CHECKING:
     from pylines.core.custom_types import ScancodeWrapper, Surface
@@ -622,7 +629,7 @@ class GameScreen(State):
                 (200, 360), border_thickness=2, border_colour=MAP_BORDER_COLOUR
             )
 
-            draw_text(hud_surface, (map_centre[0] + MAP_OVERLAY_SIZE/2 + 120, map_centre[1] - 155), 'centre', 'centre', f"Buildings", (255, 255, 255), 20, self.fonts.monospaced)
+            draw_text(hud_surface, (map_centre[0] + MAP_OVERLAY_SIZE/2 + 120, map_centre[1] - 155), 'centre', 'centre', "Buildings", (255, 255, 255), 20, self.fonts.monospaced)
 
             screen_y = map_centre[1] - 120
             items = list(self.env.building_defs.items())
@@ -878,7 +885,7 @@ class GameScreen(State):
             )
 
             hud_surface.blit(self.height_key, (C.WN_W//2 - MAP_OVERLAY_SIZE//2 - 95, map_centre[1] - 125))
-            draw_text(hud_surface, (C.WN_W//2 - MAP_OVERLAY_SIZE//2 - 110, map_centre[1] - 155), 'centre', 'centre', f"Altitude (ft)", (255, 255, 255), 20, self.fonts.monospaced)
+            draw_text(hud_surface, (C.WN_W//2 - MAP_OVERLAY_SIZE//2 - 110, map_centre[1] - 155), 'centre', 'centre', "Altitude (ft)", (255, 255, 255), 20, self.fonts.monospaced)
 
             # Show heightmap labels in feet
             for h in range(-12_000, 18_001, 2_000):

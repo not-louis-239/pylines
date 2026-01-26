@@ -12,13 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pylines.objects.objects import Entity
-from pylines.objects.building_parts import BuildingPart
-
 import OpenGL.GL as gl
-from pylines.core.custom_types import Surface
-import pylines.core.constants as C
 import pygame as pg
+
+import pylines.core.constants as C
+from pylines.core.custom_types import Surface
+from pylines.objects.building_parts import BuildingPart
+from pylines.objects.objects import Entity
+
 
 class SceneryObject(Entity):
     """Base class for all scenery objects. Visual or structural

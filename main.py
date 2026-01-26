@@ -24,7 +24,14 @@ from OpenGL import GLU as glu
 # Add src directory to Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), 'src')))
 
-from pylines.core.constants import FPS, INNER_RENDER_LIMIT, OUTER_RENDER_LIMIT, TPS, WN_H, WN_W
+from pylines.core.constants import (
+    FPS,
+    INNER_RENDER_LIMIT,
+    OUTER_RENDER_LIMIT,
+    TPS,
+    WN_H,
+    WN_W,
+)
 from pylines.game.game import Game
 
 

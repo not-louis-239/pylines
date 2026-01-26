@@ -12,17 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .bases import LargeSceneryObject
 import ctypes
+
 import numpy as np
 import OpenGL.GL as gl
-import pylines.core.constants as C
-from pylines.shaders.shader_manager import load_shader_script
-from pylines.core.custom_types import Surface
-from pylines.game.environment import Environment
 import pygame as pg
-from pylines.core.time_manager import fetch_hour, brightness_from_hour
+
+import pylines.core.constants as C
 import pylines.core.paths as paths
+from pylines.core.custom_types import Surface
+from pylines.core.time_manager import brightness_from_hour, fetch_hour
+from pylines.game.environment import Environment
+from pylines.shaders.shader_manager import load_shader_script
+
+from .bases import LargeSceneryObject
+
 
 class Ground(LargeSceneryObject):
     def __init__(self, textures: dict[str, Surface], env: Environment) -> None:

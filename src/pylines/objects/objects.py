@@ -18,18 +18,20 @@ from __future__ import annotations
 from enum import Enum
 from math import asin, cos, degrees, sin
 from math import radians as rad
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 import pygame as pg
-from OpenGL import GL as gl
 
 import pylines.core.constants as C
 from pylines.core.asset_manager import Sounds
-from pylines.core.custom_types import Surface, Coord3
-from pylines.core.time_manager import brightness_from_hour, fetch_hour
+from pylines.core.collision_checkers import (
+    point_in_cuboid,
+    point_in_cylinder,
+    point_in_sphere,
+)
+from pylines.core.custom_types import Surface
 from pylines.core.utils import clamp, point_in_aabb
 from pylines.objects.building_parts import Primitive
-from pylines.core.collision_checkers import point_in_cuboid, point_in_cylinder, point_in_sphere
 
 if TYPE_CHECKING:
     from pylines.game.environment import Environment
