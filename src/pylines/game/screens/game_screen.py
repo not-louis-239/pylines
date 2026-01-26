@@ -1385,11 +1385,11 @@ class GameScreen(State):
         self.sun.draw()
         self.moon.draw()
 
+        self.ground.draw()
+        self.ocean.draw()
+
         for runway in self.env.runways:
             runway.draw()
 
         self.draw_buildings()
-
-        self.ground.draw()
-        self.ocean.draw()
         self.draw_hud()
