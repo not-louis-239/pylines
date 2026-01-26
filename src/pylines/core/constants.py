@@ -48,7 +48,7 @@ class SFXChannelID(IntEnum):
     MUSIC = 0
 
     # Engine
-    ENGINE_IDLE = 1
+    ENGINE_AMBIENT = 1
     ENGINE_ACTIVE = 2
     WIND = 3
 

@@ -36,7 +36,6 @@ from pylines.core.custom_types import Colour, EventList, RealNumber
 from pylines.core.time_manager import fetch_hour, sky_colour_from_hour, brightness_from_hour
 import pylines.core.units as units
 from pylines.core.utils import clamp, draw_needle, draw_text, draw_transparent_rect
-from pylines.game.engine_sound import SoundManager
 from pylines.game.states import State
 from pylines.objects.objects import CrashReason, Plane, Runway
 from pylines.objects.scenery import Ground, Moon, Ocean, Sky, Sun
@@ -75,7 +74,6 @@ class GameScreen(State):
         self._frame_count = 0
         self.env = self.game.env
         self.dialog_box = DialogMessage()
-        self.sound_manager = SoundManager(assets.sounds)
 
         ground_textures = {
             "sand_texture": assets.images.sand,
@@ -96,6 +94,10 @@ class GameScreen(State):
         self.show_stall_warning: bool = False
         self.show_overspeed_warning: bool = False
         self.time_elapsed: int = 0  # milliseconds
+
+        self.engine_ambient_channel = pg.mixer.Channel(C.SFXChannelID.ENGINE_AMBIENT)
+        self.engine_active_channel = pg.mixer.Channel(C.SFXChannelID.ENGINE_ACTIVE)
+        self.wind_channel = pg.mixer.Channel(C.SFXChannelID.WIND)
 
         self.stall_channel = pg.mixer.Channel(C.SFXChannelID.STALL)
         self.overspeed_channel = pg.mixer.Channel(C.SFXChannelID.OVERSPEED)
@@ -275,8 +277,14 @@ class GameScreen(State):
 
     def reset(self) -> None:
         self.plane.reset()
-        self.sound_manager.stop()
+
+        self.wind_channel.stop()
+        self.engine_active_channel.stop()
+        self.engine_ambient_channel.stop()
+
+        self.stall_channel.stop()
         self.overspeed_channel.stop()
+
         self.sounds.menu_music.fadeout(1_500)
         self.dialog_box.reset()
         self.time_elapsed = 0
@@ -293,7 +301,11 @@ class GameScreen(State):
             self.dialog_box.reset()
             self.stall_channel.stop()
             self.overspeed_channel.stop()
-            self.sound_manager.stop()
+
+            self.wind_channel.stop()
+            self.engine_active_channel.stop()
+            self.engine_ambient_channel.stop()
+
             return
 
         # Map update
@@ -303,8 +315,6 @@ class GameScreen(State):
             self.map_up += (dt/1000) / C.MAP_TOGGLE_ANIMATION_DURATION
         self.map_up = clamp(self.map_up, (0, 1))
 
-        # Sound manager and plane
-        self.sound_manager.update(self.plane.throttle_frac)
         self.plane.update(dt)
 
         # Stall warning
@@ -322,6 +332,20 @@ class GameScreen(State):
                 self.overspeed_channel.play(self.sounds.overspeed, loops=-1)
         else:
             self.overspeed_channel.stop()
+
+        # Update engine and wind sounds
+        if not self.wind_channel.get_busy():
+            self.wind_channel.play(self.sounds.wind, loops=-1)
+        if not self.engine_ambient_channel.get_busy():
+            self.engine_ambient_channel.play(self.sounds.engine_loop_ambient, loops=-1)
+        if not self.engine_active_channel.get_busy():
+            self.engine_active_channel.play(self.sounds.engine_loop_active, loops=-1)
+
+        wind_sound_strength = (self.plane.vel.length() - 61.73) / 25.72  # start wind at 120 kn, full at 170
+        self.wind_channel.set_volume(clamp(wind_sound_strength, (0, 1)))
+
+        throttle_sound_strength = self.plane.throttle_frac ** 1.8
+        self.engine_active_channel.set_volume(throttle_sound_strength)
 
         # Prohibited zone warning
         def plane_in_prohibited_zone() -> bool:
@@ -353,7 +377,11 @@ class GameScreen(State):
         if self.pressed(keys, pg.K_p):
             self.sounds.menu_music.stop()
             self.game.enter_state(self.game.States.TITLE)
-            self.sound_manager.stop()
+
+            self.wind_channel.stop()
+            self.engine_active_channel.stop()
+            self.engine_ambient_channel.stop()
+
         if self.pressed(keys, pg.K_r):  # r to reset
             self.plane.reset()
             self.gps_runway_index = 1  # reset gps waypoint

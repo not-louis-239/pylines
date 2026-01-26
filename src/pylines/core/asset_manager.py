@@ -105,7 +105,7 @@ class Sounds(AssetBank):
         self.click: Sound = self._load("click.ogg")
 
         # Engine
-        self.engine_loop_idle: Sound = self._load("engine_loop_idle.ogg")
+        self.engine_loop_ambient: Sound = self._load("engine_loop_ambient.ogg")
         self.engine_loop_active: Sound = self._load("engine_loop_active.ogg")
         self.wind: Sound = self._load("wind.ogg")
 
