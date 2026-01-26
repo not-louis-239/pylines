@@ -95,13 +95,13 @@ class GameScreen(State):
         self.show_overspeed_warning: bool = False
         self.time_elapsed: int = 0  # milliseconds
 
-        self.engine_ambient_channel = pg.mixer.Channel(C.SFXChannelID.ENGINE_AMBIENT)
-        self.engine_active_channel = pg.mixer.Channel(C.SFXChannelID.ENGINE_ACTIVE)
-        self.wind_channel = pg.mixer.Channel(C.SFXChannelID.WIND)
+        self.channel_engine_ambient = pg.mixer.Channel(C.SFXChannelID.ENGINE_AMBIENT)
+        self.channel_engine_active = pg.mixer.Channel(C.SFXChannelID.ENGINE_ACTIVE)
+        self.channel_wind = pg.mixer.Channel(C.SFXChannelID.WIND)
 
-        self.stall_channel = pg.mixer.Channel(C.SFXChannelID.STALL)
-        self.overspeed_channel = pg.mixer.Channel(C.SFXChannelID.OVERSPEED)
-        self.prohibited_zone_channel = pg.mixer.Channel(C.SFXChannelID.PROHIBITED)
+        self.channel_stall = pg.mixer.Channel(C.SFXChannelID.STALL)
+        self.channel_overspeed = pg.mixer.Channel(C.SFXChannelID.OVERSPEED)
+        self.channel_prohibited = pg.mixer.Channel(C.SFXChannelID.PROHIBITED)
 
         # Font for text rendering
         self.font = pg.font.Font(assets.fonts.monospaced, 36)
@@ -278,12 +278,12 @@ class GameScreen(State):
     def reset(self) -> None:
         self.plane.reset()
 
-        self.wind_channel.stop()
-        self.engine_active_channel.stop()
-        self.engine_ambient_channel.stop()
+        self.channel_wind.stop()
+        self.channel_engine_active.stop()
+        self.channel_engine_ambient.stop()
 
-        self.stall_channel.stop()
-        self.overspeed_channel.stop()
+        self.channel_stall.stop()
+        self.channel_overspeed.stop()
 
         self.sounds.menu_music.fadeout(1_500)
         self.dialog_box.reset()
@@ -299,12 +299,12 @@ class GameScreen(State):
 
         if self.plane.crashed:
             self.dialog_box.reset()
-            self.stall_channel.stop()
-            self.overspeed_channel.stop()
+            self.channel_stall.stop()
+            self.channel_overspeed.stop()
 
-            self.wind_channel.stop()
-            self.engine_active_channel.stop()
-            self.engine_ambient_channel.stop()
+            self.channel_wind.stop()
+            self.channel_engine_active.stop()
+            self.channel_engine_ambient.stop()
 
             return
 
@@ -320,32 +320,32 @@ class GameScreen(State):
         # Stall warning
         self.show_stall_warning = self.plane.stalled
         if self.show_stall_warning:
-            if not self.stall_channel.get_busy():
-                self.stall_channel.play(self.sounds.stall_warning, loops=-1)
+            if not self.channel_stall.get_busy():
+                self.channel_stall.play(self.sounds.stall_warning, loops=-1)
         else:
-            self.stall_channel.stop()
+            self.channel_stall.stop()
 
         # Overspeed warning
         self.show_overspeed_warning = self.plane.vel.length() > self.plane.model.v_ne  # Both in m/s
         if self.show_overspeed_warning:
-            if not self.overspeed_channel.get_busy():
-                self.overspeed_channel.play(self.sounds.overspeed, loops=-1)
+            if not self.channel_overspeed.get_busy():
+                self.channel_overspeed.play(self.sounds.overspeed, loops=-1)
         else:
-            self.overspeed_channel.stop()
+            self.channel_overspeed.stop()
 
         # Update engine and wind sounds
-        if not self.wind_channel.get_busy():
-            self.wind_channel.play(self.sounds.wind, loops=-1)
-        if not self.engine_ambient_channel.get_busy():
-            self.engine_ambient_channel.play(self.sounds.engine_loop_ambient, loops=-1)
-        if not self.engine_active_channel.get_busy():
-            self.engine_active_channel.play(self.sounds.engine_loop_active, loops=-1)
+        if not self.channel_wind.get_busy():
+            self.channel_wind.play(self.sounds.wind, loops=-1)
+        if not self.channel_engine_ambient.get_busy():
+            self.channel_engine_ambient.play(self.sounds.engine_loop_ambient, loops=-1)
+        if not self.channel_engine_active.get_busy():
+            self.channel_engine_active.play(self.sounds.engine_loop_active, loops=-1)
 
         wind_sound_strength = (self.plane.vel.length() - 61.73) / 25.72  # start wind at 120 kn, full at 170
-        self.wind_channel.set_volume(clamp(wind_sound_strength, (0, 1)))
+        self.channel_wind.set_volume(clamp(wind_sound_strength, (0, 1)))
 
         throttle_sound_strength = self.plane.throttle_frac ** 1.8
-        self.engine_active_channel.set_volume(throttle_sound_strength)
+        self.channel_engine_active.set_volume(throttle_sound_strength)
 
         # Prohibited zone warning
         def plane_in_prohibited_zone() -> bool:
@@ -366,11 +366,11 @@ class GameScreen(State):
 
         self.show_prohibited_zone_warning = plane_in_prohibited_zone()
         if self.show_prohibited_zone_warning:
-            if not self.prohibited_zone_channel.get_busy():
-                self.prohibited_zone_channel.play(self.sounds.prohibited_zone_warning, loops=-1)
+            if not self.channel_prohibited.get_busy():
+                self.channel_prohibited.play(self.sounds.prohibited_zone_warning, loops=-1)
             self.dialog_box.set_message("Immediately exit this zone - penalties may apply", (255, 127, 0), 100)
         else:
-            self.prohibited_zone_channel.stop()
+            self.channel_prohibited.stop()
 
     def take_input(self, keys: ScancodeWrapper, events: EventList, dt: int) -> None:
         # Meta controls
@@ -378,9 +378,9 @@ class GameScreen(State):
             self.sounds.menu_music.stop()
             self.game.enter_state(self.game.States.TITLE)
 
-            self.wind_channel.stop()
-            self.engine_active_channel.stop()
-            self.engine_ambient_channel.stop()
+            self.channel_wind.stop()
+            self.channel_engine_active.stop()
+            self.channel_engine_ambient.stop()
 
         if self.pressed(keys, pg.K_r):  # r to reset
             self.plane.reset()
