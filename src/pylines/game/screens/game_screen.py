@@ -1412,5 +1412,8 @@ class GameScreen(State):
         for runway in self.env.runways:
             runway.draw()
 
+        for cloud_layer in self.env.cloud_layers:
+            cloud_layer.draw(self.plane.pos, camera_fwd)
+
         self.draw_buildings()
         self.draw_hud()

@@ -19,12 +19,14 @@ from math import cos, sin
 import OpenGL.GL as gl
 import OpenGL.GLU as glu
 import pygame as pg
+from noise import snoise2
 
 import pylines.core.constants as C
 from pylines.core.time_manager import fetch_hour
 
 from .bases import CelestialObject, LargeSceneryObject
 from pylines.core.utils import clamp
+from pylines.core.custom_types import RealNumber, Surface, Coord3
 
 class Sky(LargeSceneryObject):
     def __init__(self) -> None:
@@ -189,4 +191,116 @@ class Star(CelestialObject):
         gl.glPopMatrix()
 
 class CloudLayer(LargeSceneryObject):
-    ...
+    def __init__(
+        self, altitude: RealNumber, thickness: RealNumber, coverage: RealNumber,
+        seed: RealNumber, cloud_tex: Surface
+    ) -> None:
+        super().__init__(0, 0, 0)
+        self.altitude = altitude
+        self.thickness = thickness
+        self.coverage = coverage
+        self.seed = seed
+        self.cloud_tex = cloud_tex
+        self._load_texture()
+
+    def _draw_billboard(
+        self, position: Coord3,
+        size: RealNumber, alpha: RealNumber,
+        camera_fwd: pg.Vector3
+    ):
+        size_half = size * 0.5
+
+        # View direction from cloud to camera
+        world_up = pg.Vector3(0, 1, 0)
+
+        # Build billboard basis
+        right = camera_fwd.cross(world_up)
+        if right.length_squared() == 0:
+            return
+        right = right.normalize() * size_half
+
+        up = right.cross(camera_fwd).normalize() * size_half
+
+        gl.glEnable(gl.GL_TEXTURE_2D)
+        gl.glBindTexture(gl.GL_TEXTURE_2D, self.texture_id)
+
+        gl.glColor4f(1.0, 1.0, 1.0, alpha)
+
+        gl.glBegin(gl.GL_QUADS)
+
+        gl.glTexCoord2f(0.0, 0.0)
+        gl.glVertex3f(*(position - right - up))
+
+        gl.glTexCoord2f(1.0, 0.0)
+        gl.glVertex3f(*(position + right - up))
+
+        gl.glTexCoord2f(1.0, 1.0)
+        gl.glVertex3f(*(position + right + up))
+
+        gl.glTexCoord2f(0.0, 1.0)
+        gl.glVertex3f(*(position - right + up))
+
+        gl.glEnd()
+
+    def _load_texture(self):
+        tex_data = pg.image.tostring(self.cloud_tex, "RGBA", True)
+        width, height = self.cloud_tex.get_size()
+
+        self.texture_id = gl.glGenTextures(1)
+        gl.glBindTexture(gl.GL_TEXTURE_2D, self.texture_id)
+
+        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR)
+        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR)
+        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_S, gl.GL_CLAMP_TO_EDGE)
+        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_T, gl.GL_CLAMP_TO_EDGE)
+
+        # Upload texture data to OpenGL
+        gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGBA, *self.cloud_tex.get_size(), 0, gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, tex_data)
+        gl.glBindTexture(gl.GL_TEXTURE_2D, 0)  # Unbind texture
+
+    def draw(self, camera_pos: pg.Vector3, camera_fwd: pg.Vector3):
+        gl.glEnable(gl.GL_BLEND)
+        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
+        gl.glDepthMask(gl.GL_FALSE)
+
+        GRID_STEP = 400
+        RADIUS = 8000  # max draw radius
+        BASE_BLOB_SIZE = 600.0
+        NOISE_SCALE = 0.0004  # world -> noise space
+        ALPHA = 0.4
+
+        cx, _, cz = camera_pos
+        threshold = 1 - self.coverage
+
+        for dx in range(int(-RADIUS), int(RADIUS) + 1, int(GRID_STEP)):
+            for dz in range(int(-RADIUS), int(RADIUS) + 1, int(GRID_STEP)):
+                # World coords
+                wx = cx + dx
+                wz = cz + dz
+
+                nx = wx * NOISE_SCALE
+                nz = wz * NOISE_SCALE
+
+                density = (snoise2(nx, nz) + 1.0) * 0.5
+                if density < threshold:
+                    continue
+
+                y = self.altitude + density * self.thickness
+
+                # Stable jitter to kill the grid
+                jx = wx + snoise2(nx + 17.3, nz) * GRID_STEP * 0.35
+                jz = wz + snoise2(nx, nz + 29.1) * GRID_STEP * 0.35
+
+                size = BASE_BLOB_SIZE * (0.7 + 0.8 * density)
+                alpha = ALPHA * density
+
+                self._draw_billboard(
+                    position=(jx, y, jz),
+                    size=size,
+                    alpha=alpha,
+                    camera_fwd=camera_fwd
+                )
+
+        gl.glDisable(gl.GL_BLEND)
+        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
+        gl.glDepthMask(gl.GL_TRUE)

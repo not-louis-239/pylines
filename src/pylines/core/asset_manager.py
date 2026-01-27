@@ -32,12 +32,6 @@ from pygame.transform import scale, scale_by
 import pylines.core.paths as paths
 from pylines.core.custom_types import Sound, Surface
 
-@dataclass(kw_only=True)
-class JSONLoaderInfo:
-    """Helper to load JSON files"""
-    attr: str
-    filename: str
-    key: str
 
 class AssetBank:
     """Base class to store assets. Objects of this type should be
@@ -96,6 +90,7 @@ class Images(AssetBank):
 
         self.plane_icon = self._load("plane_icon.png")
         self.gps_dest_marker = self._load("gps_dest_marker.png")
+        self.cloud_blob = self._load("cloud_blob.png")
 
         self.augment()
 
@@ -166,19 +161,29 @@ class WorldData(AssetBank):
 
         self.noise = pg.image.load(paths.WORLD_DIR / "noise.png").convert_alpha()
 
-        # Load world data
-        data: list[JSONLoaderInfo] = [
-            JSONLoaderInfo(attr="runway_data", filename="runways.json", key="runways"),
-            JSONLoaderInfo(attr="building_defs", filename="building_defs.json", key="building_defs"),
-            JSONLoaderInfo(attr="building_placements", filename="building_placements.json", key="buildings"),
-            JSONLoaderInfo(attr="prohibited_zones", filename="prohibited_zones.json", key="prohibited_zones"),
-            JSONLoaderInfo(attr="starfield_data", filename="starfield_data.json", key="starfield"),
-            JSONLoaderInfo(attr="cloud_layers", filename="cloud_layers.json", key="cloud_layers"),
-        ]
+        # Runway data
+        with open(paths.WORLD_DIR / "runways.json") as f:
+            self.runway_data: list = json.load(f)["runways"]
 
-        for loader in data:
-            with open(paths.WORLD_DIR / loader.filename) as f:
-                self.__setattr__(loader.attr, json.load(f)[loader.key])
+        # Building definitions
+        with open(paths.WORLD_DIR / "building_defs.json") as f:
+            self.building_defs: dict = json.load(f)["building_defs"]
+
+        # Building placements
+        with open(paths.WORLD_DIR / "building_placements.json") as f:
+            self.building_placements: list = json.load(f)["buildings"]
+
+        # Prohibited zones
+        with open(paths.WORLD_DIR / "prohibited_zones.json") as f:
+            self.prohibited_zones: list = json.load(f)["prohibited_zones"]
+
+        # Starfield data
+        with open(paths.WORLD_DIR / "starfield_data.json") as f:
+            self.starfield_data: dict = json.load(f)["starfield"]
+
+        # Cloud data
+        with open(paths.WORLD_DIR / "cloud_layers.json") as f:
+            self.cloud_layers: list = json.load(f)["cloud_layers"]
 
     def _load(self, name: str) -> Path:
         return paths.WORLD_DIR / name

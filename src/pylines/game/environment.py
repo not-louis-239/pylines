@@ -34,7 +34,7 @@ from pylines.objects.buildings import (
     match_building_icon,
 )
 from pylines.objects.scenery.runway import Runway
-from pylines.objects.scenery.sky import Star
+from pylines.objects.scenery.sky import Star, CloudLayer
 
 if TYPE_CHECKING:
     from pylines.core.asset_manager import WorldData, Fonts
@@ -88,9 +88,6 @@ class Environment:
         ]
 
         # Convert raw dict entries to runtime objects
-        building_defs_raw = world_data.building_defs
-        building_placements_raw = world_data.building_placements
-
         self.building_defs: dict[str, BuildingDefinition] = {
             name: BuildingDefinition(
                 parts=[
@@ -108,7 +105,7 @@ class Environment:
                     tuple(info["map_appearance"]["dims"])
                 )
             )
-            for name, info in building_defs_raw.items()
+            for name, info in world_data.building_defs.items()
         }
 
         try:
@@ -119,24 +116,23 @@ class Environment:
                     placement["pos"][2],
                     self.building_defs[placement["type"]].parts,
                     placement["type"]
-                ) for placement in building_placements_raw
+                ) for placement in world_data.building_placements
             ]
         except KeyError as e:
             offender = str(e).strip("'")
             raise RuntimeError(f"Building definition missing for type: '{offender}'")
 
         # Prohibited zones
-        prohibited_zones_raw = world_data.prohibited_zones
-
         self.prohibited_zones = [
             ProhibitedZoneData(
                 zone["code"],
                 zone["name"],
                 tuple(zone["pos"]),
                 tuple(zone["dims"])
-            ) for zone in prohibited_zones_raw
+            ) for zone in world_data.prohibited_zones
         ]
 
+        # Stars
         starfield_data_raw = world_data.starfield_data
         starfield_seed = starfield_data_raw["seed"]
         num_stars = starfield_data_raw["count"]
@@ -161,6 +157,17 @@ class Environment:
             )
 
             self.stars.append(Star(direction, brightness, colour, size))
+
+        # Cloud layers
+        self.cloud_layers = [
+            CloudLayer(
+                cloud_layer["altitude"],
+                cloud_layer["thickness"],
+                cloud_layer["coverage"],
+                cloud_layer["seed"],
+                images.cloud_blob
+            ) for cloud_layer in world_data.cloud_layers
+        ]
 
     def _world_to_map(self, x: float, z: float) -> tuple[float, float]:
         # Must map to 0 - w or height or else causes camera to go underground
