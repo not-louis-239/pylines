@@ -273,6 +273,18 @@ class Plane(Entity):
             -cos(rad(yaw)) * cos(rad(pitch)),
         ).normalize()
 
+        # velocity magnitude
+        speed = self.vel.length()
+        if speed > C.EPSILON:
+            # compute target velocity aligned with nose
+            target_vel = forward_vec * speed
+
+            # blending factor: stronger at lower speeds, weaker at high speeds
+            align_factor = clamp(5.0 / (speed + 1e-6), (0, 1))
+
+            # blend
+            self.vel = self.vel.lerp(target_vel, align_factor * dt/1000)
+
         # Calculate thrust and weight
         thrust = pg.Vector3(0, 0, 0) if self.disabled else forward_vec * self.throttle_frac*self.model.max_throttle
         weight = pg.Vector3(0, -C.GRAVITY * self.model.mass, 0)

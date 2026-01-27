@@ -492,9 +492,9 @@ class GameScreen(State):
         RUDDER_SPEED = 2.5
         RUDDER_SNAPBACK = 3
         if keys[pg.K_a]:
-            self.plane.rudder -= RUDDER_SPEED * dt/1000
+            self.plane.rudder -= RUDDER_SPEED * dt/1000 * min(1, self.plane.vel.length() / 10)
         if keys[pg.K_d]:
-            self.plane.rudder += RUDDER_SPEED * dt/1000
+            self.plane.rudder += RUDDER_SPEED * dt/1000 * min(1, self.plane.vel.length() / 10)
         if not (keys[pg.K_a] or keys[pg.K_d]):
             decay = RUDDER_SNAPBACK * dt/1000
             self.plane.rudder *= max(0, 1 - decay)
