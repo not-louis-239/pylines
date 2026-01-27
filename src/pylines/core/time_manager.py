@@ -19,11 +19,11 @@ from .custom_types import RealNumber
 from .utils import map_value
 
 
-def fetch_hour():
+def fetch_hour() -> float:
     """Returns a value between 0 and 24 to represent the current hour."""
 
     now = datetime.now()
-    hour = now.hour + now.minute/60 + now.second/3_600
+    hour = now.hour + now.minute/60 + now.second/3_600 + now.microsecond/3_600/1e6
     return hour
 
 def brightness_from_hour(hour: RealNumber) -> RealNumber:

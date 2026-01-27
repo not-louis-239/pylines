@@ -26,6 +26,7 @@ from pylines.core.time_manager import fetch_hour
 
 from .bases import CelestialObject, LargeSceneryObject
 from pylines.core.utils import clamp
+from pylines.core.time_manager import fetch_hour, brightness_from_hour
 from pylines.core.custom_types import RealNumber, Surface, Coord3
 
 class Sky(LargeSceneryObject):
@@ -208,6 +209,7 @@ class CloudLayer(LargeSceneryObject):
         size: RealNumber, alpha: RealNumber,
         camera_fwd: pg.Vector3
     ):
+        brightness = brightness_from_hour(fetch_hour())
         size_half = size * 0.5
 
         # View direction from cloud to camera
@@ -224,7 +226,7 @@ class CloudLayer(LargeSceneryObject):
         gl.glEnable(gl.GL_TEXTURE_2D)
         gl.glBindTexture(gl.GL_TEXTURE_2D, self.texture_id)
 
-        gl.glColor4f(1.0, 1.0, 1.0, alpha)
+        gl.glColor4f(brightness, brightness, brightness, alpha)
 
         gl.glBegin(gl.GL_QUADS)
 
