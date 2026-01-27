@@ -267,16 +267,16 @@ class CloudLayer(LargeSceneryObject):
         RADIUS = 8000  # max draw radius
         BASE_BLOB_SIZE = 600.0
         NOISE_SCALE = 0.0004  # world -> noise space
-        ALPHA = 0.4
+        BASE_ALPHA = 0.4
 
         cx, _, cz = camera_pos
         threshold = 1 - self.coverage
 
         for dx in range(int(-RADIUS), int(RADIUS) + 1, int(GRID_STEP)):
             for dz in range(int(-RADIUS), int(RADIUS) + 1, int(GRID_STEP)):
-                # World coords
-                wx = cx + dx
-                wz = cz + dz
+                # World coords - anchor to fixed grid to prevent popping
+                wx = (cx + dx) - (cx + dx) % GRID_STEP
+                wz = (cz + dz) - (cz + dz) % GRID_STEP
 
                 nx = wx * NOISE_SCALE
                 nz = wz * NOISE_SCALE
@@ -292,7 +292,7 @@ class CloudLayer(LargeSceneryObject):
                 jz = wz + snoise2(nx, nz + 29.1) * GRID_STEP * 0.35
 
                 size = BASE_BLOB_SIZE * (0.7 + 0.8 * density)
-                alpha = ALPHA * density
+                alpha = BASE_ALPHA * density
 
                 self._draw_billboard(
                     position=(jx, y, jz),
