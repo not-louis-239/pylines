@@ -118,3 +118,7 @@ MAP_TOGGLE_ANIMATION_DURATION = 0.15  # seconds
 MAP_METRES_PER_PX = 50  # metres per pixel
 MAP_PIXELS_PER_TILE = 100  # pixels
 METRES_PER_TILE = MAP_METRES_PER_PX * MAP_PIXELS_PER_TILE
+
+# Terrain brightness
+MIN_BRIGHTNESS = 0.15  # moonlight
+MAX_BRIGHTNESS = 1.0  # sunlight
