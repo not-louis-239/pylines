@@ -49,6 +49,7 @@ uniform float u_brightness;
 uniform vec3 u_sun_direction;
 uniform float u_min_brightness;
 uniform float u_max_brightness;
+uniform float u_shade_multiplier;
 
 void main() {
     // Sample all textures
@@ -93,23 +94,21 @@ void main() {
     // Calculate diffuse light (direct sunlight)
     float diffuse_factor = max(dot(normalize(v_normal), normalize(u_sun_direction)), 0.0);
 
-    // Shadow logic
-    float shadow_intensity = 1.0; // 1.0 means no shadow, 0.0 means full shadow
+    // Base moonlight brightness is always present
+    float total_brightness = u_min_brightness;
 
-    if (u_brightness <= u_min_brightness) {
-        // Night: No shadows from sun, only ambient light
-        shadow_intensity = 1.0;
-    } else if (u_brightness >= u_max_brightness) {
-        // Day: Full shadows
-        shadow_intensity = diffuse_factor;
-    } else {
-        // Dawn/Dusk: Interpolate shadow intensity
-        float t = (u_brightness - u_min_brightness) / (u_max_brightness - u_min_brightness); // 0.0 at min_brightness, 1.0 at max_brightness
-        shadow_intensity = mix(1.0, diffuse_factor, t);
-    }
+    // Calculate sun's current strength above moonlight
+    float sun_strength_from_hour = max(0.0, u_brightness - u_min_brightness);
 
-    // Combine color with overall brightness and shadow
-    color.rgb *= u_brightness * shadow_intensity;
+    // The sun's additional brightness:
+    // It's strongest when facing the sun (diffuse_factor = 1).
+    // When not directly facing the sun (diffuse_factor < 1), the effect is reduced,
+    // and for fully shaded areas (diffuse_factor = 0), the effect is reduced by u_shade_multiplier.
+    float sun_additional_brightness = sun_strength_from_hour * (diffuse_factor + (1.0 - diffuse_factor) * u_shade_multiplier);
+    total_brightness += sun_additional_brightness;
+
+    // Combine color with calculated total brightness
+    color.rgb *= total_brightness;
 
     gl_FragColor = color;
 }

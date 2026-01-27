@@ -38,8 +38,6 @@ class Runway(LargeSceneryObject):
         self._load_texture(fonts, texture)
 
     def _load_texture(self, fonts: Fonts, texture: Surface):
-        # TODO: replace solid fill with runway texture once it's available
-
         # Design texture
         texture_surface = pg.Surface((int(self.w * 4), int(self.l * 4)))  # allow detailed texture
         texture_surface.fill((0, 0, 0, 255))

@@ -19,7 +19,7 @@ import OpenGL.GL as gl
 import pygame as pg
 
 import pylines.core.constants as C
-from pylines.core.constants import MIN_BRIGHTNESS, MAX_BRIGHTNESS
+from pylines.core.constants import MOON_BRIGHTNESS, SUN_BRIGHTNESS, SHADE_BRIGHTNESS_MULT
 import pylines.core.paths as paths
 from pylines.core.custom_types import Surface
 from pylines.core.time_manager import brightness_from_hour, fetch_hour, sun_direction_from_hour
@@ -50,6 +50,7 @@ class Ground(LargeSceneryObject):
         self.sun_direction_loc = gl.glGetUniformLocation(self.shader, "u_sun_direction")
         self.min_brightness_loc = gl.glGetUniformLocation(self.shader, "u_min_brightness")
         self.max_brightness_loc = gl.glGetUniformLocation(self.shader, "u_max_brightness")
+        self.shade_multiplier_loc = gl.glGetUniformLocation(self.shader, "u_shade_multiplier")
 
         self.vbo = None
         self.ebo = None
@@ -170,8 +171,9 @@ class Ground(LargeSceneryObject):
 
         gl.glUniform1f(self.brightness_loc, brightness)
         gl.glUniform3f(self.sun_direction_loc, sun_direction.x, sun_direction.y, sun_direction.z)
-        gl.glUniform1f(self.min_brightness_loc, MIN_BRIGHTNESS)
-        gl.glUniform1f(self.max_brightness_loc, MAX_BRIGHTNESS)
+        gl.glUniform1f(self.min_brightness_loc, MOON_BRIGHTNESS)
+        gl.glUniform1f(self.max_brightness_loc, SUN_BRIGHTNESS)
+        gl.glUniform1f(self.shade_multiplier_loc, SHADE_BRIGHTNESS_MULT)
 
         # Set up textures for the shader
         for i, (name, texture_id) in enumerate(self.textures.items()):

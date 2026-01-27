@@ -19,32 +19,44 @@ from datetime import datetime
 from .colours import SKY_COLOUR_SCHEMES, ColourScheme, lerp_colour
 from .custom_types import RealNumber
 from .utils import map_value
-from .constants import MIN_BRIGHTNESS, MAX_BRIGHTNESS
+from .constants import MOON_BRIGHTNESS, SUN_BRIGHTNESS
 
 def fetch_hour() -> float:
     """Returns a value between 0 and 24 to represent the current hour."""
-
-    return 16  # DEBUG
 
     now = datetime.now()
     hour = now.hour + now.minute/60 + now.second/3_600 + now.microsecond/3_600/1e6
     return hour
 
+# XXX: this function should be deprecated soon and replaced with
+#      direction aware shaders for most in-game objects
 def brightness_from_hour(hour: RealNumber) -> RealNumber:
     """Returns the expected terrain brightness.
 
     0 = pitch black, 1 = full brightness"""
 
     if hour < 4:
-        return MIN_BRIGHTNESS
+        return MOON_BRIGHTNESS
     elif hour < 8:
-        return map_value(hour, 4, 8, MIN_BRIGHTNESS, MAX_BRIGHTNESS)
+        return map_value(hour, 4, 8, MOON_BRIGHTNESS, SUN_BRIGHTNESS)
     elif hour < 16:
-        return MAX_BRIGHTNESS
+        return SUN_BRIGHTNESS
     elif hour < 20:
-        return map_value(hour, 16, 20, MAX_BRIGHTNESS, MIN_BRIGHTNESS)
+        return map_value(hour, 16, 20, SUN_BRIGHTNESS, MOON_BRIGHTNESS)
     else:
-        return MIN_BRIGHTNESS
+        return MOON_BRIGHTNESS
+
+def sunlight_strength_from_hour(hour: RealNumber) -> RealNumber:
+    if hour < 4:
+        return 0
+    elif hour < 8:
+        return map_value(hour, 4, 8, 0, 1)
+    elif hour < 16:
+        return 1
+    elif hour < 20:
+        return map_value(hour, 16, 20, 1, 0)
+    else:
+        return 0
 
 def sky_colour_from_hour(hour: float) -> ColourScheme:
     """Returns interpolated sky colours for given hour."""
