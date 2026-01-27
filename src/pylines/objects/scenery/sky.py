@@ -264,8 +264,8 @@ class CloudLayer(LargeSceneryObject):
         gl.glDepthMask(gl.GL_FALSE)
 
         GRID_STEP = 400
-        RADIUS = 8000  # max draw radius
-        BASE_BLOB_SIZE = 600.0
+        RADIUS = 10_000  # max draw radius
+        BASE_BLOB_SIZE = 600
         NOISE_SCALE = 0.0004  # world -> noise space
         BASE_ALPHA = 0.4
 
