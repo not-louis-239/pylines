@@ -57,6 +57,9 @@ class SFXChannelID(IntEnum):
     OVERSPEED = 5
     PROHIBITED = 6
 
+    # Other
+    SCRAPE = 7
+
 # Visuals, tick updates and window size
 FPS = 60
 TPS = 60

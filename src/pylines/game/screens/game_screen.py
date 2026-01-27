@@ -114,6 +114,8 @@ class GameScreen(State):
         self.channel_overspeed = pg.mixer.Channel(C.SFXChannelID.OVERSPEED)
         self.channel_prohibited = pg.mixer.Channel(C.SFXChannelID.PROHIBITED)
 
+        self.channel_scrape = pg.mixer.Channel(C.SFXChannelID.SCRAPE)
+
         # Font for text rendering
         self.font = pg.font.Font(assets.fonts.monospaced, 36)
 
@@ -296,6 +298,8 @@ class GameScreen(State):
         self.channel_stall.stop()
         self.channel_overspeed.stop()
 
+        self.channel_scrape.stop()
+
         self.sounds.menu_music.fadeout(1_500)
         self.dialog_box.reset()
         self.time_elapsed = 0
@@ -316,6 +320,8 @@ class GameScreen(State):
             self.channel_wind.stop()
             self.channel_engine_active.stop()
             self.channel_engine_ambient.stop()
+
+            self.channel_scrape.stop()
 
             return
 
@@ -358,6 +364,13 @@ class GameScreen(State):
         throttle_sound_strength = self.plane.throttle_frac ** 1.8
         self.channel_engine_active.set_volume(throttle_sound_strength)
 
+        # Terrain scrape sound
+        if not self.plane.over_runway:
+            if not self.channel_scrape.get_busy():
+                self.channel_scrape.play(self.sounds.terrain_scrape, -1)
+        else:
+            self.channel_scrape.stop()
+
         # Prohibited zone warning
         def plane_in_prohibited_zone() -> bool:
             for zone in self.env.prohibited_zones:
@@ -392,6 +405,8 @@ class GameScreen(State):
             self.channel_wind.stop()
             self.channel_engine_active.stop()
             self.channel_engine_ambient.stop()
+
+            self.channel_scrape.stop()
 
         if self.pressed(keys, pg.K_r):  # r to reset
             self.plane.reset()

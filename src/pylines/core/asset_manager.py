@@ -118,6 +118,7 @@ class Sounds(AssetBank):
         self.good_landing: Sound = self._load("good_landing.ogg")
         self.hard_landing: Sound = self._load("hard_landing.ogg")
         self.crash: Sound = self._load("crash.ogg")
+        self.terrain_scrape: Sound = self._load("terrain_scrape.ogg")
 
         # Warnings
         self.overspeed: Sound = self._load("overspeed.ogg")
