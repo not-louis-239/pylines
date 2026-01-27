@@ -1,0 +1,10 @@
+{
+    "cloud_layers": [
+        {
+            "altitude": 4100,
+            "thickness": 600,
+            "coverage": 0.35,
+            "seed": 1
+        }
+    ]
+}

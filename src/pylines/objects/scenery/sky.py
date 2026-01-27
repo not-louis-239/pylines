@@ -187,3 +187,6 @@ class Star(CelestialObject):
             gl.glDisable(gl.GL_BLEND)
 
         gl.glPopMatrix()
+
+class CloudLayer(LargeSceneryObject):
+    ...
