@@ -122,5 +122,5 @@ METRES_PER_TILE = MAP_METRES_PER_PX * MAP_PIXELS_PER_TILE
 
 # Terrain brightness
 SHADE_BRIGHTNESS_MULT = 0.5  # Brightness multiplier when shaded
-MOON_BRIGHTNESS = 0.15  # Moonlight brightness (omnipresent, uniform)
+MOON_BRIGHTNESS = 0.18  # Moonlight brightness (omnipresent, uniform)
 SUN_BRIGHTNESS = 1.0  # Brightness in direct, full-strength sunlight

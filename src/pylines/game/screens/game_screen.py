@@ -34,11 +34,11 @@ import pylines.core.paths as paths
 import pylines.core.units as units
 from pylines.core.custom_types import Colour, EventList, RealNumber
 from pylines.core.time_manager import (
-    brightness_from_hour,
+    sunlight_strength_from_hour,
     fetch_hour,
     sky_colour_from_hour,
 )
-from pylines.core.utils import clamp, draw_needle, draw_text, draw_transparent_rect
+from pylines.core.utils import clamp, draw_needle, draw_text, draw_transparent_rect, lerp
 from pylines.game.states import State
 from pylines.objects.buildings import (
     BuildingDefinition,
@@ -527,7 +527,7 @@ class GameScreen(State):
         gl.glUseProgram(self.building_shader)
 
         # Set uniforms
-        brightness = brightness_from_hour(fetch_hour())
+        brightness = lerp(C.MOON_BRIGHTNESS, C.SUN_BRIGHTNESS, sunlight_strength_from_hour(fetch_hour()))
         gl.glUniform1f(self.building_brightness_loc, brightness)
 
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buildings_vbo)

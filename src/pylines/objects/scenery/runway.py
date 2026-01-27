@@ -15,10 +15,11 @@
 import OpenGL.GL as gl
 import pygame as pg
 
+from pylines.core.constants import MOON_BRIGHTNESS, SUN_BRIGHTNESS
 from pylines.core.custom_types import Surface
 from pylines.core.asset_manager import Fonts
-from pylines.core.time_manager import brightness_from_hour, fetch_hour
-from pylines.core.utils import draw_text
+from pylines.core.time_manager import sunlight_strength_from_hour, fetch_hour
+from pylines.core.utils import draw_text, lerp
 
 from .bases import LargeSceneryObject
 
@@ -81,7 +82,7 @@ class Runway(LargeSceneryObject):
         gl.glBindTexture(gl.GL_TEXTURE_2D, 0)  # Unbind texture
 
     def draw(self):
-        brightness = brightness_from_hour(fetch_hour())
+        brightness = lerp(MOON_BRIGHTNESS, SUN_BRIGHTNESS, sunlight_strength_from_hour(fetch_hour()))
         gl.glPushMatrix()
 
         # Save current blend and depth mask states to restore them later

@@ -22,7 +22,7 @@ import pylines.core.constants as C
 from pylines.core.constants import MOON_BRIGHTNESS, SUN_BRIGHTNESS, SHADE_BRIGHTNESS_MULT
 import pylines.core.paths as paths
 from pylines.core.custom_types import Surface
-from pylines.core.time_manager import brightness_from_hour, fetch_hour, sun_direction_from_hour
+from pylines.core.time_manager import sunlight_strength_from_hour, fetch_hour, sun_direction_from_hour
 from pylines.game.environment import Environment
 from pylines.shaders.shader_manager import load_shader_script
 
@@ -166,7 +166,7 @@ class Ground(LargeSceneryObject):
         gl.glUseProgram(self.shader)  # Activate the shader program
 
         current_hour = fetch_hour()
-        brightness = brightness_from_hour(current_hour)
+        brightness = sunlight_strength_from_hour(current_hour)
         sun_direction = sun_direction_from_hour(current_hour)
 
         gl.glUniform1f(self.brightness_loc, brightness)

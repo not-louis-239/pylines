@@ -25,8 +25,8 @@ import pylines.core.constants as C
 from pylines.core.time_manager import fetch_hour, sun_direction_from_hour
 
 from .bases import CelestialObject, LargeSceneryObject
-from pylines.core.utils import clamp
-from pylines.core.time_manager import fetch_hour, brightness_from_hour
+from pylines.core.utils import clamp, lerp
+from pylines.core.time_manager import fetch_hour, sunlight_strength_from_hour
 from pylines.core.custom_types import RealNumber, Surface, Coord3
 
 class Sky(LargeSceneryObject):
@@ -188,7 +188,7 @@ class CloudLayer(LargeSceneryObject):
         size: RealNumber, alpha: RealNumber,
         camera_fwd: pg.Vector3
     ):
-        brightness = brightness_from_hour(fetch_hour())
+        brightness = lerp(C.MOON_BRIGHTNESS, C.SUN_BRIGHTNESS, sunlight_strength_from_hour(fetch_hour()))
         size_half = size * 0.5
 
         # View direction from cloud to camera

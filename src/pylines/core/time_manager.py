@@ -28,24 +28,6 @@ def fetch_hour() -> float:
     hour = now.hour + now.minute/60 + now.second/3_600 + now.microsecond/3_600/1e6
     return hour
 
-# XXX: this function should be deprecated soon and replaced with
-#      direction aware shaders for most in-game objects
-def brightness_from_hour(hour: RealNumber) -> RealNumber:
-    """Returns the expected terrain brightness.
-
-    0 = pitch black, 1 = full brightness"""
-
-    if hour < 4:
-        return MOON_BRIGHTNESS
-    elif hour < 8:
-        return map_value(hour, 4, 8, MOON_BRIGHTNESS, SUN_BRIGHTNESS)
-    elif hour < 16:
-        return SUN_BRIGHTNESS
-    elif hour < 20:
-        return map_value(hour, 16, 20, SUN_BRIGHTNESS, MOON_BRIGHTNESS)
-    else:
-        return MOON_BRIGHTNESS
-
 def sunlight_strength_from_hour(hour: RealNumber) -> RealNumber:
     if hour < 4:
         return 0
