@@ -24,7 +24,7 @@ import pylines.core.constants as C
 from pylines.core.time_manager import fetch_hour
 
 from .bases import CelestialObject, LargeSceneryObject
-
+from pylines.core.utils import clamp
 
 class Sky(LargeSceneryObject):
     def __init__(self) -> None:
@@ -111,7 +111,6 @@ class Moon(CelestialObject):
     def update(self):
         self.set_direction(fetch_hour())
 
-# TODO: Add stars
 class Star(CelestialObject):
     def __init__(
         self,
@@ -124,3 +123,67 @@ class Star(CelestialObject):
         self.brightness = brightness
         self.colour = colour
         self.size = size
+
+    def draw(self, camera_fwd: pg.Vector3) -> None:
+        """Stars should draw at full opacity during the night
+        and not be visible before sunset."""
+
+        hour = fetch_hour()
+        if 18 >= hour > 6:  # daytime
+            opacity = 0
+        elif 20 >= hour > 18:  # sunset
+            opacity = (hour - 18) / 2
+        elif 6 >= hour > 4:  # sunrise
+            opacity = 1 - (hour - 4) / 2
+        else:  # night
+            opacity = 1
+
+        opacity = clamp(opacity, (0, 1))
+
+        if opacity == 0:
+            return
+
+        distance = 19000.0
+        pos = self.direction * distance # Star's position in world coordinates
+
+        if camera_fwd.dot(self.direction) <= cos(math.radians(45)):  # Cull based on FOV
+            return
+
+        gl.glPushMatrix()
+
+        # Save OpenGL states
+        was_blend_enabled = gl.glIsEnabled(gl.GL_BLEND)
+        was_depth_mask_enabled = gl.glGetBooleanv(gl.GL_DEPTH_WRITEMASK)
+        current_point_size = gl.glGetFloatv(gl.GL_POINT_SIZE)
+        was_texture_2d_enabled = gl.glIsEnabled(gl.GL_TEXTURE_2D)
+
+        # Set states for drawing the star
+        gl.glEnable(gl.GL_BLEND)
+        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
+        gl.glDepthMask(gl.GL_FALSE)
+        gl.glDisable(gl.GL_TEXTURE_2D)
+
+        gl.glTranslatef(pos.x, pos.y, pos.z)
+
+        gl.glPointSize(self.size)
+        gl.glColor4f(
+            self.colour[0] / 255.0,
+            self.colour[1] / 255.0,
+            self.colour[2] / 255.0,
+            opacity * self.brightness
+        )
+
+        gl.glBegin(gl.GL_POINTS)
+        gl.glVertex3f(0, 0, 0)
+        gl.glEnd()
+
+        # Restore OpenGL states
+        gl.glPointSize(current_point_size)
+        gl.glDepthMask(was_depth_mask_enabled)
+        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
+        if was_texture_2d_enabled:
+            gl.glEnable(gl.GL_TEXTURE_2D)
+        if not was_blend_enabled:
+            gl.glDisable(gl.GL_BLEND)
+
+        gl.glPopMatrix()

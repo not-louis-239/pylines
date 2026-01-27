@@ -17,7 +17,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal
 
+import math
 import numpy as np
+import random
+import pygame as pg
 
 from pylines.core.constants import EPSILON, HALF_WORLD_SIZE
 from pylines.core.custom_types import Coord2
@@ -30,6 +33,7 @@ from pylines.objects.buildings import (
     match_building_icon,
 )
 from pylines.objects.scenery.runway import Runway
+from pylines.objects.scenery.sky import Star
 
 if TYPE_CHECKING:
     from pylines.core.asset_manager import WorldData, Fonts
@@ -128,6 +132,31 @@ class Environment:
                 tuple(zone["dims"])
             ) for zone in prohibited_zones_raw
         ]
+
+        starfield_data_raw = world_data.starfield_data
+        starfield_seed = starfield_data_raw["seed"]
+        num_stars = starfield_data_raw["count"]
+
+        star_rng = random.Random(starfield_seed)
+        self.stars: list[Star] = []
+        for _ in range(num_stars):
+            u = star_rng.uniform(-1, 1)
+            azimuth = star_rng.uniform(0, math.pi * 2)
+            elevation = math.asin(u)
+
+            x = math.cos(elevation) * math.cos(azimuth)
+            y = math.sin(elevation)
+            z = math.cos(elevation) * math.sin(azimuth)
+
+            direction = pg.Vector3(x, y, z)
+
+            brightness = 10 ** star_rng.uniform(-1.5, 0.35)
+            size = (0.7 + 1.6 * brightness ** 0.4) * star_rng.uniform(0.9, 1.1)
+            colour = (255, 255, 255) if brightness < 3 else star_rng.choice(
+                [(255, 217, 217), (255, 239, 214), (255, 251, 217), (199, 231, 255)]
+            )
+
+            self.stars.append(Star(direction, brightness, colour, size))
 
     def _world_to_map(self, x: float, z: float) -> tuple[float, float]:
         # Must map to 0 - w or height or else causes camera to go underground

@@ -30,12 +30,14 @@ class Rotation:
     yaw: int
     roll: int
 
-def draw_text(surface: Surface, pos: tuple[float, float],
-              horiz_align: Literal['left', 'centre', 'right'],
-              vert_align: Literal['top', 'centre', 'bottom'],
-              text: str, colour: Colour | AColour,
-              font_size: int, font_family: pg.font.Font | Path | str | None = None,
-              rotation: float = 0):
+def draw_text(
+        surface: Surface, pos: tuple[float, float],
+        horiz_align: Literal['left', 'centre', 'right'],
+        vert_align: Literal['top', 'centre', 'bottom'],
+        text: str, colour: Colour | AColour,
+        font_size: int, font_family: pg.font.Font | Path | str | None = None,
+        rotation: float = 0
+    ) -> None:
     if isinstance(font_family, pg.font.Font):
         font_obj = font_family
     elif isinstance(font_family, (str, Path)):
@@ -95,7 +97,7 @@ def frange(start: int | float, stop: int | float, step: int | float) -> Generato
             yield current
             current += step
 
-def clamp(value: RealNumber, clamp_range: tuple[RealNumber, RealNumber]):
+def clamp(value: RealNumber, clamp_range: tuple[RealNumber, RealNumber], /) -> RealNumber:
     lower, upper = clamp_range
 
     if any(math.isnan(x) for x in (value, lower, upper)):
@@ -105,10 +107,11 @@ def clamp(value: RealNumber, clamp_range: tuple[RealNumber, RealNumber]):
 
     return max(lower, min(value, upper))
 
-def draw_transparent_rect(surface: Surface, pos: Coord2, size: Coord2,
-                          bg_colour: AColour = (0, 0, 0, 180),
-                          border_thickness=0, border_colour: Colour = WHITE,
-                          ):
+def draw_transparent_rect(
+        surface: Surface, pos: Coord2, size: Coord2,
+        bg_colour: AColour = (0, 0, 0, 180),
+        border_thickness=0, border_colour: Colour = WHITE,
+    ) -> None:
     """Draws a semi-transparent rectangle with a border onto a surface.
     For a transparent rect only, set border thickness to 0."""
     box_surf = pg.Surface(size, pg.SRCALPHA)

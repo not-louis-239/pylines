@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import ctypes
 import math
+from math import sin, cos, radians as rad
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
@@ -1391,6 +1392,16 @@ class GameScreen(State):
 
         camera_y = self.plane.pos.y + C.CAMERA_RADIUS
         gl.glTranslatef(-self.plane.pos.x, -camera_y, -self.plane.pos.z)
+
+        pitch, yaw, _ = self.plane.rot
+        camera_fwd = pg.Vector3(
+            sin(rad(yaw)) * cos(rad(pitch)),
+            sin(rad(-pitch)),  # pitch is negated since +pitch = nose down
+            -cos(rad(yaw)) * cos(rad(pitch)),
+        ).normalize()
+
+        for star in self.env.stars:
+            star.draw(camera_fwd)
 
         self.sun.draw()
         self.moon.draw()

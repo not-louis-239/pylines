@@ -173,6 +173,10 @@ class WorldData(AssetBank):
         with open(paths.WORLD_DIR / "prohibited_zones.json") as f:
             self.prohibited_zones: dict = json.load(f)["prohibited_zones"]
 
+        # Starfield data
+        with open(paths.WORLD_DIR / "starfield_data.json") as f:
+            self.starfield_data: dict = json.load(f)["starfield"]
+
     def _load(self, name: str) -> Path:
         return paths.WORLD_DIR / name
 
