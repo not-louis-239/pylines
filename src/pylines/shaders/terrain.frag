@@ -17,6 +17,8 @@
 varying vec2 v_tex_coord;  // image coords
 varying float v_height;    // world altitude
 varying vec2 v_world_xz;   // world coords
+varying vec3 v_normal;
+varying vec3 v_world_pos;
 
 // Terrain textures
 uniform sampler2D sand_texture;
@@ -44,6 +46,9 @@ const float blend_range = 20.0;  // metres
 
 // Time-based brightness
 uniform float u_brightness;
+uniform vec3 u_sun_direction;
+uniform float u_min_brightness;
+uniform float u_max_brightness;
 
 void main() {
     // Sample all textures
@@ -85,8 +90,26 @@ void main() {
     color = mix(color, alpine_rock, b_alpine_rock);
     color = mix(color, snow, b_snow);
 
-    // Apply brightness multiplier
-    color.rgb *= u_brightness;
+    // Calculate diffuse light (direct sunlight)
+    float diffuse_factor = max(dot(normalize(v_normal), normalize(u_sun_direction)), 0.0);
+
+    // Shadow logic
+    float shadow_intensity = 1.0; // 1.0 means no shadow, 0.0 means full shadow
+
+    if (u_brightness <= u_min_brightness) {
+        // Night: No shadows from sun, only ambient light
+        shadow_intensity = 1.0;
+    } else if (u_brightness >= u_max_brightness) {
+        // Day: Full shadows
+        shadow_intensity = diffuse_factor;
+    } else {
+        // Dawn/Dusk: Interpolate shadow intensity
+        float t = (u_brightness - u_min_brightness) / (u_max_brightness - u_min_brightness); // 0.0 at min_brightness, 1.0 at max_brightness
+        shadow_intensity = mix(1.0, diffuse_factor, t);
+    }
+
+    // Combine color with overall brightness and shadow
+    color.rgb *= u_brightness * shadow_intensity;
 
     gl_FragColor = color;
 }

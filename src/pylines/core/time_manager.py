@@ -24,6 +24,8 @@ from .constants import MIN_BRIGHTNESS, MAX_BRIGHTNESS
 def fetch_hour() -> float:
     """Returns a value between 0 and 24 to represent the current hour."""
 
+    return 16  # DEBUG
+
     now = datetime.now()
     hour = now.hour + now.minute/60 + now.second/3_600 + now.microsecond/3_600/1e6
     return hour

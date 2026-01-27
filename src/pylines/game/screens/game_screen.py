@@ -365,7 +365,7 @@ class GameScreen(State):
         self.channel_engine_active.set_volume(throttle_sound_strength)
 
         # Terrain scrape sound
-        if not self.plane.over_runway:
+        if (not self.plane.over_runway) and self.plane.on_ground:
             if not self.channel_scrape.get_busy():
                 self.channel_scrape.play(self.sounds.terrain_scrape, -1)
         else:

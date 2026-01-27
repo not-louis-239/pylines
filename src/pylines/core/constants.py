@@ -109,6 +109,7 @@ GRAVITY = 9.8        # m/s²
 
 # Mathematical
 EPSILON = 0.0001  # Treat anything smaller than this as zero
+NORMAL_CALC_EPSILON = 1.0  # Epsilon for normal calculation (in metres)
 
 # Visual
 CHEVRON_ANGLE = 40
