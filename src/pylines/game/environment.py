@@ -24,6 +24,7 @@ import pygame as pg
 
 from pylines.core.constants import EPSILON, HALF_WORLD_SIZE
 from pylines.core.custom_types import Coord2
+from pylines.core.asset_manager import Images
 from pylines.core.utils import map_value
 from pylines.objects.building_parts import BuildingPart, match_primitive
 from pylines.objects.buildings import (
@@ -54,6 +55,7 @@ class Environment:
             self,
             world_data: WorldData,
             fonts: Fonts,
+            images: Images,
             diagonal_split: Literal['AD', 'BC'] = 'AD',
         ) -> None:
 
@@ -70,6 +72,7 @@ class Environment:
 
         # Convert runway JSON to runway objects
         self.fonts = fonts  # Used for runway text
+        self.images = images
         self.runways: list[Runway] = [
             Runway(
                 runway["name"],
@@ -79,7 +82,8 @@ class Environment:
                 runway["width"],
                 runway["length"],
                 runway["heading"],
-                self.fonts
+                self.fonts,
+                self.images.base_runway_texture
             ) for runway in world_data.runway_data
         ]
 

@@ -15,6 +15,7 @@
 import OpenGL.GL as gl
 import pygame as pg
 
+from pylines.core.custom_types import Surface
 from pylines.core.asset_manager import Fonts
 from pylines.core.time_manager import brightness_from_hour, fetch_hour
 from pylines.core.utils import draw_text
@@ -23,23 +24,26 @@ from .bases import LargeSceneryObject
 
 
 class Runway(LargeSceneryObject):
-    def __init__(self, name: str, x: float, y: float, z: float, w: float, l: float, heading: float, fonts: Fonts):
+    def __init__(
+        self, name: str, x: float, y: float, z: float, w: float, l: float, heading: float,
+        fonts: Fonts, texture: Surface
+    ) -> None:
         super().__init__(x, y, z)
         self.name = name
         self.w = w
         self.l = l
         self.heading = heading
 
-        self.fonts = fonts
         self.texture_id = None
-        self._load_texture()
+        self._load_texture(fonts, texture)
 
-    def _load_texture(self):
+    def _load_texture(self, fonts: Fonts, texture: Surface):
         # TODO: replace solid fill with runway texture once it's available
 
         # Design texture
-        texture_surface = pg.Surface((int(self.w * 4), int(self.l * 4)), pg.SRCALPHA)  # allow detailed texture
-        texture_surface.fill((51, 51, 51, 255))
+        texture_surface = pg.Surface((int(self.w * 4), int(self.l * 4)))  # allow detailed texture
+        texture_surface.fill((0, 0, 0, 255))
+        texture_surface.blit(pg.transform.scale_by(pg.transform.rotate(texture.convert_alpha(), 90), 4), (0, 0))
 
         # Edge stripes
         r = pg.Rect(0, 0, 10, int(self.l * 4)); pg.draw.rect(texture_surface, (243, 243, 243, 255), r)
@@ -57,8 +61,8 @@ class Runway(LargeSceneryObject):
         if self.heading >= 180:
             raise ValueError(f"Base heading must be <180°, e.g. {self.heading-180}°, not {self.heading}°.")  # keep things consistent
 
-        draw_text(texture_surface, (int(self.w * 4) / 2, 150), 'centre', 'centre', str(round(self.heading/10)), (255, 255, 255, 255), 150, self.fonts.monospaced, rotation=180)
-        draw_text(texture_surface, (int(self.w * 4) / 2, int(self.l * 4) - 150), 'centre', 'centre', str((round(self.heading/10) + 18) % 36), (255, 255, 255, 255), 150, self.fonts.monospaced)
+        draw_text(texture_surface, (int(self.w * 4) / 2, 150), 'centre', 'centre', str(round(self.heading/10)), (255, 255, 255, 255), 150, fonts.monospaced, rotation=180)
+        draw_text(texture_surface, (int(self.w * 4) / 2, int(self.l * 4) - 150), 'centre', 'centre', str((round(self.heading/10) + 18) % 36), (255, 255, 255, 255), 150, fonts.monospaced)
 
         # Flip the surface vertically for OpenGL
         image_surface = pg.transform.flip(texture_surface, False, True)

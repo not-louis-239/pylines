@@ -67,6 +67,8 @@ class Images(AssetBank):
         self.sand = self._load("sand.png")
         self.ocean = self._load("ocean.png")
 
+        self.base_runway_texture = self._load("base_runway_texture.png")
+
         self.cockpit = self._load("cockpit_base.png")
         self.compass = self._load("compass.png")
         self.speed_dial = self._load("speed_dial.png")
@@ -156,6 +158,8 @@ class WorldData(AssetBank):
             np.save(cached_heightmap_path, self.height_array)
 
         self.noise = pg.image.load(paths.WORLD_DIR / "noise.png").convert_alpha()
+
+        # TODO: Compress file openings
 
         # Runway data
         with open(paths.WORLD_DIR / "runways.json") as f:

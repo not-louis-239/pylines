@@ -51,6 +51,7 @@ class Game:
         self.env: Environment = Environment(
             world_data,
             self.assets.fonts,
+            self.assets.images,
             diagonal_split='AD'
         )
 
