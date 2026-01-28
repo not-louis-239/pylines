@@ -28,7 +28,6 @@ from pylines.shaders.shader_manager import load_shader_script
 
 from .bases import LargeSceneryObject
 
-
 class Ground(LargeSceneryObject):
     def __init__(self, textures: dict[str, Surface], env: Environment) -> None:
         super().__init__(0, 0, 0)
@@ -42,6 +41,7 @@ class Ground(LargeSceneryObject):
             str(paths.SHADERS_DIR / "terrain.vert"),
             str(paths.SHADERS_DIR / "terrain.frag")
         )
+
         self.position_loc = gl.glGetAttribLocation(self.shader, "position")
         self.tex_coord_loc = gl.glGetAttribLocation(self.shader, "tex_coord")
         self.normal_loc = gl.glGetAttribLocation(self.shader, "normal")
@@ -57,64 +57,88 @@ class Ground(LargeSceneryObject):
         self.env = env
         self.grid_resolution = 400  # Number of vertices along one edge
 
+    def _build(self):
         self.vertices: np.ndarray
         self.vertices, self.indices = self._build_mesh()
+        yield 0.8, "Meshing terrain"
+
         self._setup_vbo()
+        yield 0.9, "Uploading terrain vertices"
+
         self._setup_ebo()
+        yield 1.0, "Uploading terrain indices"
 
     def _build_mesh(self) -> tuple[np.ndarray, np.ndarray]:
         vertices = []
         indices = []
 
         res = self.grid_resolution
-        step = C.HALF_WORLD_SIZE * 2 / res
-        texture_scale = 200.0 / (C.HALF_WORLD_SIZE * 2)
+        size = C.HALF_WORLD_SIZE * 2
+        tex_scale = 200.0 / size
 
-        def vert_index(r: int, c: int) -> int:
-            return r * (res + 1) + c
+        # Precompute grid coords
+        xs = np.linspace(-C.HALF_WORLD_SIZE, C.HALF_WORLD_SIZE, res + 1, dtype=np.float32)
+        zs = xs.copy()
 
-        # ---- vertices ----
+        # Precompute heights
+        heights = np.empty((res + 1, res + 1), dtype=np.float32)
+        for r, z in enumerate(zs):
+            for c, x in enumerate(xs):
+                heights[r, c] = self.env.height_at(x, z)
+
+        # Preallocate buffers
+        vert_count = (res + 1) * (res + 1)
+        vertices = np.empty(vert_count * 8, dtype=np.float32)
+        indices = np.empty(res * res * 6, dtype=np.uint32)
+
+        dx = C.NORMAL_CALC_EPSILON
+        inv_2dx = 1.0 / (2.0 * dx)
+
+        vi = 0  # vertex write index
+
+        # Vertices
         for r in range(res + 1):
             for c in range(res + 1):
-                x = -C.HALF_WORLD_SIZE + c * step
-                z = -C.HALF_WORLD_SIZE + r * step
-                y = self.env.height_at(x, z)
+                x = xs[c]
+                z = zs[r]
+                y = heights[r, c]
 
-                u = (x + C.HALF_WORLD_SIZE) * texture_scale
-                v = (z + C.HALF_WORLD_SIZE) * texture_scale
+                # texture coords
+                u = (x + C.HALF_WORLD_SIZE) * tex_scale
+                v = (z + C.HALF_WORLD_SIZE) * tex_scale
 
-                # Calculate normal
-                dx = C.NORMAL_CALC_EPSILON
-                dz = C.NORMAL_CALC_EPSILON
+                # normal via central differences
+                hL = heights[r, max(c - 1, 0)]
+                hR = heights[r, min(c + 1, res)]
+                hD = heights[max(r - 1, 0), c]
+                hU = heights[min(r + 1, res), c]
 
-                ny_plus_dx = self.env.height_at(x + dx, z)
-                ny_minus_dx = self.env.height_at(x - dx, z)
-                ny_plus_dz = self.env.height_at(x, z + dz)
-                ny_minus_dz = self.env.height_at(x, z - dz)
+                nx = (hL - hR) * inv_2dx
+                ny = 1.0
+                nz = (hD - hU) * inv_2dx
 
-                normal_x = ny_minus_dx - ny_plus_dx
-                normal_y = 2 * dx
-                normal_z = ny_minus_dz - ny_plus_dz
+                inv_len = 1.0 / (nx * nx + ny * ny + nz * nz) ** 0.5
+                nx *= inv_len
+                ny *= inv_len
+                nz *= inv_len
 
-                normal = pg.Vector3(normal_x, normal_y, normal_z).normalize()
+                vertices[vi:vi + 8] = (x, y, z, u, v, nx, ny, nz)
+                vi += 8
 
-                vertices.extend([x, y, z, u, v, normal.x, normal.y, normal.z])
-
-        # ---- indices ----
+        # Indices
+        ii = 0
+        stride = res + 1
         for r in range(res):
             for c in range(res):
-                vA = vert_index(r, c)
-                vB = vert_index(r, c + 1)
-                vC = vert_index(r + 1, c)
-                vD = vert_index(r + 1, c + 1)
+                a = r * stride + c
+                b = a + 1
+                c_ = a + stride
+                d = c_ + 1
 
-                indices.extend([vA, vB, vD])
-                indices.extend([vA, vD, vC])
+                indices[ii:ii + 6] = (a, b, d, a, d, c_)
+                ii += 6
 
-        return (
-            np.array(vertices, dtype=np.float32),
-            np.array(indices, dtype=np.uint32),
-        )
+        return vertices, indices
 
     def _setup_vbo(self):
         # Create a buffer object

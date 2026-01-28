@@ -152,8 +152,7 @@ class GameScreen(State):
         )
 
     def _build(self) -> Generator[tuple[float, str], None, None]:
-        self._init_ground()
-        yield 0.45, "Creating ground"
+        yield from self._init_ground(0.3, 0.45)
 
         self._init_ocean()
         yield 0.7, "Adding H₂O"
@@ -164,7 +163,7 @@ class GameScreen(State):
         self._init_map()
         yield 1, "Booting up GPS"
 
-    def _init_ground(self):
+    def _init_ground(self, start: float, end: float):
         assert self.game.env is not None
 
         assets = self.game.assets
@@ -179,6 +178,10 @@ class GameScreen(State):
         }
 
         self.ground = Ground(ground_textures, self.game.env)
+
+        span = end - start
+        for p, msg in self.ground._build():
+            yield start + p * span, msg
 
     def _init_ocean(self):
         assert self.game.env is not None
