@@ -12,12 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import math
+import pygame as pg
 from datetime import datetime
 
+from . import constants as C
 from .colours import SKY_COLOUR_SCHEMES, ColourScheme, lerp_colour
 from .custom_types import RealNumber
 from .utils import map_value
-
+from .constants import MOON_BRIGHTNESS, SUN_BRIGHTNESS
 
 def fetch_hour() -> float:
     """Returns a value between 0 and 24 to represent the current hour."""
@@ -26,38 +29,37 @@ def fetch_hour() -> float:
     hour = now.hour + now.minute/60 + now.second/3_600 + now.microsecond/3_600/1e6
     return hour
 
-def brightness_from_hour(hour: RealNumber) -> RealNumber:
-    """Returns the expected terrain brightness.
-
-    0 = pitch black, 1 = full brightness"""
-
-    MIN_BRIGHTNESS = 0.15  # moonlight
-    MAX_BRIGHTNESS = 1.0  # sunlight
-
-    if hour < 4:
-        return MIN_BRIGHTNESS
-    elif hour < 8:
-        return map_value(hour, 4, 8, MIN_BRIGHTNESS, MAX_BRIGHTNESS)
-    elif hour < 16:
-        return MAX_BRIGHTNESS
-    elif hour < 20:
-        return map_value(hour, 16, 20, MAX_BRIGHTNESS, MIN_BRIGHTNESS)
+def sunlight_strength_from_hour(hour: RealNumber) -> RealNumber:
+    if hour < C.SUNRISE_START:
+        return 0
+    elif hour < C.SUNRISE_END:
+        return map_value(hour, C.SUNRISE_START, C.SUNRISE_END, 0, 1)
+    elif hour < C.SUNSET_START:
+        return 1
+    elif hour < C.SUNSET_END:
+        return map_value(hour, C.SUNSET_START, C.SUNSET_END, 1, 0)
     else:
-        return MIN_BRIGHTNESS
+        return 0
 
 def sky_colour_from_hour(hour: float) -> ColourScheme:
     """Returns interpolated sky colours for given hour."""
 
+    # Local aliases
+    RISE_ST = C.SUNRISE_START
+    RISE_END = C.SUNRISE_END
+    SET_ST = C.SUNSET_START
+    SET_END = C.SUNSET_END
+
     # Define scheme sequence with hours, these are the start times
     keyframes = [
-        (0, SKY_COLOUR_SCHEMES["night"]),
-        (4, SKY_COLOUR_SCHEMES["night"]),
-        (6, SKY_COLOUR_SCHEMES["sunrise"]),
-        (8, SKY_COLOUR_SCHEMES["day"]),
-        (16, SKY_COLOUR_SCHEMES["day"]),
-        (18, SKY_COLOUR_SCHEMES["sunset"]),
-        (20, SKY_COLOUR_SCHEMES["night"]),
-        (24, SKY_COLOUR_SCHEMES["night"]),
+        (0,                      SKY_COLOUR_SCHEMES["night"]),
+        (RISE_ST,                SKY_COLOUR_SCHEMES["night"]),
+        ((RISE_ST+RISE_END) / 2, SKY_COLOUR_SCHEMES["sunrise"]),
+        (RISE_END,               SKY_COLOUR_SCHEMES["day"]),
+        (SET_ST,                 SKY_COLOUR_SCHEMES["day"]),
+        ((SET_ST+SET_END) / 2,   SKY_COLOUR_SCHEMES["sunset"]),
+        (SET_END,                SKY_COLOUR_SCHEMES["night"]),
+        (24,                     SKY_COLOUR_SCHEMES["night"]),
     ]
 
     # Find surrounding keyframes
@@ -72,3 +74,19 @@ def sky_colour_from_hour(hour: float) -> ColourScheme:
                 low=lerp_colour(start_scheme.low, end_scheme.low, t),
             )
     return SKY_COLOUR_SCHEMES["night"]  # fallback
+
+def sun_direction_from_hour(hour: float) -> pg.Vector3:
+    """Returns a normalized 3D vector representing the sun's direction."""
+    pi = math.pi
+
+    azimuth = (-pi/2 + 2*pi * hour/24) % (2*pi)  # radians, with 0 = east
+    elevation = math.sin((hour - 6) * (2*pi / 24))   # -1 = directly underneath, 1 = directly overhead
+
+    h = (1 - elevation**2)**0.5
+    direction = pg.Vector3(
+        h * math.cos(azimuth),  # X
+        elevation,         # Y
+        -h * math.sin(azimuth)  # Z
+    )
+    return direction.normalize()
+

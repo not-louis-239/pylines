@@ -100,7 +100,7 @@ class Plane(Entity):
 
     def reset(self) -> None:
         STARTING_POS = (200, -3_000)
-        STARTING_YAW = 130
+        STARTING_YAW = 310
 
         sx, sz = STARTING_POS
         self.pos = pg.Vector3(sx, self.env.height_at(sx, sz), sz)

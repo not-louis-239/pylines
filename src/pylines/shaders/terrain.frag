@@ -17,6 +17,8 @@
 varying vec2 v_tex_coord;  // image coords
 varying float v_height;    // world altitude
 varying vec2 v_world_xz;   // world coords
+varying vec3 v_normal;
+varying vec3 v_world_pos;
 
 // Terrain textures
 uniform sampler2D sand_texture;
@@ -44,6 +46,10 @@ const float blend_range = 20.0;  // metres
 
 // Time-based brightness
 uniform float u_brightness;
+uniform vec3 u_sun_direction;
+uniform float u_min_brightness;
+uniform float u_max_brightness;
+uniform float u_shade_multiplier;
 
 void main() {
     // Sample all textures
@@ -85,8 +91,24 @@ void main() {
     color = mix(color, alpine_rock, b_alpine_rock);
     color = mix(color, snow, b_snow);
 
-    // Apply brightness multiplier
-    color.rgb *= u_brightness;
+    // Calculate diffuse light (direct sunlight)
+    float diffuse_factor = max(dot(normalize(v_normal), normalize(u_sun_direction)), 0.0);
+
+    // Base moonlight brightness is always present
+    float total_brightness = u_min_brightness;
+
+    // Calculate sun's current strength above moonlight
+    float sun_strength_from_hour = max(0.0, u_brightness - u_min_brightness);
+
+    // The sun's additional brightness:
+    // It's strongest when facing the sun (diffuse_factor = 1).
+    // When not directly facing the sun (diffuse_factor < 1), the effect is reduced,
+    // and for fully shaded areas (diffuse_factor = 0), the effect is reduced by u_shade_multiplier.
+    float sun_additional_brightness = sun_strength_from_hour * (diffuse_factor + (1.0 - diffuse_factor) * u_shade_multiplier);
+    total_brightness += sun_additional_brightness;
+
+    // Combine color with calculated total brightness
+    color.rgb *= total_brightness;
 
     gl_FragColor = color;
 }

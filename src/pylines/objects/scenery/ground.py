@@ -19,9 +19,10 @@ import OpenGL.GL as gl
 import pygame as pg
 
 import pylines.core.constants as C
+from pylines.core.constants import MOON_BRIGHTNESS, SUN_BRIGHTNESS, SHADE_BRIGHTNESS_MULT
 import pylines.core.paths as paths
 from pylines.core.custom_types import Surface
-from pylines.core.time_manager import brightness_from_hour, fetch_hour
+from pylines.core.time_manager import sunlight_strength_from_hour, fetch_hour, sun_direction_from_hour
 from pylines.game.environment import Environment
 from pylines.shaders.shader_manager import load_shader_script
 
@@ -43,8 +44,13 @@ class Ground(LargeSceneryObject):
         )
         self.position_loc = gl.glGetAttribLocation(self.shader, "position")
         self.tex_coord_loc = gl.glGetAttribLocation(self.shader, "tex_coord")
+        self.normal_loc = gl.glGetAttribLocation(self.shader, "normal")
         self.sea_level_loc = gl.glGetUniformLocation(self.shader, "sea_level")
         self.brightness_loc = gl.glGetUniformLocation(self.shader, "u_brightness")
+        self.sun_direction_loc = gl.glGetUniformLocation(self.shader, "u_sun_direction")
+        self.min_brightness_loc = gl.glGetUniformLocation(self.shader, "u_min_brightness")
+        self.max_brightness_loc = gl.glGetUniformLocation(self.shader, "u_max_brightness")
+        self.shade_multiplier_loc = gl.glGetUniformLocation(self.shader, "u_shade_multiplier")
 
         self.vbo = None
         self.ebo = None
@@ -77,7 +83,22 @@ class Ground(LargeSceneryObject):
                 u = (x + C.HALF_WORLD_SIZE) * texture_scale
                 v = (z + C.HALF_WORLD_SIZE) * texture_scale
 
-                vertices.extend([x, y, z, u, v])
+                # Calculate normal
+                dx = C.NORMAL_CALC_EPSILON
+                dz = C.NORMAL_CALC_EPSILON
+
+                ny_plus_dx = self.env.height_at(x + dx, z)
+                ny_minus_dx = self.env.height_at(x - dx, z)
+                ny_plus_dz = self.env.height_at(x, z + dz)
+                ny_minus_dz = self.env.height_at(x, z - dz)
+
+                normal_x = ny_minus_dx - ny_plus_dx
+                normal_y = 2 * dx
+                normal_z = ny_minus_dz - ny_plus_dz
+
+                normal = pg.Vector3(normal_x, normal_y, normal_z).normalize()
+
+                vertices.extend([x, y, z, u, v, normal.x, normal.y, normal.z])
 
         # ---- indices ----
         for r in range(res):
@@ -144,8 +165,15 @@ class Ground(LargeSceneryObject):
         gl.glEnable(gl.GL_TEXTURE_2D)  # Enable texturing before using shaders
         gl.glUseProgram(self.shader)  # Activate the shader program
 
-        brightness = brightness_from_hour(fetch_hour())
+        current_hour = fetch_hour()
+        brightness = sunlight_strength_from_hour(current_hour)
+        sun_direction = sun_direction_from_hour(current_hour)
+
         gl.glUniform1f(self.brightness_loc, brightness)
+        gl.glUniform3f(self.sun_direction_loc, sun_direction.x, sun_direction.y, sun_direction.z)
+        gl.glUniform1f(self.min_brightness_loc, MOON_BRIGHTNESS)
+        gl.glUniform1f(self.max_brightness_loc, SUN_BRIGHTNESS)
+        gl.glUniform1f(self.shade_multiplier_loc, SHADE_BRIGHTNESS_MULT)
 
         # Set up textures for the shader
         for i, (name, texture_id) in enumerate(self.textures.items()):
@@ -166,18 +194,22 @@ class Ground(LargeSceneryObject):
         gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, self.ebo)
 
         # Enable and define vertex attributes
-        stride = self.vertices.itemsize * 5
+        stride = self.vertices.itemsize * 8
         gl.glEnableVertexAttribArray(self.position_loc)
         gl.glVertexAttribPointer(self.position_loc, 3, gl.GL_FLOAT, gl.GL_FALSE, stride, ctypes.c_void_p(0))
 
         gl.glEnableVertexAttribArray(self.tex_coord_loc)
         gl.glVertexAttribPointer(self.tex_coord_loc, 2, gl.GL_FLOAT, gl.GL_FALSE, stride, ctypes.c_void_p(self.vertices.itemsize * 3))
 
+        gl.glEnableVertexAttribArray(self.normal_loc)
+        gl.glVertexAttribPointer(self.normal_loc, 3, gl.GL_FLOAT, gl.GL_FALSE, stride, ctypes.c_void_p(self.vertices.itemsize * 5))
+
         gl.glDrawElements(gl.GL_TRIANGLES, len(self.indices), gl.GL_UNSIGNED_INT, None)
 
         # Disable vertex attributes
         gl.glDisableVertexAttribArray(self.position_loc)
         gl.glDisableVertexAttribArray(self.tex_coord_loc)
+        gl.glDisableVertexAttribArray(self.normal_loc)
 
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
         gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, 0)

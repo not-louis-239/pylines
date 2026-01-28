@@ -22,11 +22,11 @@ import pygame as pg
 from noise import snoise2
 
 import pylines.core.constants as C
-from pylines.core.time_manager import fetch_hour
+from pylines.core.time_manager import fetch_hour, sun_direction_from_hour
 
 from .bases import CelestialObject, LargeSceneryObject
-from pylines.core.utils import clamp
-from pylines.core.time_manager import fetch_hour, brightness_from_hour
+from pylines.core.utils import clamp, lerp
+from pylines.core.time_manager import fetch_hour, sunlight_strength_from_hour
 from pylines.core.custom_types import RealNumber, Surface, Coord3
 
 class Sky(LargeSceneryObject):
@@ -75,17 +75,7 @@ class Sun(CelestialObject):
         0 = directly underneath, 12 = directly overhead
         Sun rises in the east and sets in the west."""
 
-        pi = math.pi
-
-        azimuth = (-pi/2 + 2*pi * hour/24) % (2*pi)  # radians, with 0 = east
-        elevation = sin((hour - 6) * (2*pi / 24))   # -1 = directly underneath, 1 = directly overhead
-
-        h = (1 - elevation**2)**0.5
-        self.direction = pg.Vector3(
-            h * cos(azimuth),  # X
-            elevation,         # Y
-            -h * sin(azimuth)  # Z
-        )
+        self.direction = sun_direction_from_hour(fetch_hour())
 
     def update(self):
         self.set_direction(fetch_hour())
@@ -98,18 +88,7 @@ class Moon(CelestialObject):
         """Set Moon direction based on hour (0-24).
         Moon is opposite Sun."""
 
-        pi = math.pi
-
-        azimuth = (-pi/2 + 2*pi * hour/24) % (2*pi)  # radians, with 0 = east
-        elevation = sin((hour - 6) * (2*pi / 24))   # -1 = directly underneath, 1 = directly overhead
-
-        h = (1 - elevation**2)**0.5
-        self.direction = pg.Vector3(
-            h * cos(azimuth),  # X
-            elevation,         # Y
-            -h * sin(azimuth)  # Z
-        )
-        self.direction *= -1
+        self.direction = -sun_direction_from_hour(fetch_hour())
 
     def update(self):
         self.set_direction(fetch_hour())
@@ -209,7 +188,7 @@ class CloudLayer(LargeSceneryObject):
         size: RealNumber, alpha: RealNumber,
         camera_fwd: pg.Vector3
     ):
-        brightness = brightness_from_hour(fetch_hour())
+        brightness = lerp(C.MOON_BRIGHTNESS, C.SUN_BRIGHTNESS, sunlight_strength_from_hour(fetch_hour()))
         size_half = size * 0.5
 
         # View direction from cloud to camera

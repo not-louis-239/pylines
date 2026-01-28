@@ -38,9 +38,6 @@ def _hex_to_rgb(hex_col: str) -> Colour:
 
     return (r, g, b)
 
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
-
 # Sky colours
 SKY_COLOUR_SCHEMES: dict[str, ColourScheme] = {
     "night": ColourScheme(
@@ -65,7 +62,16 @@ SKY_COLOUR_SCHEMES: dict[str, ColourScheme] = {
     )
 }
 
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+
 BLUE = (179, 228, 255)
 BROWN = (255, 206, 173)
 DARK_BLUE = (140, 208, 255)
 DARK_BROWN = (200, 125, 80)
+
+MAP_BORDER_COLOUR = (129, 137, 143)
+MAP_RUNWAY_COLOUR = (175, 175, 175)
+MAP_PROHIBITED_FILL_COLOR = (255, 0, 0, 51)
+MAP_PROHIBITED_BORDER_COLOR = (255, 0, 0, 255)
+MAP_PROHIBITED_TEXT_COLOUR = (255, 210, 210)

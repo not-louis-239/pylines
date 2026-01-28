@@ -15,10 +15,11 @@
 import OpenGL.GL as gl
 import pygame as pg
 
+from pylines.core.constants import MOON_BRIGHTNESS, SUN_BRIGHTNESS
 from pylines.core.custom_types import Surface
 from pylines.core.asset_manager import Fonts
-from pylines.core.time_manager import brightness_from_hour, fetch_hour
-from pylines.core.utils import draw_text
+from pylines.core.time_manager import sunlight_strength_from_hour, fetch_hour
+from pylines.core.utils import draw_text, lerp
 
 from .bases import LargeSceneryObject
 
@@ -38,8 +39,6 @@ class Runway(LargeSceneryObject):
         self._load_texture(fonts, texture)
 
     def _load_texture(self, fonts: Fonts, texture: Surface):
-        # TODO: replace solid fill with runway texture once it's available
-
         # Design texture
         texture_surface = pg.Surface((int(self.w * 4), int(self.l * 4)))  # allow detailed texture
         texture_surface.fill((0, 0, 0, 255))
@@ -83,7 +82,7 @@ class Runway(LargeSceneryObject):
         gl.glBindTexture(gl.GL_TEXTURE_2D, 0)  # Unbind texture
 
     def draw(self):
-        brightness = brightness_from_hour(fetch_hour())
+        brightness = lerp(MOON_BRIGHTNESS, SUN_BRIGHTNESS, sunlight_strength_from_hour(fetch_hour()))
         gl.glPushMatrix()
 
         # Save current blend and depth mask states to restore them later
@@ -102,7 +101,7 @@ class Runway(LargeSceneryObject):
 
         # Enable polygon offset to "pull" the runway towards the camera
         gl.glEnable(gl.GL_POLYGON_OFFSET_FILL)
-        gl.glPolygonOffset(-3.0, -3.0)
+        gl.glPolygonOffset(-6.0, -6.0)
 
         # Translate and rotate to runway's position and heading
         gl.glTranslatef(self.pos.x, 0.2 + self.pos.y, self.pos.z)  # small offset prevents z-fighting

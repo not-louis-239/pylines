@@ -16,14 +16,19 @@
 
 attribute vec3 position;
 attribute vec2 tex_coord;
+attribute vec3 normal;
 
 varying vec2 v_tex_coord;
 varying float v_height;
 varying vec2 v_world_xz;
+varying vec3 v_normal;
+varying vec3 v_world_pos;
 
 void main() {
     v_tex_coord = tex_coord;
     v_height = position.y;
     v_world_xz = position.xz;
+    v_normal = normal;
+    v_world_pos = position;
     gl_Position = gl_ModelViewProjectionMatrix * vec4(position, 1.0);
 }

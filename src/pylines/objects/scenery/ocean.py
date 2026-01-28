@@ -22,9 +22,10 @@ import OpenGL.GL as gl
 import pygame as pg
 
 import pylines.core.constants as C
+from pylines.core.utils import lerp
 import pylines.core.paths as paths
 from pylines.core.custom_types import Surface
-from pylines.core.time_manager import brightness_from_hour, fetch_hour
+from pylines.core.time_manager import sunlight_strength_from_hour, fetch_hour
 from pylines.shaders.shader_manager import load_shader_script
 
 from .bases import LargeSceneryObject
@@ -124,7 +125,7 @@ class Ocean(LargeSceneryObject):
         return vbo, ebo
 
     def draw(self):
-        brightness = brightness_from_hour(fetch_hour())
+        brightness = lerp(C.MOON_BRIGHTNESS, C.SUN_BRIGHTNESS, sunlight_strength_from_hour(fetch_hour()))
 
         gl.glPushMatrix()
 
@@ -134,7 +135,7 @@ class Ocean(LargeSceneryObject):
         gl.glDepthMask(gl.GL_FALSE)  # Don't write to depth buffer
 
         gl.glEnable(gl.GL_POLYGON_OFFSET_FILL)
-        gl.glPolygonOffset(1.0, 1.0)
+        gl.glPolygonOffset(-5.0, -5.0)
 
         gl.glUseProgram(self.shader)
 

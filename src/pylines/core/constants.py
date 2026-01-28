@@ -57,23 +57,8 @@ class SFXChannelID(IntEnum):
     OVERSPEED = 5
     PROHIBITED = 6
 
-# Visuals, tick updates and window size
-FPS = 60
-TPS = 60
-WN_W = 1350
-WN_H = 850
-
-# Ground size
-_WORLD_SIZE = 200_000  # metres
-HALF_WORLD_SIZE = _WORLD_SIZE // 2  # distance from origin, metres, so the world is actually 200,000m wide
-HARD_TRAVEL_LIMIT = HALF_WORLD_SIZE * 0.99  # invisible wall
-SOFT_TRAVEL_LIMIT = HALF_WORLD_SIZE * 0.95  # past this, forces push the user back into the centre
-
-# Rendering
-INNER_RENDER_LIMIT = 0.05
-OUTER_RENDER_LIMIT = 50_000
-
-CAMERA_RADIUS: float = 4  # The camera is a sphere collider now
+    # Other
+    SCRAPE = 7
 
 # Plane models - these should eventually be moved to a separate file called `plane_models.py`
 PLANE_MODELS: dict[str, PlaneModel] = {
@@ -97,15 +82,35 @@ PLANE_MODELS: dict[str, PlaneModel] = {
     )
 }
 
+# Visuals, tick updates and window size
+FPS = 60
+TPS = 60
+WN_W = 1350
+WN_H = 850
+
+# Ground size
+_WORLD_SIZE = 200_000  # metres
+HALF_WORLD_SIZE = _WORLD_SIZE // 2  # distance from origin, metres, so the world is actually 200,000m wide
+HARD_TRAVEL_LIMIT = HALF_WORLD_SIZE * 0.99  # invisible wall
+SOFT_TRAVEL_LIMIT = HALF_WORLD_SIZE * 0.95  # past this, forces push the user back into the centre
+
+# Rendering
+INNER_RENDER_LIMIT = 0.05
+OUTER_RENDER_LIMIT = 50_000
+
+CAMERA_RADIUS: float = 4  # The camera is a sphere collider now
+
 # Add dictionary keys to plane models as canon names
 for model_name, model_data in PLANE_MODELS.items():
     model_data.name = model_name
 
+# Physics
 AIR_DENSITY = 1.225  # kg/m³
 GRAVITY = 9.8        # m/s²
 
 # Mathematical
 EPSILON = 0.0001  # Treat anything smaller than this as zero
+NORMAL_CALC_EPSILON = 1.0  # Epsilon for normal calculation (in metres)
 
 # Visual
 CHEVRON_ANGLE = 40
@@ -115,3 +120,24 @@ MAP_TOGGLE_ANIMATION_DURATION = 0.15  # seconds
 MAP_METRES_PER_PX = 50  # metres per pixel
 MAP_PIXELS_PER_TILE = 100  # pixels
 METRES_PER_TILE = MAP_METRES_PER_PX * MAP_PIXELS_PER_TILE
+
+# Terrain brightness
+SHADE_BRIGHTNESS_MULT = 0.5  # Brightness multiplier when shaded
+MOON_BRIGHTNESS = 0.18  # Moonlight brightness (omnipresent, uniform)
+SUN_BRIGHTNESS = 1.0  # Brightness in direct, full-strength sunlight
+
+# Daylight cycle
+SUNRISE_START = 4
+SUNRISE_END = 8
+SUNSET_START = 16
+SUNSET_END = 20
+
+# Map display
+SCALE_BAR_LENGTHS = [10, 100, 500, 1_000, 2_000, 5_000, 10_000]
+MAP_ZOOM_MIN = 1
+MAP_ZOOM_MAX = 100
+
+# Controls
+FLAPS_SPEED = 2
+RUDDER_SPEED = 2.5
+RUDDER_SNAPBACK = 3
