@@ -135,7 +135,7 @@ class Ocean(LargeSceneryObject):
         gl.glDepthMask(gl.GL_FALSE)  # Don't write to depth buffer
 
         gl.glEnable(gl.GL_POLYGON_OFFSET_FILL)
-        gl.glPolygonOffset(1.0, 1.0)
+        gl.glPolygonOffset(-5.0, -5.0)
 
         gl.glUseProgram(self.shader)
 

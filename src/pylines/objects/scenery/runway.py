@@ -101,7 +101,7 @@ class Runway(LargeSceneryObject):
 
         # Enable polygon offset to "pull" the runway towards the camera
         gl.glEnable(gl.GL_POLYGON_OFFSET_FILL)
-        gl.glPolygonOffset(-3.0, -3.0)
+        gl.glPolygonOffset(-6.0, -6.0)
 
         # Translate and rotate to runway's position and heading
         gl.glTranslatef(self.pos.x, 0.2 + self.pos.y, self.pos.z)  # small offset prevents z-fighting
