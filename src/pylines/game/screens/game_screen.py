@@ -22,7 +22,7 @@ from math import sin, cos, radians as rad
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import TYPE_CHECKING, Callable, cast
+from typing import TYPE_CHECKING, Callable, cast, Generator
 
 import numpy as np
 import pygame as pg
@@ -80,6 +80,9 @@ class DialogMessage:
 
 class GameScreen(State):
     def __init__(self, game: Game) -> None:
+        """Purposefully lightweight constructor
+        to avoid stalling during loading screen."""
+
         assets = game.assets
         super().__init__(game)
         assert self.game.env is not None
@@ -88,18 +91,6 @@ class GameScreen(State):
         self.env = self.game.env
 
         self.dialog_box = DialogMessage()
-
-        ground_textures = {
-            "sand_texture": assets.images.sand,
-            "low_grass_texture": assets.images.low_grass,
-            "high_grass_texture": assets.images.high_grass,
-            "treeline_rock_texture": assets.images.treeline_rock,
-            "alpine_rock_texture": assets.images.alpine_rock,
-            "snow_texture": assets.images.snow,
-            "noise": assets.world.noise,
-        }
-        self.ocean = Ocean(assets.images.ocean, self.game.env)
-        self.ground = Ground(ground_textures, self.game.env)
 
         self.plane = Plane(assets.sounds, self.dialog_box, self.game.env)
         self.sky = Sky()
@@ -160,7 +151,77 @@ class GameScreen(State):
             inner_ai_rect.width//2
         )
 
-        # Map setup
+    def _build(self) -> Generator[tuple[float, str], None, None]:
+        self._init_ground()
+        yield 0.45, "Creating ground"
+
+        self._init_ocean()
+        yield 0.7, "Adding H₂O"
+
+        self._init_buildings()
+        yield 0.85, "Making cities"
+
+        self._init_map()
+        yield 1, "Booting up GPS"
+
+    def _init_ground(self):
+        assert self.game.env is not None
+
+        assets = self.game.assets
+        ground_textures = {
+            "sand_texture": assets.images.sand,
+            "low_grass_texture": assets.images.low_grass,
+            "high_grass_texture": assets.images.high_grass,
+            "treeline_rock_texture": assets.images.treeline_rock,
+            "alpine_rock_texture": assets.images.alpine_rock,
+            "snow_texture": assets.images.snow,
+            "noise": assets.world.noise,
+        }
+
+        self.ground = Ground(ground_textures, self.game.env)
+
+    def _init_ocean(self):
+        assert self.game.env is not None
+
+        self.ocean = Ocean(self.game.assets.images.ocean, self.game.env)
+
+    def _init_buildings(self):
+        # Building rendering setup
+        all_vertices = []
+        for building in self.env.buildings:
+            all_vertices.extend(building.get_vertices())
+
+        if all_vertices:
+            self.building_vertices = np.array(all_vertices, dtype=np.float32)
+            self.building_vertex_count = len(self.building_vertices) // 10
+
+            self.buildings_vbo = gl.glGenBuffers(1)
+            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buildings_vbo)
+            gl.glBufferData(gl.GL_ARRAY_BUFFER, self.building_vertices.nbytes, self.building_vertices, gl.GL_STATIC_DRAW)
+            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
+
+            self.building_shader = load_shader_script(
+                str(paths.SHADERS_DIR / "building.vert"),
+                str(paths.SHADERS_DIR / "building.frag")
+            )
+            self.building_pos_loc = gl.glGetAttribLocation(self.building_shader, "position")
+            self.building_color_loc = gl.glGetAttribLocation(self.building_shader, "color")
+            self.building_normal_loc = gl.glGetAttribLocation(self.building_shader, "normal")
+            self.building_emissive_loc = gl.glGetAttribLocation(self.building_shader, "in_emissive")
+            self.building_brightness_loc = gl.glGetUniformLocation(self.building_shader, "u_brightness")
+            self.building_sun_direction_loc = gl.glGetUniformLocation(self.building_shader, "u_sun_direction")
+            self.building_min_brightness_loc = gl.glGetUniformLocation(self.building_shader, "u_min_brightness")
+            self.building_max_brightness_loc = gl.glGetUniformLocation(self.building_shader, "u_max_brightness")
+            self.building_shade_multiplier_loc = gl.glGetUniformLocation(self.building_shader, "u_shade_multiplier")
+        else:
+            self.building_vertices = np.array([], dtype=np.float32)
+            self.building_vertex_count = 0
+            self.buildings_vbo = None
+
+    def _init_map(self):
+        assert self.game.env is not None
+
+        # Map view setup
         self.map_up: RealNumber = 0  # 1 = fully up, 0 = fully down
         self.map_state: MapState = MapState.HIDDEN
         self.map_show_advanced_info = False
@@ -210,7 +271,7 @@ class GameScreen(State):
         NUM_TILES = math.ceil(C.HALF_WORLD_SIZE*2 / (C.METRES_PER_TILE))
         self.map_tiles: list[list[pg.Surface]] = []
 
-        # Make cache directory
+        # Make cache directory if it doesn't exist
         cache_dir = paths.CACHE_DIR / "map_tiles"
         cache_dir.mkdir(parents=True, exist_ok=True)
 
@@ -262,38 +323,6 @@ class GameScreen(State):
             # We want h to go from 6_000 (top) to -4_000 (bottom)
             h = 6_000 - (10_000 * i / (self.HEIGHT_KEY_H - 1))
             pg.draw.rect(self.height_key, HEIGHT_COLOUR_LOOKUP[int(h+4000)], pg.Rect(0, i, self.HEIGHT_KEY_W, 1))
-
-        # Building rendering setup
-        all_vertices = []
-        for building in self.env.buildings:
-            all_vertices.extend(building.get_vertices())
-
-        if all_vertices:
-            self.building_vertices = np.array(all_vertices, dtype=np.float32)
-            self.building_vertex_count = len(self.building_vertices) // 10
-
-            self.buildings_vbo = gl.glGenBuffers(1)
-            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buildings_vbo)
-            gl.glBufferData(gl.GL_ARRAY_BUFFER, self.building_vertices.nbytes, self.building_vertices, gl.GL_STATIC_DRAW)
-            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
-
-            self.building_shader = load_shader_script(
-                str(paths.SHADERS_DIR / "building.vert"),
-                str(paths.SHADERS_DIR / "building.frag")
-            )
-            self.building_pos_loc = gl.glGetAttribLocation(self.building_shader, "position")
-            self.building_color_loc = gl.glGetAttribLocation(self.building_shader, "color")
-            self.building_normal_loc = gl.glGetAttribLocation(self.building_shader, "normal")
-            self.building_emissive_loc = gl.glGetAttribLocation(self.building_shader, "in_emissive")
-            self.building_brightness_loc = gl.glGetUniformLocation(self.building_shader, "u_brightness")
-            self.building_sun_direction_loc = gl.glGetUniformLocation(self.building_shader, "u_sun_direction")
-            self.building_min_brightness_loc = gl.glGetUniformLocation(self.building_shader, "u_min_brightness")
-            self.building_max_brightness_loc = gl.glGetUniformLocation(self.building_shader, "u_max_brightness")
-            self.building_shade_multiplier_loc = gl.glGetUniformLocation(self.building_shader, "u_shade_multiplier")
-        else:
-            self.building_vertices = np.array([], dtype=np.float32)
-            self.building_vertex_count = 0
-            self.buildings_vbo = None
 
     def reset(self) -> None:
         self.plane.reset()
