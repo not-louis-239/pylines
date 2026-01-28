@@ -26,7 +26,7 @@ import pylines.core.constants as C
 from pylines.core.colours import WHITE
 from pylines.core.custom_types import EventList, ScancodeWrapper, Surface
 from pylines.core.utils import draw_text
-from pylines.game.states import State
+from pylines.game.states import State, StateID
 from pylines.objects.buttons import Button
 
 if TYPE_CHECKING:
@@ -47,9 +47,9 @@ class TitleScreen(State):
 
     def take_input(self, keys: ScancodeWrapper, events: EventList, dt: int) -> None:
         if self.pressed(keys, pg.K_SPACE):
-            self.game.enter_state(self.game.States.GAME)
+            self.game.enter_state(StateID.GAME)
         if self.settings_button.check_click(events):
-            self.game.enter_state(self.game.States.SETTINGS)
+            self.game.enter_state(StateID.SETTINGS)
 
         self.update_prev_keys(keys)
 

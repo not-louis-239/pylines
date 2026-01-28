@@ -40,7 +40,7 @@ from pylines.core.time_manager import (
     sky_colour_from_hour
 )
 from pylines.core.utils import clamp, draw_needle, draw_text, draw_transparent_rect, lerp
-from pylines.game.states import State
+from pylines.game.states import State, StateID
 from pylines.objects.buildings import (
     BuildingDefinition,
     BuildingMapIconType,
@@ -82,9 +82,11 @@ class GameScreen(State):
     def __init__(self, game: Game) -> None:
         assets = game.assets
         super().__init__(game)
+        assert self.game.env is not None
 
         self._frame_count = 0
         self.env = self.game.env
+
         self.dialog_box = DialogMessage()
 
         ground_textures = {
@@ -96,10 +98,10 @@ class GameScreen(State):
             "snow_texture": assets.images.snow,
             "noise": assets.world.noise,
         }
-        self.ocean = Ocean(assets.images.ocean, game.env)
-        self.ground = Ground(ground_textures, game.env)
+        self.ocean = Ocean(assets.images.ocean, self.game.env)
+        self.ground = Ground(ground_textures, self.game.env)
 
-        self.plane = Plane(assets.sounds, self.dialog_box, game.env)
+        self.plane = Plane(assets.sounds, self.dialog_box, self.game.env)
         self.sky = Sky()
         self.sun = Sun(assets.images.sun)
         self.moon = Moon(assets.images.moon)
@@ -405,7 +407,7 @@ class GameScreen(State):
         # Meta controls
         if self.pressed(keys, pg.K_p):
             self.sounds.menu_music.stop()
-            self.game.enter_state(self.game.States.TITLE)
+            self.game.enter_state(StateID.TITLE)
 
             self.channel_wind.stop()
             self.channel_engine_active.stop()

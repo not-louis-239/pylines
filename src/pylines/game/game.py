@@ -19,60 +19,47 @@ from typing import TYPE_CHECKING
 
 import pygame as pg
 
-from pylines.core.asset_manager import Assets, WorldData
+from pylines.core.asset_manager import Assets
 from pylines.core.constants import SFXChannelID
 from pylines.core.data_manager import load_data, save_data
 from pylines.game.environment import Environment
-from pylines.game.screens.game_screen import GameScreen
+from pylines.game.screens.loading_screen import LoadingScreen
 from pylines.game.screens.settings import SettingsScreen
 from pylines.game.screens.title import TitleScreen
+from pylines.game.states import State, StateID
 
 if TYPE_CHECKING:
     from pylines.core.custom_types import EventList, ScancodeWrapper, Surface
-    from pylines.game.states import State
 
 class Game:
-    class States(Enum):
-        TITLE = auto()
-        GAME = auto()
-        SETTINGS = auto()
-
     def __init__(self) -> None:
-        # Load assets and files
+        # Lazy-load structure
+
         self.assets = Assets()
         self.save_data, *_ = load_data("data/save_data.json")
 
-        # Set up keys and states
         self.prev_keys: ScancodeWrapper = pg.key.get_pressed()
+        self.env: Environment | None = None
 
-        # The MapData instance should be garbage collected after Game
-        # has derived its height, size, data and other properties
-        world_data: WorldData = self.assets.world
-        self.env: Environment = Environment(
-            world_data,
-            self.assets.fonts,
-            self.assets.images,
-            diagonal_split='AD'
-        )
-
-        self.states: dict[Game.States, State] = {
-            Game.States.TITLE: TitleScreen(self),
-            Game.States.GAME: GameScreen(self),
-            Game.States.SETTINGS: SettingsScreen(self),
+        self.states: dict[StateID, State] = {
+            StateID.LOADING: LoadingScreen(self),
+            StateID.TITLE: TitleScreen(self),
+            StateID.SETTINGS: SettingsScreen(self),
         }
 
-        # Music
         self.music_channel = pg.mixer.Channel(SFXChannelID.MUSIC)
 
-        # States
-        self.state: Game.States = Game.States.TITLE  # Explicitly set initial state
-        self.enter_state(Game.States.TITLE)
+        self.state: StateID = StateID.LOADING
+        self.enter_state(StateID.LOADING)
 
-    def enter_state(self, state_name: States):
+    def enter_state(self, state_name: StateID):
+        assert self.assets is not None
+        assert self.states is not None
+
         prev_state = self.state
         self.state = state_name
 
-        menu_states = (self.States.TITLE, self.States.SETTINGS)
+        menu_states = (StateID.TITLE, StateID.SETTINGS)
         was_in_menu = prev_state in menu_states
         is_entering_menu = state_name in menu_states
         # Fade out music if leaving a menu state for a non-menu state
@@ -85,12 +72,18 @@ class Game:
         self.states[state_name].enter_state()
 
     def update(self, dt) -> None:
+        assert self.states is not None
+
         self.states[self.state].update(dt)
 
     def take_input(self, keys: ScancodeWrapper, events: EventList, dt: int) -> None:
+        assert self.states is not None
+
         self.states[self.state].take_input(keys, events, dt)
 
     def draw(self, wn: Surface) -> None:
+        assert self.states is not None
+
         self.states[self.state].draw(wn)
 
     def quit_game(self):

@@ -17,11 +17,18 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from enum import Enum, auto
 
 from pylines.core.custom_types import EventList, ScancodeWrapper, Surface
 
 if TYPE_CHECKING:
     from pylines.game.game import Game
+
+class StateID(Enum):
+    TITLE = auto()
+    GAME = auto()
+    SETTINGS = auto()
+    LOADING = auto()
 
 class State:
     def __init__(self, game: Game) -> None:

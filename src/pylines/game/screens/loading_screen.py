@@ -12,88 +12,64 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Callable, cast
+from __future__ import annotations
 
+from typing import cast, TYPE_CHECKING
+
+from OpenGL import GL as gl, GLU as glu
 import pygame as pg
-from OpenGL import GL as gl
-from OpenGL import GLU as glu
 
-import pylines.core.constants as C
-from pylines.core.custom_types import EventList, ScancodeWrapper, Surface
+from pylines.core import constants as C
 from pylines.core.utils import draw_text
+
+from pylines.game.environment import Environment
+from pylines.game.screens.game_screen import GameScreen
 from pylines.game.states import State, StateID
-from pylines.objects.buttons import Button
 
 if TYPE_CHECKING:
     from pylines.game.game import Game
 
-@dataclass(frozen=True)
-class ConfigEntry:
-    label: str
-    get: Callable[[], Any]
-    set: Callable[[Any], None]
-    kind: type
-
-class SettingsScreen(State):
-    def __init__(self, game: Game):
+class LoadingScreen(State):
+    def __init__(self, game: Game) -> None:
         super().__init__(game)
+        self.progress: float = 0
         self.display_surface = pg.Surface((C.WN_W, C.WN_H), pg.SRCALPHA)
         self.texture_id = gl.glGenTextures(1)
-        self.back_button = Button(
-            (170, C.WN_H-90), 300, 80, (25, 75, 75), (200, 255, 255),
-            "Back to Main Menu", self.fonts.monospaced, 30
+        self.gen = self._load_game()
+
+    def _load_game(self):
+        # Environment
+        world_data = self.game.assets.world
+        self.game.env = Environment(
+            world_data,
+            self.game.assets.fonts,
+            self.game.assets.images,
+            diagonal_split='AD'
         )
 
-        data = self.game.save_data
-        self.toggle_ops: list[ConfigEntry] = [
-            ConfigEntry(
-                "Time Option",
-                lambda: data.time_option,
-                lambda val: setattr(data, "time_option", val),
-                str
-            )
-        ]
-        self.toggle_idx = 0
+        self.progress = 0.1
+        yield
+
+        # Make heavier states
+        self.game.states[StateID.GAME] = GameScreen(self.game)
+        self.progress = 1.0
+        yield
 
     def reset(self) -> None:
         pass
 
-    def take_input(self, keys: ScancodeWrapper, events: EventList, dt: int) -> None:
-        if self.back_button.check_click(events):
+    def update(self, dt) -> None:
+        try:
+            next(self.gen)
+        except StopIteration:
             self.game.enter_state(StateID.TITLE)
 
-        if self.pressed(keys, pg.K_UP):
-            self.toggle_idx -= 1
-            self.toggle_idx %= len(self.toggle_ops)
-        if self.pressed(keys, pg.K_DOWN):
-            self.toggle_idx += 1
-            self.toggle_idx %= len(self.toggle_ops)
-
-        self.update_prev_keys(keys)
-
-    def draw(self, wn: Surface):
-        # Fill the display surface
+    def draw(self, wn) -> None:
         self.display_surface.fill((0, 0, 0))
-
-        # Draw text
-        draw_text(self.display_surface, (C.WN_W//2, C.WN_H*0.15), 'centre', 'centre', "Settings", (0, 192, 255), 40, self.fonts.monospaced)
-        draw_text(self.display_surface, (C.WN_W//2, C.WN_H*0.8), 'centre', 'centre', "This screen is under construction.", (255, 192, 0), 30, self.fonts.monospaced)
-        self.back_button.draw(self.display_surface)
-
-        data = self.game.save_data
-        drawn_ops = {
-            "Time Option": data.time_option,
-            "Custom Time": data.time_custom,
-            "Invert Y-Axis": data.invert_y_axis
-        }
-
-        for i, (ui_str, option) in enumerate(drawn_ops.items()):
-            TEXT_COLOUR = (192, 230, 255) if i == self.toggle_idx else (255, 255, 255)
-            VAL_COLOUR = (170, 210, 255) if i == self.toggle_idx else (220, 220, 220)
-
-            draw_text(self.display_surface, (C.WN_W*0.35, C.WN_H * (0.4+0.08*i)), 'left', 'centre', ui_str, TEXT_COLOUR, 30, self.fonts.monospaced)
-            draw_text(self.display_surface, (C.WN_W*0.65, C.WN_H * (0.4+0.08*i)), 'right', 'centre', str(option), VAL_COLOUR, 30, self.fonts.monospaced)
+        draw_text(
+            self.display_surface, (C.WN_W/2, C.WN_H/2), 'centre', 'centre',
+            "Loading...", (255, 255, 255), 30, self.fonts.monospaced
+        )
 
         # Convert the Pygame surface to an OpenGL texture
         texture_data = pg.image.tostring(self.display_surface, 'RGBA', True)
