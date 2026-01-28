@@ -16,6 +16,7 @@ import math
 import pygame as pg
 from datetime import datetime
 
+from . import constants as C
 from .colours import SKY_COLOUR_SCHEMES, ColourScheme, lerp_colour
 from .custom_types import RealNumber
 from .utils import map_value
@@ -29,30 +30,36 @@ def fetch_hour() -> float:
     return hour
 
 def sunlight_strength_from_hour(hour: RealNumber) -> RealNumber:
-    if hour < 4:
+    if hour < C.SUNRISE_START:
         return 0
-    elif hour < 8:
-        return map_value(hour, 4, 8, 0, 1)
-    elif hour < 16:
+    elif hour < C.SUNRISE_END:
+        return map_value(hour, C.SUNRISE_START, C.SUNRISE_END, 0, 1)
+    elif hour < C.SUNSET_START:
         return 1
-    elif hour < 20:
-        return map_value(hour, 16, 20, 1, 0)
+    elif hour < C.SUNSET_END:
+        return map_value(hour, C.SUNSET_START, C.SUNSET_END, 1, 0)
     else:
         return 0
 
 def sky_colour_from_hour(hour: float) -> ColourScheme:
     """Returns interpolated sky colours for given hour."""
 
+    # Local aliases
+    RISE_ST = C.SUNRISE_START
+    RISE_END = C.SUNRISE_END
+    SET_ST = C.SUNSET_START
+    SET_END = C.SUNSET_END
+
     # Define scheme sequence with hours, these are the start times
     keyframes = [
-        (0, SKY_COLOUR_SCHEMES["night"]),
-        (4, SKY_COLOUR_SCHEMES["night"]),
-        (6, SKY_COLOUR_SCHEMES["sunrise"]),
-        (8, SKY_COLOUR_SCHEMES["day"]),
-        (16, SKY_COLOUR_SCHEMES["day"]),
-        (18, SKY_COLOUR_SCHEMES["sunset"]),
-        (20, SKY_COLOUR_SCHEMES["night"]),
-        (24, SKY_COLOUR_SCHEMES["night"]),
+        (0,                      SKY_COLOUR_SCHEMES["night"]),
+        (RISE_ST,                SKY_COLOUR_SCHEMES["night"]),
+        ((RISE_ST+RISE_END) / 2, SKY_COLOUR_SCHEMES["sunrise"]),
+        (RISE_END,               SKY_COLOUR_SCHEMES["day"]),
+        (SET_ST,                 SKY_COLOUR_SCHEMES["day"]),
+        ((SET_ST+SET_END) / 2,   SKY_COLOUR_SCHEMES["sunset"]),
+        (SET_END,                SKY_COLOUR_SCHEMES["night"]),
+        (24,                     SKY_COLOUR_SCHEMES["night"]),
     ]
 
     # Find surrounding keyframes

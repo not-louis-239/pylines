@@ -24,12 +24,6 @@ from .colours import WHITE
 from .custom_types import AColour, Colour, Coord2, RealNumber
 
 
-@dataclass
-class Rotation:
-    pitch: int
-    yaw: int
-    roll: int
-
 def draw_text(
         surface: Surface, pos: tuple[float, float],
         horiz_align: Literal['left', 'centre', 'right'],
