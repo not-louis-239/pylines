@@ -35,8 +35,9 @@ import pylines.core.units as units
 from pylines.core.custom_types import Colour, EventList, RealNumber
 from pylines.core.time_manager import (
     sunlight_strength_from_hour,
+    sun_direction_from_hour,
     fetch_hour,
-    sky_colour_from_hour,
+    sky_colour_from_hour
 )
 from pylines.core.utils import clamp, draw_needle, draw_text, draw_transparent_rect, lerp
 from pylines.game.states import State
@@ -283,6 +284,10 @@ class GameScreen(State):
             self.building_normal_loc = gl.glGetAttribLocation(self.building_shader, "normal")
             self.building_emissive_loc = gl.glGetAttribLocation(self.building_shader, "in_emissive")
             self.building_brightness_loc = gl.glGetUniformLocation(self.building_shader, "u_brightness")
+            self.building_sun_direction_loc = gl.glGetUniformLocation(self.building_shader, "u_sun_direction")
+            self.building_min_brightness_loc = gl.glGetUniformLocation(self.building_shader, "u_min_brightness")
+            self.building_max_brightness_loc = gl.glGetUniformLocation(self.building_shader, "u_max_brightness")
+            self.building_shade_multiplier_loc = gl.glGetUniformLocation(self.building_shader, "u_shade_multiplier")
         else:
             self.building_vertices = np.array([], dtype=np.float32)
             self.building_vertex_count = 0
@@ -527,8 +532,15 @@ class GameScreen(State):
         gl.glUseProgram(self.building_shader)
 
         # Set uniforms
-        brightness = lerp(C.MOON_BRIGHTNESS, C.SUN_BRIGHTNESS, sunlight_strength_from_hour(fetch_hour()))
+        current_hour = fetch_hour()
+        brightness = sunlight_strength_from_hour(current_hour)
+        sun_direction = sun_direction_from_hour(current_hour)
+
         gl.glUniform1f(self.building_brightness_loc, brightness)
+        gl.glUniform3f(self.building_sun_direction_loc, sun_direction.x, sun_direction.y, sun_direction.z)
+        gl.glUniform1f(self.building_min_brightness_loc, C.MOON_BRIGHTNESS)
+        gl.glUniform1f(self.building_max_brightness_loc, C.SUN_BRIGHTNESS)
+        gl.glUniform1f(self.building_shade_multiplier_loc, C.SHADE_BRIGHTNESS_MULT)
 
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buildings_vbo)
 

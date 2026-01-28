@@ -19,6 +19,10 @@ varying vec3 vert_normal;
 varying float v_emissive;
 
 uniform float u_brightness;
+uniform vec3 u_sun_direction;
+uniform float u_min_brightness;
+uniform float u_max_brightness;
+uniform float u_shade_multiplier;
 
 void main() {
     if (v_emissive > 0.5) {
@@ -26,9 +30,22 @@ void main() {
         return;
     }
 
-    vec3 light_direction = normalize(vec3(0.5, 1.0, 0.7));
-    float diffuse = max(dot(normalize(vert_normal), light_direction), 0.0);
-    vec3 ambient = vec3(0.4, 0.4, 0.4);
-    vec3 final_color = (ambient + diffuse) * vert_color * u_brightness;
+    // Calculate diffuse light (direct sunlight)
+    float diffuse_factor = max(dot(normalize(vert_normal), normalize(u_sun_direction)), 0.0);
+
+    // Base moonlight brightness is always present
+    float total_brightness = u_min_brightness;
+
+    // Calculate sun's current strength above moonlight
+    float sun_strength_from_hour = max(0.0, u_brightness - u_min_brightness);
+
+    // The sun's additional brightness:
+    // It's strongest when facing the sun (diffuse_factor = 1).
+    // When not directly facing the sun (diffuse_factor < 1), the effect is reduced,
+    // and for fully shaded areas (diffuse_factor = 0), the effect is reduced by u_shade_multiplier.
+    float sun_additional_brightness = sun_strength_from_hour * (diffuse_factor + (1.0 - diffuse_factor) * u_shade_multiplier);
+    total_brightness += sun_additional_brightness;
+
+    vec3 final_color = vert_color * total_brightness;
     gl_FragColor = vec4(final_color, 1.0);
 }
