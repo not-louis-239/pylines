@@ -20,7 +20,7 @@ import pygame as pg
 
 from pylines.core.asset_manager import Assets
 from pylines.core.constants import SFXChannelID
-from pylines.core.data_manager import load_data, save_data
+from pylines.core.data_manager import load_data, save_data, ConfigObject
 from pylines.game.environment import Environment
 from pylines.game.screens.loading_screen import LoadingScreen
 from pylines.game.screens.settings import SettingsScreen
@@ -36,6 +36,8 @@ class Game:
         # Lazy-load structure
 
         self.assets = Assets()
+
+        self.save_data: ConfigObject
         self.save_data, *_ = load_data(paths.DATA_DIR / "save_data.json")
 
         self.prev_keys: ScancodeWrapper = pg.key.get_pressed()

@@ -517,10 +517,14 @@ class GameScreen(State):
                 self.viewport_auto_panning = True
 
             # Pitch
+            direction = rot_accel * (1 - (self.plane.rot.x / 90))
+            if self.game.save_data.invert_y_axis:
+                direction = -direction
+
             if keys[pg.K_UP]:
-                self.plane.rot_rate.x += rot_accel * (1 - (self.plane.rot.x / 90))
+                self.plane.rot_rate.x += direction
             if keys[pg.K_DOWN]:
-                self.plane.rot_rate.x -= rot_accel * (1 + (self.plane.rot.x / 90))
+                self.plane.rot_rate.x -= direction
 
             # Turning
             if keys[pg.K_LEFT]:
