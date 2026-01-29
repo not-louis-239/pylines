@@ -620,7 +620,7 @@ class GameScreen(State):
 
         self.update_prev_keys(keys)
 
-    def draw_buildings(self):
+    def draw_buildings(self, cloud_attenuation: float):
         if not self.building_vertex_count or self.buildings_vbo is None:
             return
 
@@ -628,7 +628,7 @@ class GameScreen(State):
 
         # Set uniforms
         current_hour = fetch_hour()
-        brightness = sunlight_strength_from_hour(current_hour)
+        brightness = sunlight_strength_from_hour(current_hour) * cloud_attenuation
         sun_direction = sun_direction_from_hour(current_hour)
 
         gl.glUniform1f(self.building_brightness_loc, brightness)
@@ -1555,14 +1555,14 @@ class GameScreen(State):
             cloud_attenuation *= (1 - layer.coverage * 0.2)
 
         self.ground.draw(cloud_attenuation)
-        self.ocean.draw()
+        self.ocean.draw(cloud_attenuation)
 
         for runway in self.env.runways:
-            runway.draw()
+            runway.draw(cloud_attenuation)
 
         cloud_layers = self.game.config_presets.cloud_configs[self.game.save_data.cloud_config_idx]
         for cloud_layer in cloud_layers.layers:
             cloud_layer.draw(self.plane.pos, camera_fwd)
 
-        self.draw_buildings()
+        self.draw_buildings(cloud_attenuation)
         self.draw_hud()

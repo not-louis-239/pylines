@@ -81,8 +81,8 @@ class Runway(LargeSceneryObject):
         gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGBA, image_surface.get_width(), image_surface.get_height(), 0, gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, image_data)
         gl.glBindTexture(gl.GL_TEXTURE_2D, 0)  # Unbind texture
 
-    def draw(self):
-        brightness = lerp(MOON_BRIGHTNESS, SUN_BRIGHTNESS, sunlight_strength_from_hour(fetch_hour()))
+    def draw(self, cloud_attenuation):
+        brightness = lerp(MOON_BRIGHTNESS, SUN_BRIGHTNESS, sunlight_strength_from_hour(fetch_hour()) * cloud_attenuation)
         gl.glPushMatrix()
 
         # Save current blend and depth mask states to restore them later

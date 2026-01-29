@@ -124,8 +124,8 @@ class Ocean(LargeSceneryObject):
 
         return vbo, ebo
 
-    def draw(self):
-        brightness = lerp(C.MOON_BRIGHTNESS, C.SUN_BRIGHTNESS, sunlight_strength_from_hour(fetch_hour()))
+    def draw(self, cloud_attenuation: float):
+        brightness = lerp(C.MOON_BRIGHTNESS, C.SUN_BRIGHTNESS, sunlight_strength_from_hour(fetch_hour()) * cloud_attenuation)
 
         gl.glPushMatrix()
 
