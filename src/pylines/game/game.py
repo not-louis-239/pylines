@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-from enum import Enum, auto
 from typing import TYPE_CHECKING
 
 import pygame as pg
@@ -27,6 +26,7 @@ from pylines.game.screens.loading_screen import LoadingScreen
 from pylines.game.screens.settings import SettingsScreen
 from pylines.game.screens.title import TitleScreen
 from pylines.game.states import State, StateID
+import pylines.core.paths as paths
 
 if TYPE_CHECKING:
     from pylines.core.custom_types import EventList, ScancodeWrapper, Surface
@@ -36,7 +36,7 @@ class Game:
         # Lazy-load structure
 
         self.assets = Assets()
-        self.save_data, *_ = load_data("data/save_data.json")
+        self.save_data, *_ = load_data(paths.DATA_DIR / "save_data.json")
 
         self.prev_keys: ScancodeWrapper = pg.key.get_pressed()
         self.env: Environment | None = None

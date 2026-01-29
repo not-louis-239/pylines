@@ -26,3 +26,4 @@ WORLD_DIR: Path = ASSETS_DIR / "world"
 SHADERS_DIR: Path = ROOT_DIR / "src" / "pylines" / "shaders"
 
 CACHE_DIR: Path = ROOT_DIR / "cache"
+DATA_DIR: Path = ROOT_DIR / "save_data"

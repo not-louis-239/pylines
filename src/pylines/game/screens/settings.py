@@ -48,9 +48,9 @@ class SettingsScreen(State):
         data = self.game.save_data
         self.toggle_ops: list[ConfigEntry] = [
             ConfigEntry(
-                "Time Option",
-                lambda: data.time_option,
-                lambda val: setattr(data, "time_option", val),
+                "Invert Y-Axis",
+                lambda: data.invert_y_axis,
+                lambda val: setattr(data, "invert_y_axis", val),
                 str
             )
         ]
@@ -70,6 +70,8 @@ class SettingsScreen(State):
             self.toggle_idx += 1
             self.toggle_idx %= len(self.toggle_ops)
 
+
+
         self.update_prev_keys(keys)
 
     def draw(self, wn: Surface):
@@ -78,13 +80,10 @@ class SettingsScreen(State):
 
         # Draw text
         draw_text(self.display_surface, (C.WN_W//2, C.WN_H*0.15), 'centre', 'centre', "Settings", (0, 192, 255), 40, self.fonts.monospaced)
-        draw_text(self.display_surface, (C.WN_W//2, C.WN_H*0.8), 'centre', 'centre', "This screen is under construction.", (255, 192, 0), 30, self.fonts.monospaced)
         self.back_button.draw(self.display_surface)
 
         data = self.game.save_data
         drawn_ops = {
-            "Time Option": data.time_option,
-            "Custom Time": data.time_custom,
             "Invert Y-Axis": data.invert_y_axis
         }
 
