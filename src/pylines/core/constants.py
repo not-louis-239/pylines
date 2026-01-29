@@ -95,8 +95,8 @@ HARD_TRAVEL_LIMIT = HALF_WORLD_SIZE * 0.99  # invisible wall
 SOFT_TRAVEL_LIMIT = HALF_WORLD_SIZE * 0.95  # past this, forces push the user back into the centre
 
 # Rendering
-INNER_RENDER_LIMIT = 0.05
-OUTER_RENDER_LIMIT = 50_000
+INNER_RENDER_LIMIT: float = 2.0
+OUTER_RENDER_LIMIT: float = 20_000
 
 CAMERA_RADIUS: float = 4  # The camera is a sphere collider now
 
