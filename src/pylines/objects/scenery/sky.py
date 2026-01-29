@@ -128,7 +128,7 @@ class Star(CelestialObject):
         distance = 19000.0
         pos = self.direction * distance # Star's position in world coordinates
 
-        if camera_fwd.dot(self.direction) <= cos(math.radians(45)):  # Cull based on FOV
+        if camera_fwd.dot(self.direction) <= cos(math.radians(C.FOV)):  # Cull based on FOV
             return
 
         gl.glPushMatrix()
@@ -183,6 +183,14 @@ class CloudLayer(LargeSceneryObject):
         self.cloud_tex = cloud_tex
         self._load_texture()
 
+        RADIUS = C.CLOUD_MAX_DRAW_RADIUS
+        STEP = C.CLOUD_GRID_STEP
+        self._grid_offsets = [
+            (dx, dz)
+            for dx in range(-RADIUS, RADIUS + 1, STEP)
+            for dz in range(-RADIUS, RADIUS + 1, STEP)
+        ]
+
     def _draw_billboard(
         self, position: Coord3,
         size: RealNumber, alpha: RealNumber,
@@ -225,7 +233,6 @@ class CloudLayer(LargeSceneryObject):
 
     def _load_texture(self):
         tex_data = pg.image.tostring(self.cloud_tex, "RGBA", True)
-        width, height = self.cloud_tex.get_size()
 
         self.texture_id = gl.glGenTextures(1)
         gl.glBindTexture(gl.GL_TEXTURE_2D, self.texture_id)
@@ -244,43 +251,44 @@ class CloudLayer(LargeSceneryObject):
         gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
         gl.glDepthMask(gl.GL_FALSE)
 
-        GRID_STEP = 400
-        RADIUS = 10_000  # max draw radius
-        BASE_BLOB_SIZE = 600
-        NOISE_SCALE = 0.0004  # world -> noise space
-        BASE_ALPHA = 0.4
-
         cx, _, cz = camera_pos
+
+        base_x = cx - (cx % C.CLOUD_GRID_STEP)
+        base_z = cz - (cz % C.CLOUD_GRID_STEP)
+
         threshold = 1 - self.coverage
 
-        for dx in range(int(-RADIUS), int(RADIUS) + 1, int(GRID_STEP)):
-            for dz in range(int(-RADIUS), int(RADIUS) + 1, int(GRID_STEP)):
-                # World coords - anchor to fixed grid to prevent popping
-                wx = (cx + dx) - (cx + dx) % GRID_STEP
-                wz = (cz + dz) - (cz + dz) % GRID_STEP
+        for dx, dz in self._grid_offsets:
+            # World coords - anchor to fixed grid to prevent popping
+            wx = base_x + dx
+            wz = base_z + dz
 
-                nx = wx * NOISE_SCALE
-                nz = wz * NOISE_SCALE
+            to_blob = (pg.Vector3(wx - cx, 0, wz - cz))
+            to_blob.normalize_ip()
 
-                density = (snoise2(nx, nz) + 1.0) * 0.5
-                if density < threshold:
-                    continue
+            if to_blob.dot(pg.Vector3(camera_fwd.x, 0, camera_fwd.z).normalize()) < cos(math.radians(C.FOV)):
+                continue
 
-                y = self.altitude + density * self.thickness
+            nx = wx * C.CLOUD_NOISE_SCALE
+            nz = wz * C.CLOUD_NOISE_SCALE
 
-                # Stable jitter to kill the grid
-                jx = wx + snoise2(nx + 17.3, nz) * GRID_STEP * 0.35
-                jz = wz + snoise2(nx, nz + 29.1) * GRID_STEP * 0.35
+            density = (snoise2(nx, nz) + 1.0) * 0.5
+            if density < threshold:
+                continue
 
-                size = BASE_BLOB_SIZE * (0.7 + 0.8 * density)
-                alpha = BASE_ALPHA * density
+            # Stable jitter to kill the grid
+            jx = wx + snoise2(nx + 17.3, nz) * C.CLOUD_GRID_STEP * 0.35
+            jz = wz + snoise2(nx, nz + 29.1) * C.CLOUD_GRID_STEP * 0.35
 
-                self._draw_billboard(
-                    position=(jx, y, jz),
-                    size=size,
-                    alpha=alpha,
-                    camera_fwd=camera_fwd
-                )
+            size = C.CLOUD_BASE_BLOB_SIZE * (0.7 + 0.8 * density)
+            alpha = C.CLOUD_BASE_ALPHA * density
+
+            self._draw_billboard(
+                position=(jx, self.altitude, jz),
+                size=size,
+                alpha=alpha,
+                camera_fwd=camera_fwd
+            )
 
         gl.glDisable(gl.GL_BLEND)
         gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)

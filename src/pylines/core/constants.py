@@ -113,6 +113,8 @@ EPSILON = 0.0001  # Treat anything smaller than this as zero
 NORMAL_CALC_EPSILON = 1.0  # Epsilon for normal calculation (in metres)
 
 # Visual
+FOV = 45  # degrees
+
 CHEVRON_ANGLE = 40
 CHEVRON_COLOUR = (255, 0, 0)
 
@@ -142,3 +144,10 @@ THROTTLE_SPEED = 0.7
 FLAPS_SPEED = 2
 RUDDER_SPEED = 2.5
 RUDDER_SNAPBACK = 3
+
+# Clouds
+CLOUD_GRID_STEP = 400
+CLOUD_MAX_DRAW_RADIUS = 10_000
+CLOUD_BASE_BLOB_SIZE = 600
+CLOUD_NOISE_SCALE = 0.0004  # world -> noise space
+CLOUD_BASE_ALPHA = 0.4
