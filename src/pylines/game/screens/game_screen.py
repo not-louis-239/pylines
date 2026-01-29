@@ -1550,7 +1550,11 @@ class GameScreen(State):
         self.sun.draw()
         self.moon.draw()
 
-        self.ground.draw()
+        cloud_attenuation = 1.0
+        for layer in self.game.config_presets.cloud_configs[self.game.save_data.cloud_config_idx].layers:
+            cloud_attenuation *= (1 - layer.coverage * 0.2)
+
+        self.ground.draw(cloud_attenuation)
         self.ocean.draw()
 
         for runway in self.env.runways:

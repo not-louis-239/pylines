@@ -180,7 +180,7 @@ class Ground(LargeSceneryObject):
         gl.glBindTexture(gl.GL_TEXTURE_2D, 0) # Unbind texture
         return texture_id
 
-    def draw(self):
+    def draw(self, cloud_attenuation: float):
         gl.glPushMatrix()
 
         gl.glEnable(gl.GL_POLYGON_OFFSET_FILL)
@@ -190,7 +190,7 @@ class Ground(LargeSceneryObject):
         gl.glUseProgram(self.shader)  # Activate the shader program
 
         current_hour = fetch_hour()
-        brightness = sunlight_strength_from_hour(current_hour)
+        brightness = sunlight_strength_from_hour(current_hour) * cloud_attenuation
         sun_direction = sun_direction_from_hour(current_hour)
 
         gl.glUniform1f(self.brightness_loc, brightness)
