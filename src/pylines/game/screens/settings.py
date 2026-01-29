@@ -62,7 +62,7 @@ class SettingsScreen(State):
             ),
             ConfigEntry(
                 "Cloud Cover",
-                lambda: self.game.config_presets.cloud_configs[data.cloud_config_idx].common_name,  # type: ignore  # HACK: silences type checker
+                lambda: self.game.config_presets.cloud_configs[data.cloud_config_idx].common_name,
                 lambda: data.cloud_config_idx,
                 lambda val: setattr(data, "cloud_config_idx", val),
                 list(range(len(self.game.config_presets.cloud_configs)))

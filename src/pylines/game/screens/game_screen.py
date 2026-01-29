@@ -859,9 +859,9 @@ class GameScreen(State):
         icon_x = cx - (self.viewport_pos.x - self.plane.pos.x) / self.viewport_zoom
         icon_z = cz - (self.viewport_pos.z - self.plane.pos.z) / self.viewport_zoom
 
-        icon_rect = self.images.plane_icon.get_rect(center=(icon_x, icon_z))
         plane_icon_rotated = pg.transform.rotate(self.images.plane_icon, -self.plane.rot.y)
-        map_surface.blit(plane_icon_rotated, icon_rect)
+        rotated_icon_rect = plane_icon_rotated.get_rect(center=(icon_x, icon_z))
+        map_surface.blit(plane_icon_rotated, rotated_icon_rect)
 
         # Define scale bar size here as the world length is also used in grid rendering
         MAX_SCALE_BAR_SIZE = 80  # pixels

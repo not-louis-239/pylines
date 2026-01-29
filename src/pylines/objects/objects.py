@@ -291,7 +291,6 @@ class Plane(Entity):
 
         # Calculate Angle of Attack (AoA)
 
-        # TODO: Improve AoA calculation
         # AoA should not simply be the pitch difference between velocity and forward vectors
         airspeed = self.vel.length()
         if airspeed < C.EPSILON:
