@@ -28,6 +28,7 @@ import numpy as np
 import pygame as pg
 from OpenGL import GL as gl
 
+from pylines.objects.buttons import Button
 import pylines.core.colours as cols
 import pylines.core.constants as C
 import pylines.core.paths as paths
@@ -88,6 +89,7 @@ class GameScreen(State):
         assert self.game.env is not None
 
         self._frame_count = 0
+
         self.env = self.game.env
 
         self.dialog_box = DialogMessage()
@@ -116,6 +118,28 @@ class GameScreen(State):
         # GPS destination
         self.gps_runway_index: int = 1  # start at second GPS destination
 
+        # Pausing
+        self.paused: bool = False
+        self.in_menu_confirmation = False
+
+        self.continue_button = Button(
+            (C.WN_W//2-200, C.WN_H//2), 250, 50, (0, 96, 96), (128, 255, 255),
+            "Continue", self.fonts.monospaced, 30
+        )
+        self.menu_button = Button(
+            (C.WN_W//2+200, C.WN_H//2), 250, 50, (0, 96, 96), (128, 255, 255),
+            "Return to Menu", self.fonts.monospaced, 30
+        )
+
+        self.yes_button = Button(
+            (C.WN_W//2-200, C.WN_H//2+20), 150, 50, (0, 96, 96), (128, 255, 255),
+            "Yes", self.fonts.monospaced, 30
+        )
+        self.no_button = Button(
+            (C.WN_W//2+200, C.WN_H//2+20), 150, 50, (0, 96, 96), (128, 255, 255),
+            "No", self.fonts.monospaced, 30
+        )
+
         # Graphics
         self.hud_tex = gl.glGenTextures(1)
         gl.glBindTexture(gl.GL_TEXTURE_2D, self.hud_tex)
@@ -141,6 +165,7 @@ class GameScreen(State):
         gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
         self.hud_surface = pg.Surface((C.WN_W, C.WN_H), pg.SRCALPHA)
 
+        # Setup attitude indicator mask
         ai_size = 170, 170
         inner_ai_rect = pg.Rect(0, 0, ai_size[0]-4, ai_size[1]-4)
         self.ai_mask = pg.Surface(inner_ai_rect.size, pg.SRCALPHA)
@@ -161,7 +186,7 @@ class GameScreen(State):
         yield 0.85, "Making cities"
 
         self._init_map()
-        yield 1, "Booting up GPS"
+        yield 0.95, "Booting up GPS"
 
     def _init_ground(self, start: float, end: float):
         assert self.game.env is not None
@@ -328,6 +353,9 @@ class GameScreen(State):
             pg.draw.rect(self.height_key, HEIGHT_COLOUR_LOOKUP[int(h+4000)], pg.Rect(0, i, self.HEIGHT_KEY_W, 1))
 
     def reset(self) -> None:
+        self.in_menu_confirmation = False
+        self.paused = False
+
         self.plane.reset()
 
         self.channel_wind.stop()
@@ -346,10 +374,14 @@ class GameScreen(State):
     def update(self, dt: int):
         self._frame_count += 1
         self.time_elapsed += dt
-        self.dialog_box.update(dt)
 
         self.sun.update()
         self.moon.update()
+
+        if self.paused:
+            return
+
+        self.dialog_box.update(dt)
 
         if self.plane.crashed:
             self.dialog_box.reset()
@@ -438,14 +470,31 @@ class GameScreen(State):
     def take_input(self, keys: ScancodeWrapper, events: EventList, dt: int) -> None:
         # Meta controls
         if self.pressed(keys, pg.K_p):
-            self.sounds.menu_music.stop()
-            self.game.enter_state(StateID.TITLE)
+            self.paused = not self.paused
 
             self.channel_wind.stop()
             self.channel_engine_active.stop()
             self.channel_engine_ambient.stop()
 
             self.channel_scrape.stop()
+
+        if self.paused and not self.in_menu_confirmation:
+            if self.continue_button.check_click(events):
+                self.paused = False
+
+            if self.menu_button.check_click(events):
+                self.in_menu_confirmation = True
+
+            self.update_prev_keys(keys)
+            return
+
+        if self.in_menu_confirmation:
+            if self.yes_button.check_click(events):
+                self.game.enter_state(StateID.TITLE)
+
+
+            if self.no_button.check_click(events):
+                self.in_menu_confirmation = False
 
         if self.pressed(keys, pg.K_r):  # r to reset
             self.plane.reset()
@@ -1375,6 +1424,34 @@ class GameScreen(State):
         # Show crash reason on screen
         if self.plane.crash_reason is not None:
             show_crash_reason(self.plane.crash_reason)
+
+        # If paused, show overlay
+        if self.paused:
+            transparent_surface = pg.Surface((C.WN_W, C.WN_H), pg.SRCALPHA)
+            transparent_surface.fill((0, 0, 0, 100))
+            self.hud_surface.blit(transparent_surface, (0, 0))
+
+            for button in (self.continue_button, self.menu_button):
+                button.draw(self.hud_surface)
+
+            draw_text(
+                self.hud_surface, (C.WN_W//2, C.WN_H*0.35), 'centre', 'centre',
+                'Game Paused', (255, 255, 255), 50, self.fonts.monospaced
+            )
+
+            if self.in_menu_confirmation:
+                draw_transparent_rect(
+                    self.hud_surface, (C.WN_W//2 - 400, C.WN_H//2 - 175), (800, C.WN_H*0.3),
+                    border_thickness=3
+                )
+
+                draw_text(
+                    self.hud_surface, (C.WN_W//2, C.WN_H*0.4), 'centre', 'centre',
+                    'Are you sure?', (255, 255, 255), 50, self.fonts.monospaced
+                )
+
+                for button in (self.yes_button, self.no_button):
+                    button.draw(self.hud_surface)
 
         # Upload HUD surface to OpenGL
         hud_data = pg.image.tostring(hud_surface, "RGBA", True)
