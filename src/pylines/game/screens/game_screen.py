@@ -121,13 +121,18 @@ class GameScreen(State):
         # Pausing
         self.paused: bool = False
         self.in_menu_confirmation = False
+        self.in_restart_confirmation = False
 
         self.continue_button = Button(
-            (C.WN_W//2-200, C.WN_H//2), 250, 50, (0, 96, 96), (128, 255, 255),
+            (C.WN_W//2-400, C.WN_H//2), 250, 50, (0, 96, 96), (128, 255, 255),
             "Continue", self.fonts.monospaced, 30
         )
+        self.restart_button = Button(
+            (C.WN_W//2, C.WN_H//2), 250, 50, (0, 96, 96), (128, 255, 255),
+            "Restart", self.fonts.monospaced, 30
+        )
         self.menu_button = Button(
-            (C.WN_W//2+200, C.WN_H//2), 250, 50, (0, 96, 96), (128, 255, 255),
+            (C.WN_W//2+400, C.WN_H//2), 250, 50, (0, 96, 96), (128, 255, 255),
             "Return to Menu", self.fonts.monospaced, 30
         )
 
@@ -354,9 +359,11 @@ class GameScreen(State):
 
     def reset(self) -> None:
         self.in_menu_confirmation = False
+        self.in_restart_confirmation = False
         self.paused = False
 
         self.plane.reset()
+        self.gps_runway_index = 1
 
         self.channel_wind.stop()
         self.channel_engine_active.stop()
@@ -478,9 +485,12 @@ class GameScreen(State):
 
             self.channel_scrape.stop()
 
-        if self.paused and not self.in_menu_confirmation:
+        if self.paused and not (self.in_menu_confirmation or self.in_restart_confirmation):
             if self.continue_button.check_click(events):
                 self.paused = False
+
+            if self.restart_button.check_click(events):
+                self.in_restart_confirmation = True
 
             if self.menu_button.check_click(events):
                 self.in_menu_confirmation = True
@@ -492,13 +502,15 @@ class GameScreen(State):
             if self.yes_button.check_click(events):
                 self.game.enter_state(StateID.TITLE)
 
-
             if self.no_button.check_click(events):
                 self.in_menu_confirmation = False
 
-        if self.pressed(keys, pg.K_r):  # r to reset
-            self.plane.reset()
-            self.gps_runway_index = 1  # reset gps waypoint
+        if self.in_restart_confirmation:
+            if self.yes_button.check_click(events):
+                self.reset()
+
+            if self.no_button.check_click(events):
+                self.in_restart_confirmation = False
 
         # Block flight controls if crashed or disabled
         if not self.plane.flyable:
@@ -1005,8 +1017,7 @@ class GameScreen(State):
 
         # Exit controls
         if self.time_elapsed < 5_000 or not self.plane.flyable:
-            draw_text(hud_surface, (15, 30), 'left', 'centre', "R    restart flight", cols.WHITE, 30, self.fonts.monospaced)
-            draw_text(hud_surface, (15, 60), 'left', 'centre', "P    quit to menu", cols.WHITE, 30, self.fonts.monospaced)
+            draw_text(hud_surface, (15, 30), 'left', 'centre', "P to pause", cols.WHITE, 30, self.fonts.monospaced)
 
         # Stall warning
         warning_x = C.WN_W//2-145
@@ -1417,9 +1428,8 @@ class GameScreen(State):
                 self.hud_surface, (C.WN_W*0.28, C.WN_H*0.3), (C.WN_W*0.44, C.WN_H*0.3),
                 (0, 0, 0, 180), 2
             )
-            draw_text(self.hud_surface, (C.WN_W//2, C.WN_H*0.35), 'centre', 'centre', 'CRASH', (255, 0, 0), 50, self.fonts.monospaced)
-            draw_text(self.hud_surface, (C.WN_W//2, C.WN_H*0.41), 'centre', 'centre', ui_text, cols.WHITE, 30, self.fonts.monospaced)
-            draw_text(self.hud_surface, (C.WN_W//2, C.WN_H*0.54), 'centre', 'centre', 'Press P to return to menu.', cols.WHITE, 30, self.fonts.monospaced)
+            draw_text(self.hud_surface, (C.WN_W//2, C.WN_H*0.40), 'centre', 'centre', 'CRASH', (255, 0, 0), 50, self.fonts.monospaced)
+            draw_text(self.hud_surface, (C.WN_W//2, C.WN_H*0.49), 'centre', 'centre', ui_text, cols.WHITE, 30, self.fonts.monospaced)
 
         # Show crash reason on screen
         if self.plane.crash_reason is not None:
@@ -1431,7 +1441,7 @@ class GameScreen(State):
             transparent_surface.fill((0, 0, 0, 100))
             self.hud_surface.blit(transparent_surface, (0, 0))
 
-            for button in (self.continue_button, self.menu_button):
+            for button in (self.continue_button, self.restart_button, self.menu_button):
                 button.draw(self.hud_surface)
 
             draw_text(
@@ -1439,7 +1449,7 @@ class GameScreen(State):
                 'Game Paused', (255, 255, 255), 50, self.fonts.monospaced
             )
 
-            if self.in_menu_confirmation:
+            if self.in_menu_confirmation or self.in_restart_confirmation:
                 draw_transparent_rect(
                     self.hud_surface, (C.WN_W//2 - 400, C.WN_H//2 - 175), (800, C.WN_H*0.3),
                     border_thickness=3
