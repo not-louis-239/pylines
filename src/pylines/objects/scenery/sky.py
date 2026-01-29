@@ -187,6 +187,7 @@ class CloudLayer(LargeSceneryObject):
         self.cloud_tex = cloud_tex
         self._load_texture()
 
+        # Precompute offsets for performance
         RADIUS = C.CLOUD_MAX_DRAW_RADIUS
         STEP = C.CLOUD_GRID_STEP
         self._grid_offsets = [
@@ -195,12 +196,21 @@ class CloudLayer(LargeSceneryObject):
             for dz in range(-RADIUS, RADIUS + 1, STEP)
         ]
 
+        # Derive colour from coverage
+        self.brightness = 1 - self.coverage * 0.5
+
+        # Seed offsets
+        self.sx = CloudLayer._SEED_SCALE * self.seed
+        self.sz = CloudLayer._SEED_SCALE * self.seed * 0.7384
+
     def _draw_billboard(
         self, position: Coord3,
         size: RealNumber, alpha: RealNumber,
         camera_fwd: pg.Vector3
     ):
-        brightness = lerp(C.MOON_BRIGHTNESS, C.SUN_BRIGHTNESS, sunlight_strength_from_hour(fetch_hour()))
+        base_brightness = lerp(C.MOON_BRIGHTNESS, C.SUN_BRIGHTNESS, sunlight_strength_from_hour(fetch_hour()))
+        final_brightness = base_brightness * self.brightness
+
         size_half = size * 0.5
 
         # View direction from cloud to camera
@@ -217,7 +227,7 @@ class CloudLayer(LargeSceneryObject):
         gl.glEnable(gl.GL_TEXTURE_2D)
         gl.glBindTexture(gl.GL_TEXTURE_2D, self.texture_id)
 
-        gl.glColor4f(brightness, brightness, brightness, alpha)
+        gl.glColor4f(final_brightness, final_brightness, final_brightness, alpha)
 
         gl.glBegin(gl.GL_QUADS)
 
@@ -250,6 +260,21 @@ class CloudLayer(LargeSceneryObject):
         gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGBA, *self.cloud_tex.get_size(), 0, gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, tex_data)
         gl.glBindTexture(gl.GL_TEXTURE_2D, 0)  # Unbind texture
 
+    def get_density(self, world_x: float, world_z: float):
+        """Authoritative function to retrieve cloud
+        density for a layer.
+        
+        Returns density value, noise-x and noise-z
+        used in sampling."""
+
+        wx, wz = world_x, world_z
+
+        nx = wx * C.CLOUD_NOISE_SCALE + self.sx
+        nz = wz * C.CLOUD_NOISE_SCALE + self.sz
+
+        density = (snoise2(nx, nz) + 1.0) * 0.5
+        return density, nx, nz
+
     def draw(self, camera_pos: pg.Vector3, camera_fwd: pg.Vector3):
         gl.glEnable(gl.GL_BLEND)
         gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
@@ -266,10 +291,6 @@ class CloudLayer(LargeSceneryObject):
 
         _cos_fov = cos(math.radians(C.FOV))
 
-        # Seed offsets
-        sx = CloudLayer._SEED_SCALE * self.seed
-        sz = CloudLayer._SEED_SCALE * self.seed * 0.7384
-
         for dx, dz in self._grid_offsets:
             # World coords - anchor to fixed grid to prevent popping
             wx = base_x + dx
@@ -285,10 +306,7 @@ class CloudLayer(LargeSceneryObject):
             if to_blob.dot(fwd_flat) < _cos_fov:
                 continue
 
-            nx = wx * C.CLOUD_NOISE_SCALE + sx
-            nz = wz * C.CLOUD_NOISE_SCALE + sz
-
-            density = (snoise2(nx, nz) + 1.0) * 0.5
+            density, nx, nz = self.get_density(wx, wz)
             if density < threshold:
                 continue
 
