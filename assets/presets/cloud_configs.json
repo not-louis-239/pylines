@@ -11,7 +11,7 @@
                     "altitude": 4100,
                     "thickness": 600,
                     "coverage": 0.35,
-                    "seed": 1
+                    "seed": 3143
                 }
             ]
         },
@@ -21,14 +21,14 @@
                 {
                     "altitude": 3200,
                     "thickness": 900,
-                    "coverage": 0.8,
-                    "seed": 1
+                    "coverage": 0.75,
+                    "seed": 3143
                 },
                 {
                     "altitude": 4500,
                     "thickness": 700,
-                    "coverage": 0.7,
-                    "seed": 2
+                    "coverage": 0.6,
+                    "seed": 1859
                 }
             ]
         },
@@ -39,19 +39,19 @@
                     "altitude": 2200,
                     "thickness": 1200,
                     "coverage": 0.9,
-                    "seed": 1
+                    "seed": 3143
                 },
                 {
                     "altitude": 3600,
                     "thickness": 1000,
                     "coverage": 0.85,
-                    "seed": 2
+                    "seed": 1859
                 },
                 {
                     "altitude": 5200,
                     "thickness": 1400,
-                    "coverage": 0.75,
-                    "seed": 3
+                    "coverage": 0.8,
+                    "seed": 2248
                 }
             ]
         }

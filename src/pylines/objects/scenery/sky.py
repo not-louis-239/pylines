@@ -171,6 +171,10 @@ class Star(CelestialObject):
         gl.glPopMatrix()
 
 class CloudLayer(LargeSceneryObject):
+    _SEED_SCALE = 157.3138214  # large, irrational-ish
+    _X_OFFSET = 17.3
+    _Z_OFFSET = 29.1
+
     def __init__(
         self, altitude: RealNumber, thickness: RealNumber, coverage: RealNumber,
         seed: RealNumber, cloud_tex: Surface
@@ -251,6 +255,8 @@ class CloudLayer(LargeSceneryObject):
         gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
         gl.glDepthMask(gl.GL_FALSE)
 
+        fwd_flat = pg.Vector3(camera_fwd.x, 0, camera_fwd.z).normalize()
+
         cx, _, cz = camera_pos
 
         base_x = cx - (cx % C.CLOUD_GRID_STEP)
@@ -258,30 +264,40 @@ class CloudLayer(LargeSceneryObject):
 
         threshold = 1 - self.coverage
 
+        _cos_fov = cos(math.radians(C.FOV))
+
+        # Seed offsets
+        sx = CloudLayer._SEED_SCALE * self.seed
+        sz = CloudLayer._SEED_SCALE * self.seed * 0.7384
+
         for dx, dz in self._grid_offsets:
             # World coords - anchor to fixed grid to prevent popping
             wx = base_x + dx
             wz = base_z + dz
 
             to_blob = (pg.Vector3(wx - cx, 0, wz - cz))
-            to_blob.normalize_ip()
-
-            if to_blob.dot(pg.Vector3(camera_fwd.x, 0, camera_fwd.z).normalize()) < cos(math.radians(C.FOV)):
+            if to_blob.length() < C.EPSILON:
                 continue
 
-            nx = wx * C.CLOUD_NOISE_SCALE
-            nz = wz * C.CLOUD_NOISE_SCALE
+            to_blob.normalize_ip()
+
+            # Forward cull
+            if to_blob.dot(fwd_flat) < _cos_fov:
+                continue
+
+            nx = wx * C.CLOUD_NOISE_SCALE + sx
+            nz = wz * C.CLOUD_NOISE_SCALE + sz
 
             density = (snoise2(nx, nz) + 1.0) * 0.5
             if density < threshold:
                 continue
 
             # Stable jitter to kill the grid
-            jx = wx + snoise2(nx + 17.3, nz) * C.CLOUD_GRID_STEP * 0.35
-            jz = wz + snoise2(nx, nz + 29.1) * C.CLOUD_GRID_STEP * 0.35
+            jx = wx + snoise2(nx + CloudLayer._X_OFFSET, nz) * C.CLOUD_GRID_STEP * 0.35
+            jz = wz + snoise2(nx, nz + CloudLayer._Z_OFFSET) * C.CLOUD_GRID_STEP * 0.35
 
-            size = C.CLOUD_BASE_BLOB_SIZE * (0.7 + 0.8 * density)
-            alpha = C.CLOUD_BASE_ALPHA * density
+            size = C.CLOUD_BASE_BLOB_SIZE * (0.9 + 0.7 * density)
+            alpha = min(1, C.CLOUD_BASE_ALPHA * density)
 
             self._draw_billboard(
                 position=(jx, self.altitude, jz),
