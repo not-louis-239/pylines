@@ -11,7 +11,7 @@ venv/
 ENV/
 
 # Data / temporary files
-data/
+save_data/
 tmp/
 *.log
 *.sqlite3

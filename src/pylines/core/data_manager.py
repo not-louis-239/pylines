@@ -20,7 +20,9 @@ import json
 from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass, fields
 from enum import Enum, auto
-from typing import Any, Literal, Mapping, Self, TypeAlias
+from typing import Any, Mapping, Self, TypeAlias
+from pathlib import Path
+import pylines.core.paths as paths
 
 JSONValue: TypeAlias = (
     str | int | float | bool | None |
@@ -54,8 +56,6 @@ class JSONConvertible(ABC):
 
 @dataclass
 class ConfigObject(JSONConvertible):
-    time_option: Literal["system", "custom"] = "system"  # "system" or "custom"
-    time_custom: int = 18
     invert_y_axis: bool = False
 
     def to_json(self) -> JSONValue:
@@ -67,21 +67,27 @@ class ConfigObject(JSONConvertible):
         filtered = {k: v for k, v in data.items() if k in field_names}
         return cls(**filtered)
 
-def save_data(obj: JSONConvertible, path="data/save_data.json") -> str | None:
+def save_data(obj: JSONConvertible, path: Path = paths.DATA_DIR / "save_data.json") -> str | None:
     """
     Return:
         None  -> success
         str   -> error msg
     """
     try:
-        with open(path, "w", encoding="utf-8") as f:
-            raw_data: JSONValue = obj.to_json()
-            json.dump(raw_data, f, indent=4, ensure_ascii=False)
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Write to temporary file to avoid corruption
+        # if the program errors mid-write
+        tmp = path.with_suffix(path.suffix + ".tmp")
+        with tmp.open("w", encoding="utf-8") as f:
+            json.dump(obj.to_json(), f, indent=4, ensure_ascii=False)
+        tmp.replace(path)
+
         return None
     except Exception as e:
         return str(e)
 
-def load_data(path="data/save_data.json") -> tuple[ConfigObject, LoadStatus, str | None]:
+def load_data(path: Path) -> tuple[ConfigObject, LoadStatus, str | None]:
     """
     Return:
         ConfigObject
