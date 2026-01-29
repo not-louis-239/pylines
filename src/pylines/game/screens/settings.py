@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Callable, cast
+from typing import TYPE_CHECKING, Callable, cast
 
 import pygame as pg
 from OpenGL import GL as gl
@@ -21,7 +21,7 @@ from OpenGL import GLU as glu
 
 import pylines.core.constants as C
 from pylines.core.colours import WHITE
-from pylines.core.custom_types import EventList, ScancodeWrapper, Surface
+from pylines.core.custom_types import EventList, ScancodeWrapper, Surface, ConfigValue
 from pylines.core.utils import draw_text
 from pylines.game.states import State, StateID
 from pylines.objects.buttons import Button
@@ -32,13 +32,18 @@ if TYPE_CHECKING:
 @dataclass(frozen=True)
 class ConfigEntry:
     label: str
-    get: Callable[[], Any]
-    set: Callable[[Any], None]
-    kind: type
+    display: Callable[[], str]  # value display
+
+    get: Callable[[], ConfigValue]
+    set: Callable[[ConfigValue], None]
+
+    choices: list[ConfigValue]
 
 class SettingsScreen(State):
     def __init__(self, game: Game):
         super().__init__(game)
+        assert self.game.config_presets is not None
+
         self.display_surface = pg.Surface((C.WN_W, C.WN_H), pg.SRCALPHA)
         self.texture_id = gl.glGenTextures(1)
         self.back_button = Button(
@@ -50,11 +55,20 @@ class SettingsScreen(State):
         self.toggle_ops: list[ConfigEntry] = [
             ConfigEntry(
                 "Invert Y-Axis",
+                lambda: str(data.invert_y_axis),
                 lambda: data.invert_y_axis,
                 lambda val: setattr(data, "invert_y_axis", val),
-                bool
+                [True, False]
+            ),
+            ConfigEntry(
+                "Cloud Cover",
+                lambda: self.game.config_presets.cloud_configs[data.cloud_config_idx].common_name,  # type: ignore  # HACK: silences type checker
+                lambda: data.cloud_config_idx,
+                lambda val: setattr(data, "cloud_config_idx", val),
+                list(range(len(self.game.config_presets.cloud_configs)))
             )
         ]
+
         self.toggle_idx = 0
 
     def reset(self) -> None:
@@ -72,13 +86,16 @@ class SettingsScreen(State):
             self.toggle_idx %= len(self.toggle_ops)
 
         if self.pressed(keys, pg.K_SPACE):
-            focused = self.toggle_ops[self.toggle_idx]
-            focused_val = focused.get()
+            entry = self.toggle_ops[self.toggle_idx]
+            cur_val = entry.get()
+            choices = entry.choices
 
-            # HACK: this works for now, but should
-            # be abstracted into each ConfigEntry later.
-            if isinstance(focused_val, bool):
-                focused.set(not focused_val)
+            try:
+                cur_idx = choices.index(cur_val)
+            except ValueError:
+                cur_idx = 0  # fallback if save is out of sync
+
+            entry.set(choices[(cur_idx + 1) % len(choices)])
 
         self.update_prev_keys(keys)
 
@@ -91,12 +108,7 @@ class SettingsScreen(State):
         draw_text(self.display_surface, (C.WN_W//2, C.WN_H*0.85), 'centre', 'centre', "Up/Down to select, Space to change", WHITE, 35, self.fonts.monospaced)
         self.back_button.draw(self.display_surface)
 
-        data = self.game.save_data
-        drawn_ops = {
-            "Invert Y-Axis": data.invert_y_axis
-        }
-
-        for i, (ui_str, option) in enumerate(drawn_ops.items()):
+        for i, (ui_str, option) in enumerate((opt.label, opt.display()) for opt in self.toggle_ops):
             TEXT_COLOUR = (192, 230, 255) if i == self.toggle_idx else (255, 255, 255)
             VAL_COLOUR = (170, 210, 255) if i == self.toggle_idx else (220, 220, 220)
 

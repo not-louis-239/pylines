@@ -1,0 +1,59 @@
+{
+    "cloud_configs": [
+        {
+            "common_name": "Clear",
+            "layers": []
+        },
+        {
+            "common_name": "Cloudy",
+            "layers": [
+                {
+                    "altitude": 4100,
+                    "thickness": 600,
+                    "coverage": 0.35,
+                    "seed": 1
+                }
+            ]
+        },
+        {
+            "common_name": "Overcast",
+            "layers": [
+                {
+                    "altitude": 3200,
+                    "thickness": 900,
+                    "coverage": 0.8,
+                    "seed": 1
+                },
+                {
+                    "altitude": 4500,
+                    "thickness": 700,
+                    "coverage": 0.7,
+                    "seed": 2
+                }
+            ]
+        },
+        {
+            "common_name": "Stormy",
+            "layers": [
+                {
+                    "altitude": 2200,
+                    "thickness": 1200,
+                    "coverage": 0.9,
+                    "seed": 1
+                },
+                {
+                    "altitude": 3600,
+                    "thickness": 1000,
+                    "coverage": 0.85,
+                    "seed": 2
+                },
+                {
+                    "altitude": 5200,
+                    "thickness": 1400,
+                    "coverage": 0.75,
+                    "seed": 3
+                }
+            ]
+        }
+    ]
+}

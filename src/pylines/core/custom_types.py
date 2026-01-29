@@ -35,3 +35,6 @@ Surface: TypeAlias = pg.Surface
 Sound: TypeAlias = pg.mixer.Sound
 Path: TypeAlias = pathlib.Path
 Font: TypeAlias = pg.font.Font
+
+# Config
+ConfigValue: TypeAlias = int | bool   # more will be added when needed

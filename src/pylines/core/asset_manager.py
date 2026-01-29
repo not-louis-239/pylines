@@ -137,7 +137,7 @@ class Sounds(AssetBank):
         return pg.mixer.Sound(paths.SOUNDS_DIR / name)
 
 class WorldData(AssetBank):
-    """Data container for raw world data."""
+    """Data container for raw, fixed world data."""
 
     def __init__(self) -> None:
         # Heightmap metadata
@@ -182,12 +182,21 @@ class WorldData(AssetBank):
         with open(paths.WORLD_DIR / "starfield_data.json") as f:
             self.starfield_data: dict = json.load(f)["starfield"]
 
-        # Cloud data
-        with open(paths.WORLD_DIR / "cloud_layers.json") as f:
-            self.cloud_layers: list = json.load(f)["cloud_layers"]
-
     def _load(self, name: str) -> Path:
         return paths.WORLD_DIR / name
+
+class ConfigPresets(AssetBank):
+    """Data container for presets such as clouds that
+    can be chosen by the user, but are not absolutely
+    immutable, such as terrain or buildings."""
+
+    def __init__(self) -> None:
+        # Cloud data
+        with open(paths.PRESETS_DIR / "cloud_configs.json") as f:
+            self.cloud_configs: list = json.load(f)["cloud_configs"]
+
+    def _load(self, name: str) -> Path:
+        return paths.PRESETS_DIR / name
 
 class Assets:
     def __init__(self) -> None:
@@ -195,3 +204,4 @@ class Assets:
         self.fonts: Fonts = Fonts()
         self.sounds: Sounds = Sounds()
         self.world: WorldData = WorldData()
+        self.config_presets: ConfigPresets = ConfigPresets()

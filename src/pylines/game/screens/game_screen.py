@@ -534,11 +534,10 @@ class GameScreen(State):
             self.viewport_zoom = clamp(self.viewport_zoom, (C.MAP_ZOOM_MIN, C.MAP_ZOOM_MAX))
         else:
             # Throttle controls
-            throttle_speed = 0.4 * dt/1000
             if keys[pg.K_w]:
-                self.plane.throttle_frac += throttle_speed
+                self.plane.throttle_frac += C.THROTTLE_SPEED * dt/1000
             if keys[pg.K_s]:
-                self.plane.throttle_frac -= throttle_speed
+                self.plane.throttle_frac -= C.THROTTLE_SPEED * dt/1000
             self.plane.throttle_frac = clamp(self.plane.throttle_frac, (0, 1))
 
         self.map_show_advanced_info = self.map_state == MapState.SHOWN and keys[pg.K_h]
@@ -1516,6 +1515,8 @@ class GameScreen(State):
         gl.glDisable(gl.GL_TEXTURE_2D)
 
     def draw(self, wn: Surface):
+        assert self.game.config_presets is not None
+
         colour_scheme = sky_colour_from_hour(fetch_hour())
 
         gl.glClear(cast(int, gl.GL_COLOR_BUFFER_BIT) | cast(int, gl.GL_DEPTH_BUFFER_BIT))
@@ -1555,7 +1556,8 @@ class GameScreen(State):
         for runway in self.env.runways:
             runway.draw()
 
-        for cloud_layer in self.env.cloud_layers:
+        cloud_layers = self.game.config_presets.cloud_configs[self.game.save_data.cloud_config_idx]
+        for cloud_layer in cloud_layers.layers:
             cloud_layer.draw(self.plane.pos, camera_fwd)
 
         self.draw_buildings()

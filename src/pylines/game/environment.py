@@ -158,17 +158,6 @@ class Environment:
 
             self.stars.append(Star(direction, brightness, colour, size))
 
-        # Cloud layers
-        self.cloud_layers = [
-            CloudLayer(
-                cloud_layer["altitude"],
-                cloud_layer["thickness"],
-                cloud_layer["coverage"],
-                cloud_layer["seed"],
-                images.cloud_blob
-            ) for cloud_layer in world_data.cloud_layers
-        ]
-
     def _world_to_map(self, x: float, z: float) -> tuple[float, float]:
         # Must map to 0 - w or height or else causes camera to go underground
         # This is because mapping to 0-w/h makes _world_to_map sample exactly

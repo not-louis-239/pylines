@@ -27,6 +27,7 @@ from pylines.game.screens.settings import SettingsScreen
 from pylines.game.screens.title import TitleScreen
 from pylines.game.states import State, StateID
 import pylines.core.paths as paths
+from pylines.game.live_config_presets import LiveConfigPresets
 
 if TYPE_CHECKING:
     from pylines.core.custom_types import EventList, ScancodeWrapper, Surface
@@ -39,6 +40,9 @@ class Game:
 
         self.save_data: ConfigObject
         self.save_data, *_ = load_data(paths.DATA_DIR / "save_data.json")
+
+        config_presets_raw = self.assets.config_presets
+        self.config_presets = LiveConfigPresets(config_presets_raw, self.assets.images)
 
         self.prev_keys: ScancodeWrapper = pg.key.get_pressed()
         self.env: Environment | None = None
