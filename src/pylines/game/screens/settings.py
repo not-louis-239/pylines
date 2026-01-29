@@ -20,6 +20,7 @@ from OpenGL import GL as gl
 from OpenGL import GLU as glu
 
 import pylines.core.constants as C
+from pylines.core.colours import WHITE
 from pylines.core.custom_types import EventList, ScancodeWrapper, Surface
 from pylines.core.utils import draw_text
 from pylines.game.states import State, StateID
@@ -51,7 +52,7 @@ class SettingsScreen(State):
                 "Invert Y-Axis",
                 lambda: data.invert_y_axis,
                 lambda val: setattr(data, "invert_y_axis", val),
-                str
+                bool
             )
         ]
         self.toggle_idx = 0
@@ -70,7 +71,14 @@ class SettingsScreen(State):
             self.toggle_idx += 1
             self.toggle_idx %= len(self.toggle_ops)
 
+        if self.pressed(keys, pg.K_SPACE):
+            focused = self.toggle_ops[self.toggle_idx]
+            focused_val = focused.get()
 
+            # HACK: this works for now, but should
+            # be abstracted into each ConfigEntry later.
+            if isinstance(focused_val, bool):
+                focused.set(not focused_val)
 
         self.update_prev_keys(keys)
 
@@ -79,7 +87,8 @@ class SettingsScreen(State):
         self.display_surface.fill((0, 0, 0))
 
         # Draw text
-        draw_text(self.display_surface, (C.WN_W//2, C.WN_H*0.15), 'centre', 'centre', "Settings", (0, 192, 255), 40, self.fonts.monospaced)
+        draw_text(self.display_surface, (C.WN_W//2, C.WN_H*0.1), 'centre', 'centre', "Settings", (0, 192, 255), 40, self.fonts.monospaced)
+        draw_text(self.display_surface, (C.WN_W//2, C.WN_H*0.85), 'centre', 'centre', "Up/Down to select, Space to change", WHITE, 35, self.fonts.monospaced)
         self.back_button.draw(self.display_surface)
 
         data = self.game.save_data
