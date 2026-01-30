@@ -54,10 +54,6 @@ class TitleScreen(State):
         self.update_prev_keys(keys)
 
     def draw(self, wn: Surface):
-        def draw_control(control: str, desc: str, y: float):
-            draw_text(self.display_surface, (C.WN_W//2 - 300, y), 'left', 'centre', control, WHITE, 30, self.fonts.monospaced)
-            draw_text(self.display_surface, (C.WN_W//2 - 50, y), 'left', 'centre', desc, WHITE, 30, self.fonts.monospaced)
-
         # Fill the display surface
         self.display_surface.fill((0, 0, 0))
         rect = self.images.logo.get_rect(center=(C.WN_W//2, C.WN_H*0.15
@@ -66,11 +62,21 @@ class TitleScreen(State):
         draw_text(self.display_surface, (C.WN_W//2, C.WN_H*0.8), 'centre', 'centre', "Press Space to start", (255, 255, 255), 30, self.fonts.monospaced)
         draw_text(self.display_surface, (C.WN_W//2, 0.95*C.WN_H), 'centre', 'centre', "Copyright (C) 2025-2026 Louis Masarei-Boulton.", (127, 127, 127), 15, self.fonts.monospaced)
 
-        draw_text(self.display_surface, (C.WN_W//2, C.WN_H*0.3), 'centre', 'centre', "Flight Notes", (0, 192, 255), 40, self.fonts.monospaced)
+        draw_text(self.display_surface, (C.WN_W//2, C.WN_H*0.3), 'centre', 'centre', "Read Before Flight", (0, 192, 255), 40, self.fonts.monospaced)
 
-        draw_control("W/S", "Increase/decrease throttle", C.WN_H*0.4)
-        draw_control("Left/Right", "Turn sideways", C.WN_H*0.45)
-        draw_control("Up/Down", "Nose up/down", C.WN_H*0.5)
+        controls: dict[str, str] = {
+            "W/S": "Throttle",
+            "Arrows": "Pitch/Yaw",
+            "Z/X": "Flaps Up/Down",
+            "B": "Brake",
+            "A/D": "Rudder",
+            "P": "Pause",
+        }
+
+        for i, (key, desc) in enumerate(controls.items()):
+            draw_text(self.display_surface, (C.WN_W//2 - 140, C.WN_H * (0.41 + 0.05*i)), 'right', 'centre', key, WHITE, 27, self.fonts.monospaced)
+            draw_text(self.display_surface, (C.WN_W//2 + 80, C.WN_H * (0.41 + 0.05*i)), 'left', 'centre', desc, WHITE, 27, self.fonts.monospaced)
+
         self.settings_button.draw(self.display_surface)
 
         # Convert the Pygame surface to an OpenGL texture
