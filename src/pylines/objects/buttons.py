@@ -21,8 +21,10 @@ from pylines.core.utils import draw_text
 
 
 class Button:
-    def __init__(self, pos: Coord2, w: RealNumber, h: RealNumber,
-                 colour: Colour, text_colour: Colour, text: str, font: Path, font_size: int) -> None:
+    def __init__(
+        self, pos: Coord2, w: RealNumber, h: RealNumber,
+        colour: Colour, text_colour: Colour, text: str, font: Path, font_size: int,
+    ) -> None:
         self.pos = pg.Vector2(*pos)
         self.w = w
         self.h = h
@@ -35,14 +37,36 @@ class Button:
         self.rect = pg.Rect(0, 0, self.w, self.h)
         self.rect.center = (int(self.pos.x), int(self.pos.y))
 
-    # Returns True once when held
+    # Returns True once on press
     def check_click(self, event_list: EventList) -> bool:
-        for e in event_list:
-            if e.type == pg.MOUSEBUTTONDOWN and e.button == 1:
-                if self.rect.collidepoint(e.pos):
+        for event in event_list:
+            if event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
+                if self.rect.collidepoint(event.pos):
                     return True
         return False
 
     def draw(self, wn: Surface):
         pg.draw.rect(wn, self.colour, self.rect)
         draw_text(wn, (int(self.pos.x), int(self.pos.y)), 'centre', 'centre', self.text, self.text_colour, 30, self.font)
+
+class ImageButton(Button):
+    def __init__(
+        self, pos: Coord2, image: Surface
+    ) -> None:
+        self.pos = pg.Vector2(*pos)
+        self.image = image
+        self.w, self.h = self.image.get_size()
+
+        self.rect = pg.Rect(0, 0, self.w, self.h)
+        self.rect.center = int(self.pos.x), int(self.pos.y)
+
+    # Returns True once on press
+    def check_click(self, event_list: EventList) -> bool:
+        for event in event_list:
+            if event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
+                if self.rect.collidepoint(event.pos):
+                    return True
+        return False
+
+    def draw(self, wn: Surface):
+        wn.blit(self.image, self.rect)
