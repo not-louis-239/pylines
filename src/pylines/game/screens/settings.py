@@ -29,7 +29,7 @@ from pylines.objects.buttons import Button
 if TYPE_CHECKING:
     from pylines.game.game import Game
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class ConfigEntry:
     label: str
     display: Callable[[], str]  # value display
@@ -54,18 +54,25 @@ class SettingsScreen(State):
         data = self.game.save_data
         self.toggle_ops: list[ConfigEntry] = [
             ConfigEntry(
-                "Invert Y-Axis",
-                lambda: str(data.invert_y_axis),
-                lambda: data.invert_y_axis,
-                lambda val: setattr(data, "invert_y_axis", val),
-                [True, False]
+                label="Invert Y-Axis",
+                display=lambda: str(data.invert_y_axis),
+                get=lambda: data.invert_y_axis,
+                set=lambda val: setattr(data, "invert_y_axis", val),
+                choices=[True, False]
             ),
             ConfigEntry(
-                "Cloud Cover",
-                lambda: self.game.config_presets.cloud_configs[data.cloud_config_idx].common_name,
-                lambda: data.cloud_config_idx,
-                lambda val: setattr(data, "cloud_config_idx", val),
-                list(range(len(self.game.config_presets.cloud_configs)))
+                label="Cloud Cover",
+                display=lambda: self.game.config_presets.cloud_configs[data.cloud_config_idx].common_name,
+                get=lambda: data.cloud_config_idx,
+                set=lambda val: setattr(data, "cloud_config_idx", val),
+                choices=list(range(len(self.game.config_presets.cloud_configs)))
+            ),
+            ConfigEntry(
+                label="Show Briefing",
+                display=lambda: str(data.show_briefing),
+                get=lambda: data.show_briefing,
+                set=lambda val: setattr(data, "show_briefing", val),
+                choices=[True, False]
             )
         ]
 
@@ -112,8 +119,8 @@ class SettingsScreen(State):
             TEXT_COLOUR = (192, 230, 255) if i == self.toggle_idx else (255, 255, 255)
             VAL_COLOUR = (170, 210, 255) if i == self.toggle_idx else (220, 220, 220)
 
-            draw_text(self.display_surface, (C.WN_W*0.35, C.WN_H * (0.4+0.08*i)), 'left', 'centre', ui_str, TEXT_COLOUR, 30, self.fonts.monospaced)
-            draw_text(self.display_surface, (C.WN_W*0.65, C.WN_H * (0.4+0.08*i)), 'right', 'centre', str(option), VAL_COLOUR, 30, self.fonts.monospaced)
+            draw_text(self.display_surface, (C.WN_W*0.35, C.WN_H * (0.35+0.05*i)), 'left', 'centre', ui_str, TEXT_COLOUR, 30, self.fonts.monospaced)
+            draw_text(self.display_surface, (C.WN_W*0.65, C.WN_H * (0.35+0.05*i)), 'right', 'centre', str(option), VAL_COLOUR, 30, self.fonts.monospaced)
 
         # Convert the Pygame surface to an OpenGL texture
         texture_data = pg.image.tostring(self.display_surface, 'RGBA', True)

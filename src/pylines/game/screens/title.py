@@ -27,7 +27,7 @@ from pylines.core.colours import WHITE
 from pylines.core.custom_types import EventList, ScancodeWrapper, Surface
 from pylines.core.utils import draw_text
 from pylines.game.states import State, StateID
-from pylines.objects.buttons import Button
+from pylines.objects.buttons import Button, ImageButton
 
 if TYPE_CHECKING:
     from pylines.game.game import Game
@@ -37,10 +37,12 @@ class TitleScreen(State):
         super().__init__(game)
         self.display_surface = pg.Surface((C.WN_W, C.WN_H), pg.SRCALPHA)
         self.texture_id = gl.glGenTextures(1)
+
         self.settings_button = Button(
             (120, C.WN_H-90), 200, 80, (25, 75, 75), (200, 255, 255),
             "Settings", self.fonts.monospaced, 30
         )
+        self.help_button = ImageButton((C.WN_W - 75, C.WN_H - 75), self.images.help_icon)
 
     def reset(self) -> None:
         self.sounds.stall_warning.stop()
@@ -78,6 +80,7 @@ class TitleScreen(State):
             draw_text(self.display_surface, (C.WN_W//2 + 80, C.WN_H * (0.41 + 0.05*i)), 'left', 'centre', desc, WHITE, 27, self.fonts.monospaced)
 
         self.settings_button.draw(self.display_surface)
+        self.help_button.draw(self.display_surface)
 
         # Convert the Pygame surface to an OpenGL texture
         texture_data = pg.image.tostring(self.display_surface, 'RGBA', True)

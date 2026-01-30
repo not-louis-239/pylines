@@ -58,6 +58,7 @@ class JSONConvertible(ABC):
 class ConfigObject(JSONConvertible):
     invert_y_axis: bool = False
     cloud_config_idx: int = 0
+    show_briefing: bool = True
 
     def to_json(self) -> JSONValue:
         return asdict(self)

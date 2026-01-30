@@ -79,6 +79,8 @@ class Images(AssetBank):
 
         self.logo = self._load("logo.png")
 
+        self.help_icon = self._load("help_icon.png")
+
         self.damage_overlays: tuple[Surface, ...] = (
             self._load("damage_1.png"),
             self._load("damage_2.png"),
@@ -90,6 +92,7 @@ class Images(AssetBank):
 
         self.plane_icon = self._load("plane_icon.png")
         self.gps_dest_marker = self._load("gps_dest_marker.png")
+
         self.cloud_blob = self._load("cloud_blob.png")
 
         self.augment()
@@ -100,6 +103,7 @@ class Images(AssetBank):
         self.logo = scale_by(self.logo, 0.2)
         self.plane_icon = scale(self.plane_icon, (24, 24))
         self.gps_dest_marker = scale(self.gps_dest_marker, (24, 24))
+        self.help_icon = scale(self.help_icon, (50, 50))
 
     def _load(self, name: str):
         return pg.image.load(paths.IMAGES_DIR / name).convert_alpha()

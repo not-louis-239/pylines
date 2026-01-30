@@ -28,7 +28,7 @@ import numpy as np
 import pygame as pg
 from OpenGL import GL as gl
 
-from pylines.objects.buttons import Button
+from pylines.objects.buttons import Button, ImageButton
 import pylines.core.colours as cols
 import pylines.core.constants as C
 import pylines.core.paths as paths
@@ -144,6 +144,8 @@ class GameScreen(State):
             (C.WN_W//2+200, C.WN_H//2+20), 150, 50, (0, 96, 96), (128, 255, 255),
             "No", self.fonts.monospaced, 30
         )
+
+        self.help_button = ImageButton((C.WN_W - 75, C.WN_H - 75), self.images.help_icon)
 
         # Graphics
         self.hud_tex = gl.glGenTextures(1)
@@ -1440,7 +1442,7 @@ class GameScreen(State):
             transparent_surface.fill((0, 0, 0, 100))
             self.hud_surface.blit(transparent_surface, (0, 0))
 
-            for button in (self.continue_button, self.restart_button, self.menu_button):
+            for button in (self.continue_button, self.restart_button, self.menu_button, self.help_button):
                 button.draw(self.hud_surface)
 
             draw_text(
