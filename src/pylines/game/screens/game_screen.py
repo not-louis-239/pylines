@@ -478,7 +478,7 @@ class GameScreen(State):
 
     def take_input(self, keys: ScancodeWrapper, events: EventList, dt: int) -> None:
         # Meta controls
-        if self.pressed(keys, pg.K_p):
+        if self.pressed(keys, pg.K_ESCAPE):
             self.paused = not self.paused
 
             self.channel_wind.stop()
@@ -1018,7 +1018,7 @@ class GameScreen(State):
 
         # Exit controls
         if self.time_elapsed < 5_000 or not self.plane.flyable:
-            draw_text(hud_surface, (15, 30), 'left', 'centre', "P to pause", cols.WHITE, 30, self.fonts.monospaced)
+            draw_text(hud_surface, (15, 30), 'left', 'centre', "Press Esc to pause", cols.WHITE, 30, self.fonts.monospaced)
 
         # Stall warning
         warning_x = C.WN_W//2-145

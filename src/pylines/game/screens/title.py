@@ -75,7 +75,7 @@ class TitleScreen(State):
             "Z/X": "Flaps Up/Down",
             "B": "Brake",
             "A/D": "Rudder",
-            "P": "Pause",
+            "Esc": "Pause",
         }
 
         for i, (key, desc) in enumerate(controls.items()):
