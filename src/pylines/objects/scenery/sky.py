@@ -153,7 +153,7 @@ class Star(CelestialObject):
         pos = rotated_dir.normalize() * distance
 
         # Forward cull
-        if camera_fwd.dot(rotated_dir) <= cos(math.radians(C.FOV)):  # Cull based on FOV
+        if camera_fwd.dot(rotated_dir.normalize()) <= cos(math.radians(C.FOV)):  # Cull based on FOV
             return
 
         gl.glPushMatrix()
