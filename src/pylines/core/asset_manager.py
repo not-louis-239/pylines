@@ -22,7 +22,6 @@ asset_manager.py
 
 import json
 from pathlib import Path
-from dataclasses import dataclass
 
 import numpy as np
 import pygame as pg
