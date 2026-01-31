@@ -22,6 +22,7 @@ asset_manager.py
 
 import json
 from pathlib import Path
+from typing import cast
 
 import numpy as np
 import pygame as pg
@@ -165,28 +166,18 @@ class WorldData(AssetBank):
 
         self.noise = pg.image.load(paths.WORLD_DIR / "noise.png").convert_alpha()
 
-        # Runway data
-        with open(paths.WORLD_DIR / "runways.json") as f:
-            self.runway_data: list = json.load(f)["runways"]
-
-        # Building definitions
-        with open(paths.WORLD_DIR / "building_defs.json") as f:
-            self.building_defs: dict = json.load(f)["building_defs"]
-
-        # Building placements
-        with open(paths.WORLD_DIR / "building_placements.json") as f:
-            self.building_placements: list = json.load(f)["buildings"]
-
-        # Prohibited zones
-        with open(paths.WORLD_DIR / "prohibited_zones.json") as f:
-            self.prohibited_zones: list = json.load(f)["prohibited_zones"]
-
-        # Starfield data
-        with open(paths.WORLD_DIR / "starfield_data.json") as f:
-            self.starfield_data: dict = json.load(f)["starfield"]
+        self.runway_data: list = cast(list, self._load_json("runways.json", "runways"))
+        self.building_defs: dict = cast(dict, self._load_json("building_defs.json", "building_defs"))
+        self.building_placements: list = cast(list, self._load_json("building_placements.json", "buildings"))
+        self.prohibited_zones: list = cast(list, self._load_json("prohibited_zones.json", "prohibited_zones"))
+        self.starfield_data: dict = cast(dict, self._load_json("starfield_data.json", "starfield"))
 
     def _load(self, name: str) -> Path:
         return paths.WORLD_DIR / name
+
+    def _load_json(self, name: str, key: str) -> dict | list:
+        with open(paths.WORLD_DIR / name, "r", encoding="utf-8") as f:
+            return json.load(f)[key]
 
 class ConfigPresets(AssetBank):
     """Data container for presets such as clouds that
@@ -204,11 +195,18 @@ class ConfigPresets(AssetBank):
 class TextAssets(AssetBank):
     """Data container for text-based assets"""
 
+    COMMENT_SYMBOL = '#'
+
     def __init__(self) -> None:
-        # Briefing text
-        with open(paths.TEXT_DIR / "briefing.txt", "r", encoding="utf-8") as f:
-            self.briefing_text: list[str] = [
-                line.rstrip("\n") for line in f if not line.lstrip().startswith("#")]
+        self.briefing_text: list[str] = self._load("briefing.txt")
+        self.help_text: list[str] = self._load("help.txt")
+
+    def _load(self, name: str) -> list[str]:
+        with open(paths.TEXT_DIR / name, "r", encoding="utf-8") as f:
+            return [
+                line.rstrip("\n")
+                for line in f if not line.lstrip().startswith(TextAssets.COMMENT_SYMBOL)
+            ]
 
 class Assets:
     def __init__(self) -> None:
