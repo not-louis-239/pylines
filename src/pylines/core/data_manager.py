@@ -20,8 +20,9 @@ import json
 from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass, fields
 from enum import Enum, auto
-from typing import Any, Mapping, Self, TypeAlias
 from pathlib import Path
+from typing import Any, Mapping, Self, TypeAlias
+
 import pylines.core.paths as paths
 
 JSONValue: TypeAlias = (

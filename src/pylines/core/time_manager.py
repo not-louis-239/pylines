@@ -13,14 +13,15 @@
 # limitations under the License.
 
 import math
-import pygame as pg
 from datetime import datetime
+
+import pygame as pg
 
 from . import constants as C
 from .colours import SKY_COLOUR_SCHEMES, ColourScheme, lerp_colour
 from .custom_types import RealNumber
 from .utils import map_value
-from .constants import MOON_BRIGHTNESS, SUN_BRIGHTNESS
+
 
 def fetch_hour() -> float:
     """Returns a value between 0 and 24 to represent the current hour."""

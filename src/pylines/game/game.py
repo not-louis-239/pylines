@@ -18,17 +18,17 @@ from typing import TYPE_CHECKING
 
 import pygame as pg
 
+import pylines.core.paths as paths
 from pylines.core.asset_manager import Assets
 from pylines.core.constants import SFXChannelID
-from pylines.core.data_manager import load_data, save_data, ConfigObject
+from pylines.core.data_manager import ConfigObject, load_data, save_data
 from pylines.game.environment import Environment
+from pylines.game.live_config_presets import LiveConfigPresets
 from pylines.game.screens.briefing import BriefingScreen
 from pylines.game.screens.loading_screen import LoadingScreen
 from pylines.game.screens.settings import SettingsScreen
 from pylines.game.screens.title import TitleScreen
 from pylines.game.states import State, StateID
-import pylines.core.paths as paths
-from pylines.game.live_config_presets import LiveConfigPresets
 
 if TYPE_CHECKING:
     from pylines.core.custom_types import EventList, ScancodeWrapper, Surface

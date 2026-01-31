@@ -19,14 +19,23 @@ import OpenGL.GL as gl
 import pygame as pg
 
 import pylines.core.constants as C
-from pylines.core.constants import MOON_BRIGHTNESS, SUN_BRIGHTNESS, SHADE_BRIGHTNESS_MULT
 import pylines.core.paths as paths
+from pylines.core.constants import (
+    MOON_BRIGHTNESS,
+    SHADE_BRIGHTNESS_MULT,
+    SUN_BRIGHTNESS,
+)
 from pylines.core.custom_types import Surface
-from pylines.core.time_manager import sunlight_strength_from_hour, fetch_hour, sun_direction_from_hour
+from pylines.core.time_manager import (
+    fetch_hour,
+    sun_direction_from_hour,
+    sunlight_strength_from_hour,
+)
 from pylines.game.environment import Environment
 from pylines.shaders.shader_manager import load_shader_script
 
 from .bases import LargeSceneryObject
+
 
 class Ground(LargeSceneryObject):
     def __init__(self, textures: dict[str, Surface], env: Environment) -> None:

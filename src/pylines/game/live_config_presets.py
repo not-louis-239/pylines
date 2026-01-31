@@ -14,8 +14,9 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
 from ..objects.scenery.sky import CloudLayer
 
 if TYPE_CHECKING:

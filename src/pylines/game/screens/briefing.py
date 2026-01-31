@@ -22,8 +22,8 @@ import pygame as pg
 from OpenGL import GL as gl
 from OpenGL import GLU as glu
 
-import pylines.core.constants as C
 import pylines.core.colours as cols
+import pylines.core.constants as C
 from pylines.core.custom_types import EventList, ScancodeWrapper, Surface
 from pylines.core.utils import draw_text
 from pylines.game.states import State, StateID

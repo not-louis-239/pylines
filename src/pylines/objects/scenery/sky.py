@@ -14,7 +14,7 @@
 
 
 import math
-from math import cos, sin
+from math import cos
 
 import OpenGL.GL as gl
 import OpenGL.GLU as glu
@@ -22,12 +22,16 @@ import pygame as pg
 from noise import snoise2
 
 import pylines.core.constants as C
-from pylines.core.time_manager import fetch_hour, sun_direction_from_hour
+from pylines.core.custom_types import Coord3, RealNumber, Surface
+from pylines.core.time_manager import (
+    fetch_hour,
+    sun_direction_from_hour,
+    sunlight_strength_from_hour,
+)
+from pylines.core.utils import clamp, lerp
 
 from .bases import CelestialObject, LargeSceneryObject
-from pylines.core.utils import clamp, lerp
-from pylines.core.time_manager import fetch_hour, sunlight_strength_from_hour
-from pylines.core.custom_types import RealNumber, Surface, Coord3
+
 
 class Sky(LargeSceneryObject):
     def __init__(self) -> None:

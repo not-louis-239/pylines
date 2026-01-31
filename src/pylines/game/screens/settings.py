@@ -21,7 +21,7 @@ from OpenGL import GLU as glu
 
 import pylines.core.constants as C
 from pylines.core.colours import WHITE
-from pylines.core.custom_types import EventList, ScancodeWrapper, Surface, ConfigValue
+from pylines.core.custom_types import ConfigValue, EventList, ScancodeWrapper, Surface
 from pylines.core.utils import draw_text
 from pylines.game.states import State, StateID
 from pylines.objects.buttons import Button

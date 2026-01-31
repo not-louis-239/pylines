@@ -16,8 +16,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
 from enum import Enum, auto
+from typing import TYPE_CHECKING
 
 from pylines.core.custom_types import EventList, ScancodeWrapper, Surface
 

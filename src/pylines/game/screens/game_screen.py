@@ -18,35 +18,41 @@ from __future__ import annotations
 
 import ctypes
 import math
-from math import sin, cos, radians as rad
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import TYPE_CHECKING, Callable, cast, Generator
+from math import cos, sin
+from math import radians as rad
+from typing import TYPE_CHECKING, Callable, Generator, cast
 
 import numpy as np
 import pygame as pg
 from OpenGL import GL as gl
 
-from pylines.objects.buttons import Button, ImageButton
 import pylines.core.colours as cols
 import pylines.core.constants as C
 import pylines.core.paths as paths
 import pylines.core.units as units
 from pylines.core.custom_types import Colour, EventList, RealNumber
 from pylines.core.time_manager import (
-    sunlight_strength_from_hour,
-    sun_direction_from_hour,
     fetch_hour,
-    sky_colour_from_hour
+    sky_colour_from_hour,
+    sun_direction_from_hour,
+    sunlight_strength_from_hour,
 )
-from pylines.core.utils import clamp, draw_needle, draw_text, draw_transparent_rect, lerp
+from pylines.core.utils import (
+    clamp,
+    draw_needle,
+    draw_text,
+    draw_transparent_rect,
+)
 from pylines.game.states import State, StateID
 from pylines.objects.buildings import (
     BuildingDefinition,
     BuildingMapIconType,
     draw_building_icon,
 )
+from pylines.objects.buttons import Button, ImageButton
 from pylines.objects.objects import CrashReason, Plane
 from pylines.objects.scenery.ground import Ground
 from pylines.objects.scenery.ocean import Ocean

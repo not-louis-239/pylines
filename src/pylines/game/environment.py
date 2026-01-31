@@ -14,17 +14,17 @@
 
 from __future__ import annotations
 
+import math
+import random
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal
 
-import math
 import numpy as np
-import random
 import pygame as pg
 
+from pylines.core.asset_manager import Images
 from pylines.core.constants import EPSILON, HALF_WORLD_SIZE
 from pylines.core.custom_types import Coord2
-from pylines.core.asset_manager import Images
 from pylines.core.utils import map_value
 from pylines.objects.building_parts import BuildingPart, match_primitive
 from pylines.objects.buildings import (
@@ -34,10 +34,10 @@ from pylines.objects.buildings import (
     match_building_icon,
 )
 from pylines.objects.scenery.runway import Runway
-from pylines.objects.scenery.sky import Star, CloudLayer
+from pylines.objects.scenery.sky import Star
 
 if TYPE_CHECKING:
-    from pylines.core.asset_manager import WorldData, Fonts
+    from pylines.core.asset_manager import Fonts, WorldData
 
 
 @dataclass

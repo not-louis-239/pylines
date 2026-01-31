@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import math
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Generator, Literal
 
