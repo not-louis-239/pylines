@@ -23,67 +23,69 @@ from OpenGL import GL as gl
 from OpenGL import GLU as glu
 
 import pylines.core.constants as C
-from pylines.core.colours import WHITE
+import pylines.core.colours as cols
 from pylines.core.custom_types import EventList, ScancodeWrapper, Surface
 from pylines.core.utils import draw_text
 from pylines.game.states import State, StateID
-from pylines.objects.buttons import Button, ImageButton
+from pylines.objects.buttons import Button, Checkbox
 
 if TYPE_CHECKING:
     from pylines.game.game import Game
 
-class TitleScreen(State):
+# TODO: finish BriefingScreen
+class BriefingScreen(State):
     def __init__(self, game: Game):
         super().__init__(game)
         self.display_surface = pg.Surface((C.WN_W, C.WN_H), pg.SRCALPHA)
         self.texture_id = gl.glGenTextures(1)
 
-        self.settings_button = Button(
-            (120, C.WN_H-90), 200, 80, (25, 75, 75), (200, 255, 255),
-            "Settings", self.fonts.monospaced, 30
+        self.fly_button = Button(
+            (C.WN_W//2 - 150, C.WN_H - 90), 200, 80, (25, 75, 75), (200, 255, 255),
+            "Fly", self.fonts.monospaced, 30
         )
-        self.help_button = ImageButton((C.WN_W - 75, C.WN_H - 75), self.images.help_icon)
+
+        self.return_button = Button(
+            (C.WN_W//2 + 150, C.WN_H - 90), 200, 80, (25, 75, 75), (200, 255, 255),
+            "Return", self.fonts.monospaced, 30
+        )
+
+        self.dont_show_again = Checkbox(
+            (C.WN_W * 0.317, C.WN_H * 0.8), 30, 30, (25, 75, 75), cols.WHITE,
+            "Hide briefing for future flights", self.fonts.monospaced, 30
+        )
 
     def reset(self) -> None:
         self.sounds.stall_warning.stop()
 
     def take_input(self, keys: ScancodeWrapper, events: EventList, dt: int) -> None:
-        if self.pressed(keys, pg.K_SPACE):
-            self.game.enter_state(StateID.BRIEFING if self.game.save_data.show_briefing else StateID.GAME)
-        if self.settings_button.check_click(events):
-            self.game.enter_state(StateID.SETTINGS)
+        if self.return_button.check_click(events):
+            self.game.enter_state(StateID.TITLE)
+        if self.fly_button.check_click(events):
+            if self.dont_show_again:
+                self.game.save_data.show_briefing = False
+            self.game.enter_state(StateID.GAME)
+        if self.dont_show_again.check_click(events):
+            self.dont_show_again.toggle()
 
         self.update_prev_keys(keys)
 
     def draw(self, wn: Surface):
         # Fill the display surface
         self.display_surface.fill((0, 0, 0))
-        rect = self.images.logo.get_rect(center=(C.WN_W//2, C.WN_H*0.15
-                                                 ))
-        self.display_surface.blit(self.images.logo, rect)
 
-        text = "Press Space for briefing" if self.game.save_data.show_briefing else "Press Space to fly"
-        draw_text(self.display_surface, (C.WN_W//2, C.WN_H*0.8), 'centre', 'centre', text, (255, 255, 255), 30, self.fonts.monospaced)
+        self.fly_button.draw(self.display_surface)
+        self.return_button.draw(self.display_surface)
+        self.dont_show_again.draw(self.display_surface)
 
-        draw_text(self.display_surface, (C.WN_W//2, 0.95*C.WN_H), 'centre', 'centre', "Copyright (C) 2025-2026 Louis Masarei-Boulton.", (127, 127, 127), 15, self.fonts.monospaced)
+        draw_text(self.display_surface, (C.WN_W//2, C.WN_H*0.15), 'centre', 'centre', "Flight Briefing", (0, 192, 255), 40, self.fonts.monospaced)
 
-        draw_text(self.display_surface, (C.WN_W//2, C.WN_H*0.3), 'centre', 'centre', "Read Before Flight", (0, 192, 255), 40, self.fonts.monospaced)
+        instructions: list[str] = self.game.assets.texts.briefing_text
 
-        controls: dict[str, str] = {
-            "W/S": "Throttle",
-            "Arrows": "Pitch/Yaw",
-            "Z/X": "Flaps Up/Down",
-            "B": "Brake",
-            "A/D": "Rudder",
-            "P": "Pause",
-        }
-
-        for i, (key, desc) in enumerate(controls.items()):
-            draw_text(self.display_surface, (C.WN_W//2 - 140, C.WN_H * (0.41 + 0.05*i)), 'right', 'centre', key, WHITE, 27, self.fonts.monospaced)
-            draw_text(self.display_surface, (C.WN_W//2 + 80, C.WN_H * (0.41 + 0.05*i)), 'left', 'centre', desc, WHITE, 27, self.fonts.monospaced)
-
-        self.settings_button.draw(self.display_surface)
-        self.help_button.draw(self.display_surface)
+        for i, line in enumerate(instructions):
+            draw_text(
+                self.display_surface, (C.WN_W//2, C.WN_H * (0.3 + 0.05*i)), 'centre', 'centre',
+                line, cols.WHITE, 25, self.fonts.monospaced
+            )
 
         # Convert the Pygame surface to an OpenGL texture
         texture_data = pg.image.tostring(self.display_surface, 'RGBA', True)

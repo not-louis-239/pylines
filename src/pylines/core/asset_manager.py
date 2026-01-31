@@ -202,6 +202,15 @@ class ConfigPresets(AssetBank):
     def _load(self, name: str) -> Path:
         return paths.PRESETS_DIR / name
 
+class TextAssets(AssetBank):
+    """Data container for text-based assets"""
+
+    def __init__(self) -> None:
+        # Briefing text
+        with open(paths.TEXT_DIR / "briefing.txt", "r", encoding="utf-8") as f:
+            self.briefing_text: list[str] = [
+                line.rstrip("\n") for line in f if not line.lstrip().startswith("#")]
+
 class Assets:
     def __init__(self) -> None:
         self.images: Images = Images()
@@ -209,3 +218,4 @@ class Assets:
         self.sounds: Sounds = Sounds()
         self.world: WorldData = WorldData()
         self.config_presets: ConfigPresets = ConfigPresets()
+        self.texts: TextAssets = TextAssets()

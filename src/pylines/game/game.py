@@ -22,6 +22,7 @@ from pylines.core.asset_manager import Assets
 from pylines.core.constants import SFXChannelID
 from pylines.core.data_manager import load_data, save_data, ConfigObject
 from pylines.game.environment import Environment
+from pylines.game.screens.briefing import BriefingScreen
 from pylines.game.screens.loading_screen import LoadingScreen
 from pylines.game.screens.settings import SettingsScreen
 from pylines.game.screens.title import TitleScreen
@@ -51,6 +52,7 @@ class Game:
             StateID.LOADING: LoadingScreen(self),
             StateID.TITLE: TitleScreen(self),
             StateID.SETTINGS: SettingsScreen(self),
+            StateID.BRIEFING: BriefingScreen(self),
         }
 
         self.music_channel = pg.mixer.Channel(SFXChannelID.MUSIC)
@@ -65,7 +67,8 @@ class Game:
         prev_state = self.state
         self.state = state_name
 
-        menu_states = (StateID.TITLE, StateID.SETTINGS)
+        # TODO: Move menu music out of here, it doesn't belong!
+        menu_states = (StateID.TITLE, StateID.SETTINGS, StateID.BRIEFING)
         was_in_menu = prev_state in menu_states
         is_entering_menu = state_name in menu_states
         # Fade out music if leaving a menu state for a non-menu state

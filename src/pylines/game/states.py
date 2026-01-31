@@ -29,6 +29,7 @@ class StateID(Enum):
     GAME = auto()
     SETTINGS = auto()
     LOADING = auto()
+    BRIEFING = auto()
 
 class State:
     def __init__(self, game: Game) -> None:
