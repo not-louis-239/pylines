@@ -20,6 +20,7 @@ asset_manager.py
     not be involved in computations or logic beyond asset file management.
 """
 
+from enum import Enum, auto
 import json
 from pathlib import Path
 from typing import cast
@@ -32,6 +33,18 @@ from pygame.transform import scale, scale_by
 import pylines.core.paths as paths
 from pylines.core.custom_types import Sound, Surface
 
+
+class FLine:
+    """Formatted line for help text"""
+
+    class Style(Enum):
+        NORMAL = auto()
+        HEADER = auto()
+        BULLET = auto()
+
+    def __init__(self, text: str, style: Style = Style.NORMAL):
+        self.text = text
+        self.style = style
 
 class AssetBank:
     """Base class to store assets. Objects of this type should be
@@ -199,13 +212,27 @@ class TextAssets(AssetBank):
 
     def __init__(self) -> None:
         self.briefing_text: list[str] = self._load("briefing.txt")
-        self.help_text: list[str] = self._load("help.txt")
 
-    def _load(self, name: str) -> list[str]:
+        raw_lines: list[str] = self._load("help.txt", cmt_symbol="//")
+        self.help_lines: list[FLine] = []
+
+        Style = FLine.Style
+        for line in raw_lines:
+            stripped = line.strip()
+            if stripped.startswith('#'):
+                fline = FLine(stripped[1:].strip(), Style.HEADER)
+            elif stripped.startswith('*'):
+                fline = FLine(stripped[1:].strip(), Style.BULLET)
+            else:
+                fline = FLine(stripped, Style.NORMAL)
+
+            self.help_lines.append(fline)
+
+    def _load(self, name: str, /, *, cmt_symbol: str = COMMENT_SYMBOL) -> list[str]:
         with open(paths.TEXT_DIR / name, "r", encoding="utf-8") as f:
             return [
                 line.rstrip("\n")
-                for line in f if not line.lstrip().startswith(TextAssets.COMMENT_SYMBOL)
+                for line in f if not line.lstrip().startswith(cmt_symbol)
             ]
 
 class Assets:
