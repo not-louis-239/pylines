@@ -105,7 +105,7 @@ class Star(CelestialObject):
         colour: tuple[int, int, int] = (255, 255, 255),
         size: float = 1.0
     ) -> None:
-        self.direction = direction
+        self.direction = direction  # currently represents offset from sun
         self.brightness = brightness
         self.colour = colour
         self.size = size
@@ -130,9 +130,30 @@ class Star(CelestialObject):
             return
 
         distance = 19000.0
-        pos = self.direction * distance # Star's position in world coordinates
 
-        if camera_fwd.dot(self.direction) <= cos(math.radians(C.FOV)):  # Cull based on FOV
+        # Sun direction
+        sun_dir = sun_direction_from_hour(hour)
+        ref_dir = pg.Vector3(0, 0, -1)  # what self.direction is originally relative to
+
+        # Rodrigues’ rotation formula
+        k = ref_dir.cross(sun_dir)
+        if k.length() < C.EPSILON:  # vectors are parallel
+            rotated_dir = self.direction.copy() if ref_dir.dot(sun_dir) > 0 else -self.direction
+        else:
+            k = k.normalize()
+            cos_theta = clamp(ref_dir.dot(sun_dir), (-1, 1))
+            theta = math.acos(cos_theta)
+            v = self.direction
+            rotated_dir = (
+                v * math.cos(theta) +
+                k.cross(v) * math.sin(theta) +
+                k * (k.dot(v)) * (1 - math.cos(theta))
+            )
+
+        pos = rotated_dir.normalize() * distance
+
+        # Forward cull
+        if camera_fwd.dot(rotated_dir) <= cos(math.radians(C.FOV)):  # Cull based on FOV
             return
 
         gl.glPushMatrix()
@@ -267,7 +288,7 @@ class CloudLayer(LargeSceneryObject):
     def get_density(self, world_x: float, world_z: float):
         """Authoritative function to retrieve cloud
         density for a layer.
-        
+
         Returns density value, noise-x and noise-z
         used in sampling."""
 
