@@ -32,7 +32,6 @@ from pylines.objects.buttons import Button, Checkbox
 if TYPE_CHECKING:
     from pylines.game.game import Game
 
-# TODO: finish BriefingScreen
 class BriefingScreen(State):
     def __init__(self, game: Game):
         super().__init__(game)

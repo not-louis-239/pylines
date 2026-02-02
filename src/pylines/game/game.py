@@ -64,10 +64,11 @@ class Game:
         assert self.assets is not None
         assert self.states is not None
 
-        prev_state = self.state
-        self.state = state_name
+        prev_state, self.state = self.state, state_name
 
-        # TODO: Move menu music out of here, it doesn't belong!
+        # TODO: Move menu music out handling out of Game
+        #       and into a separate MusicManager class
+
         menu_states = (StateID.TITLE, StateID.SETTINGS, StateID.BRIEFING)
         was_in_menu = prev_state in menu_states
         is_entering_menu = state_name in menu_states
