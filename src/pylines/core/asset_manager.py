@@ -39,7 +39,8 @@ class FLine:
 
     class Style(Enum):
         NORMAL = auto()
-        HEADER = auto()
+        HEADING_1 = auto()
+        HEADING_2 = auto()
         BULLET = auto()
 
     def __init__(self, text: str, style: Style = Style.NORMAL):
@@ -219,8 +220,10 @@ class TextAssets(AssetBank):
         Style = FLine.Style
         for line in raw_lines:
             stripped = line.strip()
-            if stripped.startswith('#'):
-                fline = FLine(stripped[1:].strip(), Style.HEADER)
+            if stripped.startswith('##'):
+                fline = FLine(stripped[2:].strip(), Style.HEADING_2)
+            elif stripped.startswith('#'):
+                fline = FLine(stripped[1:].strip(), Style.HEADING_1)
             elif stripped.startswith('*'):
                 fline = FLine(stripped[1:].strip(), Style.BULLET)
             else:

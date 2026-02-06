@@ -13,37 +13,74 @@
 // limitations under the License.
 //
 // Help page text.
+//
+// Text formats
+// Normal
+// * Bullet
+// # Heading
+// ## Subheading
+//
 // Lines starting with '//' are ignored.
 // Do not modify this file.
 //
 # Overview
 
-You have just started flying at Darculus Metropolis.
+You have just started flying at Darculus Metropolis. This is a flight sandbox;
+you are free to explore the region as you wish.
 
 # Adjustments
 
-The flaps have been pre-adjusted to be slightly down, optimal
-for takeoff. Lowering the flaps increases lift and
-significantly increases drag, especially at high
-deflections, hence the pre-adjustment.
+The flaps have been pre-adjusted to be slightly down, optimal for takeoff.
+Lowering the flaps increases lift and significantly increases drag, especially
+at high deflections, hence the adjustment.
 
 # Takeoff
 
-To takeoff, apply full throttle and at 55 knots, raise
-the nose by 10-15°. Do not raise the nose too high
-or you will stall. Wait until you reach a speed of
+To takeoff, apply full throttle and at 55 knots, raise the nose by 10-15°. Do
+not raise the nose too high or you will stall. Wait until you reach a speed of
 70 knots before attempting to climb more steeply.
 
 # Cruise
 
-As you fly, you can raise or lower the nose, or roll to
-adjust your direction. You also have a map available
-for navigation guidance.
+As you fly, you can raise or lower the nose, or roll to adjust your direction.
+You also have a map available for navigation guidance.
 
-If you raise the nose too high, you will stall. To
-recover from a stall, pitch down to regain speed until
-the stall warning stops.
+If you raise the nose too high, you will stall. To recover from a stall, pitch
+down to regain speed until the stall warning stops.
 
-If you stall,
+For cruise, it is optimal to have the flaps fully up as it reduces both lift and
+drag. However, it also increases stall speed and therefore the risk of stalling.
+
+Additionally, be careful to manage your kinetic energy as overspeeding (letting
+your speed exceed your plane's structural speed limit, as indicated by the red
+region on your speedometer) may severely damage the airplane.
+
+# GUI
+
+...
 
 # Landing
+
+To land, ensure you are inline with the target runway. The trick is to keep the
+speed at 65 knots by controlling your pitch and throttle. Put the flaps fully
+down to increase drag and reduce speed in preparation for landing.
+
+Your glidescope will help you with landing by indicating your altitude relative
+to the optimal glidepath. It is located to the bottom right of your artificial
+horizon.
+* The green needle indicates the correct glidepath. Keep it near the central line.
+* If the green needle is above the central white line, you are too low-raise the nose slightly or add throttle.
+* If the green needle is below the central white line, you are too high-drop the nose or reduce throttle.
+Add more throttle if you get too low or less if you get too high. Slowly level
+out at 10 feet above the runway, then drop to 5 feet and reduce throttle to none
+before touching down gently, slightly nose-up.
+
+# Prohibited Areas
+
+Some areas are restricted for safety, military activity, or wildlife protection.
+Flying into a prohibited area will trigger warnings and may affect your standing
+as a pilot.
+
+# World Information
+
+...
