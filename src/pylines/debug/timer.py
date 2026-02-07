@@ -13,8 +13,8 @@
 # limitations under the License.
 
 import time
-from typing import Callable
 from functools import wraps
+from typing import Callable
 
 START_TIME = time.perf_counter()
 last_segment_time = START_TIME

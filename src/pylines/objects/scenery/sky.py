@@ -28,7 +28,7 @@ from pylines.core.time_manager import (
     sun_direction_from_hour,
     sunlight_strength_from_hour,
 )
-from pylines.core.utils import clamp, lerp
+from pylines.core.utils import lerp
 
 from .bases import CelestialObject, LargeSceneryObject
 

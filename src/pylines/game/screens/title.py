@@ -23,12 +23,12 @@ from OpenGL import GL as gl
 from OpenGL import GLU as glu
 
 import pylines.core.constants as C
+from pylines.core.asset_manager import FLine
 from pylines.core.colours import WHITE
-from pylines.core.custom_types import EventList, ScancodeWrapper, Surface, Colour
+from pylines.core.custom_types import Colour, EventList, ScancodeWrapper, Surface
 from pylines.core.utils import draw_text, wrap_text
 from pylines.game.states import State, StateID
 from pylines.objects.buttons import Button, ImageButton
-from pylines.core.asset_manager import FLine
 
 if TYPE_CHECKING:
     from pylines.game.game import Game

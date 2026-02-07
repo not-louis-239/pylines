@@ -20,8 +20,8 @@ asset_manager.py
     not be involved in computations or logic beyond asset file management.
 """
 
-from enum import Enum, auto
 import json
+from enum import Enum, auto
 from pathlib import Path
 from typing import cast
 

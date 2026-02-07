@@ -14,7 +14,7 @@
 
 import math
 from pathlib import Path
-from typing import Generator, Literal
+from typing import Literal
 
 import pygame as pg
 from pygame.surface import Surface

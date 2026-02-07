@@ -15,10 +15,11 @@
 from __future__ import annotations
 
 import math
-from enum import Enum, auto
 from dataclasses import dataclass
+from enum import Enum, auto
 
 from ..core.custom_types import RealNumber
+
 
 class DimensionType(Enum):
     LENGTH = auto()
