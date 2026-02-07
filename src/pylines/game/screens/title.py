@@ -132,16 +132,27 @@ class TitleScreen(State):
         for fline in self.game.assets.texts.help_lines:
             size, colour, bullet = VISUAL_STYLES[fline.style]
 
-            text = f"• {fline.text}" if bullet else fline.text
             x = left + indent_px * fline.indent
             max_w = width - indent_px * fline.indent
 
             font = pg.font.Font(self.fonts.monospaced, size)
-            for line in wrap_text(text, max_w, font):
-                render_y = logical_y - self.help_screen_offset
-                if render_y + font.get_linesize() >= top and render_y <= bottom:
-                    draw_text(self.display_surface, (x, render_y), 'left', 'top', line, colour, size, font)
-                logical_y += font.get_linesize() + 4
+            if bullet:
+                bullet_prefix = "• "
+                prefix_w = font.size(bullet_prefix)[0]
+                wrapped = wrap_text(fline.text, max_w - prefix_w, font)
+                for i, line in enumerate(wrapped):
+                    render_y = logical_y - self.help_screen_offset
+                    if render_y + font.get_linesize() >= top and render_y <= bottom:
+                        if i == 0:
+                            draw_text(self.display_surface, (x, render_y), 'left', 'top', bullet_prefix, colour, size, font)
+                        draw_text(self.display_surface, (x + prefix_w, render_y), 'left', 'top', line, colour, size, font)
+                    logical_y += font.get_linesize() + 4
+            else:
+                for line in wrap_text(fline.text, max_w, font):
+                    render_y = logical_y - self.help_screen_offset
+                    if render_y + font.get_linesize() >= top and render_y <= bottom:
+                        draw_text(self.display_surface, (x, render_y), 'left', 'top', line, colour, size, font)
+                    logical_y += font.get_linesize() + 4
 
             logical_y += 6  # extra spacing between FLine entries
 
