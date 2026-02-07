@@ -19,9 +19,9 @@ from functools import wraps
 START_TIME = time.perf_counter()
 last_segment_time = START_TIME
 
-COL_EMPHASIS = "\033[32m"        # Green
-COL_NAMES_SEGMENTS = "\033[31m"  # Red
-COL_NAMES_FUNCS = "\033[34m"     # Blue
+COL_EMPHASIS = "\033[32m"
+COL_NAMES_SEGMENTS = "\033[33m"
+COL_NAMES_FUNCS = "\033[93m"
 COL_RESET = "\033[0m"
 
 def log_segment(seg_name: str | None = None):

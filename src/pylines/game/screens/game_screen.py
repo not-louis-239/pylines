@@ -343,6 +343,54 @@ class GameScreen(State):
         draw_text(surf, (warning_x + 20, C.WN_H*0.965), 'left', 'centre', "OVERSPEED", (25, 20, 18), 20, self.fonts.monospaced)
         pg.draw.circle(surf, (51, 43, 37), (warning_x, C.WN_H*0.965), 10)
 
+    def _populate_building_legend(self) -> pg.Surface:
+        width, height = 200, 360
+        surf = pg.Surface((width, height), pg.SRCALPHA)
+        surf.fill((0, 0, 0, 180))
+        pg.draw.rect(surf, cols.MAP_BORDER_COLOUR, surf.get_rect(), 2)
+
+        draw_text(surf, (100, 25), 'centre', 'centre', "Buildings", cols.WHITE, 20, self.fonts.monospaced)
+
+        items = list(self.env.building_defs.items())
+
+        def icon_height(info: BuildingDefinition) -> int:
+            icon = info.appearance.icon
+            dims = info.appearance.dims
+            if icon == BuildingMapIconType.POINT:
+                return 0
+            if icon == BuildingMapIconType.CIRCLE:
+                return cast(tuple[int], dims)[0] * 2
+            if icon == BuildingMapIconType.SQUARE:
+                return cast(tuple[int, int], dims)[1]
+            return 0
+
+        screen_y = 60
+        for idx, (name, def_) in enumerate(items):
+            draw_text(surf, (75, screen_y), 'left', 'centre', f"{name}", cols.WHITE, 15, self.fonts.monospaced)
+            draw_building_icon(surf, 35, screen_y, def_.appearance)
+
+            curr_h = icon_height(def_)
+            next_h = icon_height(items[idx + 1][1]) if idx + 1 < len(items) else 0
+            line_h = max(15, 15 + curr_h//2 + next_h//2)
+            screen_y += line_h
+
+        return surf
+
+    def _populate_height_legend(self) -> pg.Surface:
+        width, height = 180, 360
+        surf = pg.Surface((width, height), pg.SRCALPHA)
+        surf.fill((0, 0, 0, 180))
+        pg.draw.rect(surf, cols.MAP_BORDER_COLOUR, surf.get_rect(), 2)
+
+        draw_text(surf, (90, 25), 'centre', 'centre', "Altitude (ft)", cols.WHITE, 20, self.fonts.monospaced)
+        surf.blit(self.height_key, (105, 55))
+
+        for h in range(-12_000, 18_001, 2_000):
+            text_y = 55 + (self.HEIGHT_KEY_H * (1 - ((h + 12_000) / 30_000)))
+            draw_text(surf, (100, text_y), 'right', 'centre', f"{h:,.0f}", cols.WHITE, 15, self.fonts.monospaced)
+
+        return surf
+
     def _build(self) -> Generator[tuple[float, str], None, None]:
         yield from self._init_ground(0.3, 0.45)
 
@@ -518,6 +566,9 @@ class GameScreen(State):
             # We want h to go from 6_000 (top) to -4_000 (bottom)
             h = 6_000 - (10_000 * i / (self.HEIGHT_KEY_H - 1))
             pg.draw.rect(self.height_key, HEIGHT_COLOUR_LOOKUP[int(h+4000)], pg.Rect(0, i, self.HEIGHT_KEY_W, 1))
+
+        self.building_legend_surface = self._populate_building_legend()
+        self.height_legend_surface = self._populate_height_legend()
 
     def reset(self) -> None:
         self.in_menu_confirmation = False
@@ -1185,7 +1236,9 @@ class GameScreen(State):
         pg.draw.circle(hud_surface, (warning_col), (warning_x, C.WN_H*0.965), 8)
         log_segment("warning_lights")
 
+    @timer
     def draw_map(self):
+        log_segment()
         self.map_surface.fill((0, 0, 0, 255))
 
         hud_surface = self.hud_surface
@@ -1198,11 +1251,13 @@ class GameScreen(State):
 
         # Render base map
         map_centre = C.WN_W//2, int(285 + C.WN_H * (1-self.map_up))
+        log_segment("base")
 
         # Map border
         outer_map_rect = pg.Rect(0, 0, C.MAP_OVERLAY_SIZE+10, C.MAP_OVERLAY_SIZE+10)
         outer_map_rect.center = map_centre
         pg.draw.rect(hud_surface, cols.MAP_BORDER_COLOUR, outer_map_rect)
+        log_segment("border")
 
         # Draw map tiles
         # World coordinates of the top-left corner of the map viewport
@@ -1278,6 +1333,8 @@ class GameScreen(State):
                 scaled_tile = pg.transform.scale(tile_crop, (max(1, int(dest_rect.w) + 1), max(1, int(dest_rect.h) + 1)))
                 self.map_surface.blit(scaled_tile, dest_rect)
 
+        log_segment("tiles")
+
         # Show buildings
         if self.viewport_zoom < 10:  # Only show if zoomed in far enough for performance
             for building in self.env.buildings:
@@ -1293,56 +1350,16 @@ class GameScreen(State):
 
                     # Draw the building icon
                     draw_building_icon(self.map_surface, screen_x, screen_y, def_.appearance, self.viewport_zoom)
+        log_segment("buildings")
 
-        # Show buliding legend if advanced map info is enabled
+        # Show building legend if advanced map info is enabled
         if self.map_show_advanced_info:
-            draw_transparent_rect(
-                hud_surface,
-                (map_centre[0] + C.MAP_OVERLAY_SIZE/2 + 20, map_centre[1] - 180),
-                (200, 360), border_thickness=2, border_colour=cols.MAP_BORDER_COLOUR
+            hud_surface.blit(
+                self.building_legend_surface,
+                (map_centre[0] + C.MAP_OVERLAY_SIZE/2 + 20, map_centre[1] - 180)
             )
 
-            draw_text(hud_surface, (map_centre[0] + C.MAP_OVERLAY_SIZE/2 + 120, map_centre[1] - 155), 'centre', 'centre', "Buildings", cols.WHITE, 20, self.fonts.monospaced)
-
-            screen_y = map_centre[1] - 120
-            items = list(self.env.building_defs.items())
-
-            def icon_height(info: BuildingDefinition):
-                icon = info.appearance.icon
-                dims = info.appearance.dims
-                if icon == BuildingMapIconType.POINT:
-                    return 0
-                if icon == BuildingMapIconType.CIRCLE:
-                    return cast(tuple[int], dims)[0] * 2   # radius → diameter
-                if icon == BuildingMapIconType.SQUARE:
-                    return cast(tuple[int, int], dims)[1]
-
-                return 0  # fallback
-
-            for idx, (name, def_) in enumerate(items):
-                # draw icon + label
-                draw_text(
-                    hud_surface,
-                    (map_centre[0] + C.MAP_OVERLAY_SIZE/2 + 90, screen_y),
-                    'left', 'centre',
-                    f"{name}",
-                    cols.WHITE, 15,
-                    self.fonts.monospaced
-                )
-                draw_building_icon(
-                    hud_surface,
-                    map_centre[0] + C.MAP_OVERLAY_SIZE/2 + 55,
-                    screen_y,
-                    def_.appearance
-                )
-
-                # Compute spacing for next line
-                curr_h = icon_height(def_)
-                next_h = icon_height(items[idx + 1][1]) if idx + 1 < len(items) else 0
-
-                # Apply line spacing
-                line_h = max(15, 15 + curr_h//2 + next_h//2)
-                screen_y += line_h
+        log_segment("building_legend")
 
         # Draw prohibited zones
         self.zone_overlay.fill((0, 0, 0, 0))
@@ -1360,6 +1377,7 @@ class GameScreen(State):
             pg.draw.rect(self.zone_overlay, cols.MAP_PROHIBITED_FILL_COLOR, zone_rect)
 
         self.map_surface.blit(self.zone_overlay, (0, 0))
+        log_segment("prohibited_zones")
 
         for zone in self.env.prohibited_zones:
             zone_top_left_wld = zone.pos[0] - zone.dims[0] / 2, zone.pos[1] - zone.dims[1] / 2
@@ -1374,6 +1392,8 @@ class GameScreen(State):
             if self.map_show_advanced_info:
                 text_centre = (screen_pos_x + screen_w / 2, screen_pos_z + screen_h / 2)
                 draw_text(self.map_surface, text_centre, 'centre', 'centre', zone.code, cols.MAP_PROHIBITED_TEXT_COLOUR, 20, self.fonts.monospaced)
+
+        log_segment("prohibited_zone_text")
 
         # Draw runways
         for runway in self.env.runways:
@@ -1409,6 +1429,7 @@ class GameScreen(State):
 
             info_text = f"{runway.heading:03d}°, {units.convert_units(runway.pos.y, units.METRES, units.FEET):,.0f} ft"
             draw_text(self.map_surface, (runway_cx, runway_cy - 30), 'centre', 'centre', info_text, cols.WHITE, 15, self.fonts.monospaced)
+        log_segment("runways")
 
         # Draw plane icon
         cx, cz = C.MAP_OVERLAY_SIZE/2, C.MAP_OVERLAY_SIZE/2
@@ -1418,12 +1439,14 @@ class GameScreen(State):
         plane_icon_rotated = pg.transform.rotate(self.images.plane_icon, -self.plane.rot.y)
         rotated_icon_rect = plane_icon_rotated.get_rect(center=(icon_x, icon_z))
         self.map_surface.blit(plane_icon_rotated, rotated_icon_rect)
+        log_segment("plane_icon")
 
         # Define scale bar size here as the world length is also used in grid rendering
         MAX_SCALE_BAR_SIZE = 80  # pixels
         target_size = self.viewport_zoom * MAX_SCALE_BAR_SIZE
 
         scale_bar_length_world = max([l for l in C.SCALE_BAR_LENGTHS if l <= target_size], default=C.SCALE_BAR_LENGTHS[0])
+        log_segment("scale_bar_length")
 
         # Show grid
         if self.map_show_advanced_info:
@@ -1471,6 +1494,7 @@ class GameScreen(State):
 
             # Blit grid surface onto map surface
             self.map_surface.blit(self.grid_surface, (0, 0))
+        log_segment("grid")
 
         # North indicator - draw an arrow pointing upwards
         north_indicator_size = 20
@@ -1497,6 +1521,7 @@ class GameScreen(State):
 
         pg.draw.rect(self.map_surface, cols.WHITE, scale_bar_rect)
         draw_text(self.map_surface, (scale_bar_offset[0], scale_bar_offset[1] + 20), 'left', 'centre', f"{scale_bar_length_world:,} m", cols.WHITE, 20, self.fonts.monospaced)
+        log_segment("north_indicator_and_scale_bar")
 
         # Calculate ground speed
         ground_speed_vec = pg.Vector3(self.plane.vel.x, 0, self.plane.vel.z)
@@ -1543,26 +1568,20 @@ class GameScreen(State):
 
         draw_text(self.map_surface, (C.MAP_OVERLAY_SIZE//2 - 100, 55), 'left', 'centre', 'ETA', (100, 255, 255), 25, self.fonts.monospaced)
         draw_text(self.map_surface, (C.MAP_OVERLAY_SIZE//2 - 45, 55), 'left', 'centre', eta_text, cols.WHITE, 25, self.fonts.monospaced)
+        log_segment("ground_speed_eta")
 
         # Blit the completed map to the main HUD surface
         map_rect = self.map_surface.get_rect(center=(map_centre))
         hud_surface.blit(self.map_surface, map_rect)
+        log_segment("blit_map")
 
         # Show height key
         if self.map_show_advanced_info:
-            draw_transparent_rect(
-                hud_surface,
-                (C.WN_W//2 - C.MAP_OVERLAY_SIZE//2 - 200, map_centre[1] - 180),
-                (180, 360), border_thickness=2, border_colour=cols.MAP_BORDER_COLOUR
+            hud_surface.blit(
+                self.height_legend_surface,
+                (C.WN_W//2 - C.MAP_OVERLAY_SIZE//2 - 200, map_centre[1] - 180)
             )
-
-            hud_surface.blit(self.height_key, (C.WN_W//2 - C.MAP_OVERLAY_SIZE//2 - 95, map_centre[1] - 125))
-            draw_text(hud_surface, (C.WN_W//2 - C.MAP_OVERLAY_SIZE//2 - 110, map_centre[1] - 155), 'centre', 'centre', "Altitude (ft)", cols.WHITE, 20, self.fonts.monospaced)
-
-            # Show heightmap labels in feet
-            for h in range(-12_000, 18_001, 2_000):
-                text_y = map_centre[1] - 125 + (self.HEIGHT_KEY_H * (1 - ((h + 12_000) / 30_000)))
-                draw_text(hud_surface, (C.WN_W//2 - C.MAP_OVERLAY_SIZE//2 - 100, text_y), 'right', 'centre', f"{h:,.0f}", cols.WHITE, 15, self.fonts.monospaced)
+        log_segment("height_key")
 
     def draw_pause_screen(self) -> None:
         for button in (
@@ -1832,6 +1851,8 @@ class GameScreen(State):
     @timer
     def draw(self, wn: Surface):
         assert self.game.config_presets is not None
+
+        print(f"Frame {self._frame_count:,}")
 
         colour_scheme = sky_colour_from_hour(fetch_hour())
 
