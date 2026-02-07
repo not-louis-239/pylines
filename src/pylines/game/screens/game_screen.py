@@ -215,6 +215,9 @@ class GameScreen(State):
         self.grid_surface = pg.Surface((C.MAP_OVERLAY_SIZE, C.MAP_OVERLAY_SIZE), pg.SRCALPHA)
         self.grid_surface.fill((0, 0, 0, 0))
 
+        self.zone_overlay = pg.Surface((C.MAP_OVERLAY_SIZE, C.MAP_OVERLAY_SIZE), pg.SRCALPHA)
+        self.zone_overlay.fill((0, 0, 0, 0))
+
     def _build(self) -> Generator[tuple[float, str], None, None]:
         yield from self._init_ground(0.3, 0.45)
 
@@ -1286,6 +1289,7 @@ class GameScreen(State):
                 screen_y += line_h
 
         # Draw prohibited zones
+        self.zone_overlay.fill((0, 0, 0, 0))
         for zone in self.env.prohibited_zones:
             # Calculate top-left corner in world coordinates
             zone_top_left_wld = zone.pos[0] - zone.dims[0] / 2, zone.pos[1] - zone.dims[1] / 2
@@ -1297,14 +1301,18 @@ class GameScreen(State):
             screen_h = zone.dims[1] / self.viewport_zoom
 
             zone_rect = pg.Rect(screen_pos_x, screen_pos_z, screen_w, screen_h)
+            pg.draw.rect(self.zone_overlay, cols.MAP_PROHIBITED_FILL_COLOR, zone_rect)
 
-            # Draw filled rectangle
-            # Create a semi-transparent surface for the fill
-            zone_fill_surface = pg.Surface(zone_rect.size, pg.SRCALPHA)
-            zone_fill_surface.fill(cols.MAP_PROHIBITED_FILL_COLOR)
-            self.map_surface.blit(zone_fill_surface, zone_rect.topleft)
+        self.map_surface.blit(self.zone_overlay, (0, 0))
 
-            # Draw border
+        for zone in self.env.prohibited_zones:
+            zone_top_left_wld = zone.pos[0] - zone.dims[0] / 2, zone.pos[1] - zone.dims[1] / 2
+            screen_pos_x = (zone_top_left_wld[0] - viewport_top_left_x) / self.viewport_zoom
+            screen_pos_z = (zone_top_left_wld[1] - viewport_top_left_z) / self.viewport_zoom
+            screen_w = zone.dims[0] / self.viewport_zoom
+            screen_h = zone.dims[1] / self.viewport_zoom
+            zone_rect = pg.Rect(screen_pos_x, screen_pos_z, screen_w, screen_h)
+
             pg.draw.rect(self.map_surface, cols.MAP_PROHIBITED_BORDER_COLOR, zone_rect, 2)
 
             if self.map_show_advanced_info:
