@@ -110,91 +110,6 @@ class Star(CelestialObject):
         self.colour = colour
         self.size = size
 
-    def draw(self, camera_fwd: pg.Vector3) -> None:
-        """Stars should draw at full opacity during the night
-        and not be visible before sunset."""
-
-        hour = fetch_hour()
-        if 18 >= hour > 6:  # daytime
-            opacity = 0
-        elif 20 >= hour > 18:  # sunset
-            opacity = (hour - 18) / 2
-        elif 6 >= hour > 4:  # sunrise
-            opacity = 1 - (hour - 4) / 2
-        else:  # night
-            opacity = 1
-
-        opacity = clamp(opacity, (0, 1))
-
-        if opacity == 0:
-            return
-
-        distance = 19000.0
-
-        # Sun direction
-        sun_dir = sun_direction_from_hour(hour)
-        ref_dir = pg.Vector3(0, 0, -1)  # what self.direction is originally relative to
-
-        # Rodrigues’ rotation formula
-        k = ref_dir.cross(sun_dir)
-        if k.length() < C.EPSILON:  # vectors are parallel
-            rotated_dir = self.direction.copy() if ref_dir.dot(sun_dir) > 0 else -self.direction
-        else:
-            k = k.normalize()
-            cos_theta = clamp(ref_dir.dot(sun_dir), (-1, 1))
-            theta = math.acos(cos_theta)
-            v = self.direction
-            rotated_dir = (
-                v * math.cos(theta) +
-                k.cross(v) * math.sin(theta) +
-                k * (k.dot(v)) * (1 - math.cos(theta))
-            )
-
-        pos = rotated_dir.normalize() * distance
-
-        # Forward cull
-        if camera_fwd.dot(rotated_dir.normalize()) <= cos(math.radians(C.FOV)):  # Cull based on FOV
-            return
-
-        gl.glPushMatrix()
-
-        # Save OpenGL states
-        was_blend_enabled = gl.glIsEnabled(gl.GL_BLEND)
-        was_depth_mask_enabled = gl.glGetBooleanv(gl.GL_DEPTH_WRITEMASK)
-        current_point_size = gl.glGetFloatv(gl.GL_POINT_SIZE)
-        was_texture_2d_enabled = gl.glIsEnabled(gl.GL_TEXTURE_2D)
-
-        # Set states for drawing the star
-        gl.glEnable(gl.GL_BLEND)
-        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
-        gl.glDepthMask(gl.GL_FALSE)
-        gl.glDisable(gl.GL_TEXTURE_2D)
-
-        gl.glTranslatef(pos.x, pos.y, pos.z)
-
-        gl.glPointSize(self.size)
-        gl.glColor4f(
-            self.colour[0] / 255.0,
-            self.colour[1] / 255.0,
-            self.colour[2] / 255.0,
-            opacity * self.brightness
-        )
-
-        gl.glBegin(gl.GL_POINTS)
-        gl.glVertex3f(0, 0, 0)
-        gl.glEnd()
-
-        # Restore OpenGL states
-        gl.glPointSize(current_point_size)
-        gl.glDepthMask(was_depth_mask_enabled)
-        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
-        if was_texture_2d_enabled:
-            gl.glEnable(gl.GL_TEXTURE_2D)
-        if not was_blend_enabled:
-            gl.glDisable(gl.GL_BLEND)
-
-        gl.glPopMatrix()
-
 class CloudLayer(LargeSceneryObject):
     _SEED_SCALE = 157.3138214  # large, irrational-ish
     _X_OFFSET = 17.3
@@ -249,9 +164,6 @@ class CloudLayer(LargeSceneryObject):
 
         up = right.cross(camera_fwd).normalize() * size_half
 
-        gl.glEnable(gl.GL_TEXTURE_2D)
-        gl.glBindTexture(gl.GL_TEXTURE_2D, self.texture_id)
-
         gl.glColor4f(final_brightness, final_brightness, final_brightness, alpha)
 
         gl.glBegin(gl.GL_QUADS)
@@ -304,6 +216,8 @@ class CloudLayer(LargeSceneryObject):
         gl.glEnable(gl.GL_BLEND)
         gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
         gl.glDepthMask(gl.GL_FALSE)
+        gl.glEnable(gl.GL_TEXTURE_2D)
+        gl.glBindTexture(gl.GL_TEXTURE_2D, self.texture_id)
 
         fwd_flat = pg.Vector3(camera_fwd.x, 0, camera_fwd.z).normalize()
 
@@ -352,3 +266,5 @@ class CloudLayer(LargeSceneryObject):
         gl.glDisable(gl.GL_BLEND)
         gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
         gl.glDepthMask(gl.GL_TRUE)
+        gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
+        gl.glDisable(gl.GL_TEXTURE_2D)

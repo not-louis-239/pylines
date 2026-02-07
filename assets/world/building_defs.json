@@ -63,7 +63,8 @@
                 "colour": [220, 0, 0],
                 "icon": "square",
                 "dims": [8, 10]
-            }
+            },
+            "common_name": "House"
         },
         "atc_tower": {
             "parts": [
@@ -107,7 +108,8 @@
                 "colour": [0, 127, 255],
                 "icon": "circle",
                 "dims": [8]
-            }
+            },
+            "common_name": "ATC Tower"
         },
         "apartment_block": {
             "parts": [
@@ -200,7 +202,8 @@
                 "colour": [77, 77, 77],
                 "icon": "square",
                 "dims": [20, 15]
-            }
+            },
+            "common_name": "Apartment Block"
         },
         "airport_block": {
             "parts": [
@@ -279,7 +282,8 @@
                 "colour": [230, 230, 230],
                 "icon": "square",
                 "dims": [50, 50]
-            }
+            },
+            "common_name": "Airport"
         },
         "streetlight": {
             "parts": [
@@ -302,7 +306,8 @@
                 "colour": [255, 255, 0],
                 "icon": "point",
                 "dims": []
-            }
+            },
+            "common_name": "Streetlight"
         }
     }
 }

@@ -13,33 +13,78 @@
 # limitations under the License.
 
 import time
+from typing import Callable
+from functools import wraps
 
 START_TIME = time.perf_counter()
 last_segment_time = START_TIME
 
-COL_EMPHASIS = "\033[32m"
+MAX_ACCEPTABLE = 1.5  # ms
+
+def rgb(r: int, g: int, b: int) -> str:
+    return f"\033[38;2;{r};{g};{b}m"
+
+def lerp_colours(
+        c1: tuple[int, int, int],
+        c2: tuple[int, int, int],
+        weight: float, /
+    ) -> tuple[int, int, int]:
+    t = max(0.0, min(1.0, weight))
+    r = int(c1[0] + t * (c2[0] - c1[0]))
+    g = int(c1[1] + t * (c2[1] - c1[1]))
+    b = int(c1[2] + t * (c2[2] - c1[2]))
+    return (r, g, b)
+
+def get_duration_colour(ms: float) -> str:
+    """Returns an ANSI escape code based on the duration relative to MAX_ACCEPTABLE."""
+    half_point = MAX_ACCEPTABLE / 2
+
+    if ms <= half_point:
+        # Interpolate Green -> Orange
+        weight = ms / half_point
+        c = lerp_colours(COL_ACCEPTABLE, COL_HALF_ACCEPTABLE, weight)
+    else:
+        # Interpolate Orange -> Red
+        weight = (ms - half_point) / half_point
+        c = lerp_colours(COL_HALF_ACCEPTABLE, COL_UNACCEPTABLE, weight)
+
+    return rgb(*c)
+
+COL_ACCEPTABLE = (110, 255, 110)
+COL_HALF_ACCEPTABLE = (255, 255, 110)
+COL_UNACCEPTABLE = (255, 110, 110)
+
+COL_TOTAL = "\033[97m"
+
+COL_NAMES_SEGMENTS = "\033[34m"
+COL_NAMES_FUNCS = "\033[94m"
 COL_RESET = "\033[0m"
 
 def log_segment(seg_name: str | None = None):
-    """Log segment duration and start a new segment. With no
-    argument it just resets the segment timer silently."""
     global last_segment_time
-
     now = time.perf_counter()
-    segment_duration = now - last_segment_time
+    duration_ms = (now - last_segment_time) * 1000
 
-    if seg_name is not None:
-        if not seg_name:
-            # Detect empty string as misuse
-            raise ValueError("Segment name cannot be empty.")
+    if seg_name:
+        colour = get_duration_colour(duration_ms)
+        print(f"Segment {COL_NAMES_SEGMENTS}'{seg_name}'{COL_RESET} completed in: "
+              f"{colour}{duration_ms:,.2f} ms{COL_RESET}")
 
-        print(f"Segment '{seg_name}' completed in: {COL_EMPHASIS}{segment_duration:,.4f}s{COL_RESET}")
-
-    # Start a new segment
     last_segment_time = now
 
 def log_total_time():
-    """Print the total time elapsed without resetting it"""
     elapsed_time = time.perf_counter() - START_TIME
+    print(f"Total time elapsed: {COL_TOTAL}{elapsed_time:,.4f}s{COL_RESET}")
 
-    print(f"Total time elapsed: {COL_EMPHASIS}{elapsed_time:,.4f}s{COL_RESET}")
+def timer(func: Callable) -> Callable:
+    @wraps(func)
+    def timed_func(*args, **kwargs):
+        start = time.perf_counter()
+        result = func(*args, **kwargs)
+        duration_ms = (time.perf_counter() - start) * 1000
+
+        colour = get_duration_colour(duration_ms)
+        print(f"Time taken for function {COL_NAMES_FUNCS}'{func.__name__}'{COL_RESET}: "
+              f"{colour}{duration_ms:.2f} ms{COL_RESET}")
+        return result
+    return timed_func

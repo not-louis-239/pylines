@@ -178,6 +178,7 @@ class WorldData(AssetBank):
         # Heightmap raw data and noise
         heightmap_path = paths.WORLD_DIR / "heightmap.png"
         cached_heightmap_path = paths.CACHE_DIR / "heightmap.npy"
+        paths.CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
         if cached_heightmap_path.exists():
             # Load the cached numpy array to save time on startup

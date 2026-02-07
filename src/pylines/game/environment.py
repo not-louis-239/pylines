@@ -103,7 +103,8 @@ class Environment:
                     tuple(info["map_appearance"]["colour"]),
                     match_building_icon(info["map_appearance"]["icon"]),
                     tuple(info["map_appearance"]["dims"])
-                )
+                ),
+                common_name=info["common_name"]
             )
             for name, info in world_data.building_defs.items()
         }

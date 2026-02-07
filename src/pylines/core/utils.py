@@ -75,12 +75,21 @@ def draw_needle(surf: Surface, centre: Coord2, angle_deg: RealNumber, length: Re
 
     pg.draw.line(surf, colour, centre, end, width)
 
-def frange(start: int | float, stop: int | float, step: int | float) -> Generator[float, None, None]:
-    """A version of range that accepts and yields floats."""
-    if step == 0:
-        raise ValueError("step cannot be zero")
+def frange(start, stop=None, step=1.0):
+    """
+    Float-based range generator.
+    Behaves like range(start, stop, step) but accepts floats.
+    """
+    if stop is None:
+        stop = float(start)
+        start = 0.0
 
-    current = start
+    current = float(start)
+    step = float(step)
+
+    if step == 0:
+        raise ValueError("frange() arg 3 must not be zero")
+
     if step > 0:
         while current < stop:
             yield current
@@ -164,10 +173,6 @@ def point_in_aabb(
 
     inside = abs(local_x) <= half_length and abs(local_z) <= half_width
     return inside, (local_x, local_z)
-
-# For debug only
-def _prettyvec(vec: pg.Vector3, dp: int = 3) -> str:
-    return f"({vec.x:,.{dp}f}, {vec.y:,.{dp}f}, {vec.z:,.{dp}f})"
 
 def lerp(start: float, end: float, t: float):
     """
