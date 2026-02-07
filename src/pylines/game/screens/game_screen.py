@@ -237,6 +237,10 @@ class GameScreen(State):
             for theta in frange(0, 360, 360/C.COMPASS_QUANTISATION_STEPS)
         ]
 
+        self.grid_labels_x: dict[int, pg.Surface] = dict()
+        self.grid_labels_y: dict[int, pg.Surface] = dict()
+        self.grid_detail_level: int | None = None
+
     def _populate_cockpit(self) -> None:
         """Draw static cockpit elements, e.g. cockpit background, static
         rectangles. Does not include text or elements that are only
@@ -1458,6 +1462,12 @@ class GameScreen(State):
             MAJOR_INTERVAL = 5 * MINOR_INTERVAL
 
             self.grid_surface.fill((0, 0, 0, 0))
+            if self.grid_detail_level != MINOR_INTERVAL:  # Clear label dicts when detail level changes
+                self.grid_labels_x.clear()
+                self.grid_labels_y.clear()
+                self.grid_detail_level = MINOR_INTERVAL
+
+            label_font = pg.font.Font(self.fonts.monospaced, 18)
 
             def world_to_map(world_x, world_z) -> tuple[float, float]:
                 screen_x = (world_x - viewport_top_left_x) * (1/self.viewport_zoom)
@@ -1477,7 +1487,13 @@ class GameScreen(State):
                 pg.draw.line(self.grid_surface, GRID_MAJOR_COL if abs(world_x % MAJOR_INTERVAL) < C.EPSILON else GRID_MINOR_COL, p1, p2, 1)
 
                 if abs(world_x % MAJOR_INTERVAL) <= C.EPSILON:
-                    draw_text(self.grid_surface, (p1[0], C.MAP_OVERLAY_SIZE - 15), 'centre', 'centre', f"{int(world_x):,.0f}", cols.WHITE, 18, self.fonts.monospaced)
+                    label_val = int(world_x)
+                    label_surf = self.grid_labels_x.get(label_val)
+                    if label_surf is None:
+                        label_surf = label_font.render(f"{label_val:,.0f}", True, cols.WHITE)
+                        self.grid_labels_x[label_val] = label_surf
+                    label_rect = label_surf.get_rect(center=(p1[0], C.MAP_OVERLAY_SIZE - 15))
+                    self.grid_surface.blit(label_surf, label_rect)
 
             for world_z in range(start_grid_z, end_grid_z, MINOR_INTERVAL):
                 p1 = world_to_map(viewport_top_left_x, world_z)
@@ -1485,7 +1501,15 @@ class GameScreen(State):
                 pg.draw.line(self.grid_surface, GRID_MAJOR_COL if abs(world_z % MAJOR_INTERVAL) < C.EPSILON else GRID_MINOR_COL, p1, p2, 1)
 
                 if abs(world_z % MAJOR_INTERVAL) <= C.EPSILON:
-                    draw_text(self.grid_surface, (5, p1[1]), 'left', 'centre', f"{int(world_z):,.0f}", cols.WHITE, 18, self.fonts.monospaced)
+                    label_val = int(world_z)
+                    label_surf = self.grid_labels_y.get(label_val)
+                    if label_surf is None:
+                        label_surf = label_font.render(f"{label_val:,.0f}", True, cols.WHITE)
+                        self.grid_labels_y[label_val] = label_surf
+                    label_rect = label_surf.get_rect()
+                    label_rect.left = 5
+                    label_rect.centery = int(p1[1])
+                    self.grid_surface.blit(label_surf, label_rect)
 
             # Draw origin
             origin_map_x, origin_map_y = world_to_map(0, 0)
