@@ -19,7 +19,14 @@
 You have been cleared for takeoff at Darculus Metropolis. Apply full power
 and raise the nose at 55 knots. Do not raise the nose too high or you will stall.
 
-Use the map to guide your navigation. When you are close to your selected GPS
-destination, the glidescope will activate to provide landing assistance.
+While cruising, keep the flaps fully up to reduce drag, but be aware that this also
+increases stall speed. Roll or use the rudder to turn if necessary. Use the map to
+guide your navigation. If you stall, recover by pitching downward until the stall
+warning stops.
+
+When you are close to your selected GPS destination, the glidescope will activate to
+provide landing assistance. Reduce throttle to avoid potentially overspeeding the
+plane during descent. Lower the flaps and follow the glidepath for a smooth
+landing.
 
 Happy flying!
