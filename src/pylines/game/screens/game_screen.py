@@ -1076,6 +1076,85 @@ class GameScreen(State):
                 text_y = map_centre[1] - 125 + (self.HEIGHT_KEY_H * (1 - ((h + 12_000) / 30_000)))
                 draw_text(hud_surface, (C.WN_W//2 - MAP_OVERLAY_SIZE//2 - 100, text_y), 'right', 'centre', f"{h:,.0f}", cols.WHITE, 15, self.fonts.monospaced)
 
+    def draw_pause_screen(self) -> None:
+        for button in (
+            self.continue_button, self.restart_button,
+            self.menu_button, self.help_button, self.controls_button
+        ):
+            button.draw(self.hud_surface)
+
+        draw_text(
+            self.hud_surface, (C.WN_W//2, C.WN_H*0.35), 'centre', 'centre',
+            'Game Paused', (255, 255, 255), 50, self.fonts.monospaced
+        )
+
+        if self.in_menu_confirmation or self.in_restart_confirmation:
+            draw_transparent_rect(
+                self.hud_surface, (C.WN_W//2 - 400, C.WN_H//2 - 175), (800, C.WN_H*0.3),
+                border_thickness=3
+            )
+
+            draw_text(
+                self.hud_surface, (C.WN_W//2, C.WN_H*0.4), 'centre', 'centre',
+                'Are you sure?', (255, 255, 255), 50, self.fonts.monospaced
+            )
+
+            for button in (self.yes_button, self.no_button):
+                button.draw(self.hud_surface)
+
+    def draw_controls_screen(self) -> None:
+        self.back_button.draw(self.hud_surface)
+
+        draw_transparent_rect(
+            self.hud_surface, (C.WN_W * 0.1, C.WN_H * 0.15), (C.WN_W * 0.8, C.WN_H*0.65),
+            border_thickness=3
+        )
+
+        draw_text(
+            self.hud_surface, (C.WN_W//2, C.WN_H*0.22), 'centre', 'centre',
+            'Controls', (255, 255, 255), 50, self.fonts.monospaced
+        )
+
+        # Show controls
+        draw_text(self.hud_surface, (C.WN_W * 0.3, C.WN_H*0.31), 'centre', 'centre', "Main Controls", (0, 192, 255), 40, self.fonts.monospaced)
+
+        controls: dict[str, str] = {
+            "W/S": "Throttle",
+            "Z/X": "Flaps Up/Down",
+            "A/D": "Rudder",
+            "Arrows": "Pitch/Yaw",
+            "B": "Brake",
+            "G": "Cycle GPS dest.",
+            "Esc": "Pause"
+        }
+
+        for i, (key, desc) in enumerate(controls.items()):
+            draw_text(self.hud_surface, (C.WN_W//2 - 340, C.WN_H * (0.4 + 0.05*i)), 'right', 'centre', key, (150, 230, 255), 27, self.fonts.monospaced)
+            draw_text(self.hud_surface, (C.WN_W//2 - 300, C.WN_H * (0.4 + 0.05*i)), 'left', 'centre', desc, cols.WHITE, 27, self.fonts.monospaced)
+
+        draw_text(self.hud_surface, (C.WN_W * 0.71, C.WN_H*0.3), 'centre', 'centre', "Map Controls", (0, 192, 255), 30, self.fonts.monospaced)
+
+        controls: dict[str, str] = {
+            "M": "Show/Hide Map",
+        }
+
+        for i, (key, desc) in enumerate(controls.items()):
+            draw_text(self.hud_surface, (C.WN_W//2 + 190, C.WN_H * (0.38 + 0.05*i)), 'right', 'centre', key, (150, 230, 255), 27, self.fonts.monospaced)
+            draw_text(self.hud_surface, (C.WN_W//2 + 230, C.WN_H * (0.38 + 0.05*i)), 'left', 'centre', desc, cols.WHITE, 27, self.fonts.monospaced)
+
+        draw_text(self.hud_surface, (C.WN_W * 0.71, C.WN_H*0.47), 'centre', 'centre', "While Map Open:", (0, 192, 255), 30, self.fonts.monospaced)
+
+        controls: dict[str, str] = {
+            "W/S": "Zoom In/Out",
+            "Arrows": "Pan",
+            "Space": "Re-centre",
+            "H (hold)": "Show advanced info",
+        }
+
+        for i, (key, desc) in enumerate(controls.items()):
+            draw_text(self.hud_surface, (C.WN_W//2 + 190, C.WN_H * (0.55 + 0.05*i)), 'right', 'centre', key, (150, 230, 255), 27, self.fonts.monospaced)
+            draw_text(self.hud_surface, (C.WN_W//2 + 230, C.WN_H * (0.55 + 0.05*i)), 'left', 'centre', desc, cols.WHITE, 27, self.fonts.monospaced)
+
     def draw_help_screen(self) -> None:
         draw_transparent_rect(
             self.hud_surface, (30, 30), (C.WN_W - 60, C.WN_H - 60), border_thickness=3
@@ -1143,14 +1222,9 @@ class GameScreen(State):
             thumb = pg.Rect(scrollbar_x, thumb_y, scrollbar_w, thumb_h)
             pg.draw.rect(self.hud_surface, (185, 185, 185), thumb)
 
-    def draw_hud(self):
+    def draw_cockpit(self) -> None:
         pitch, yaw, roll = self.plane.rot
         hud_surface = self.hud_surface
-        hud_surface.fill((0, 0, 0, 0))  # clear with transparency
-
-        # Exit controls
-        if self.time_elapsed < 5_000 or not self.plane.flyable:
-            draw_text(hud_surface, (15, 30), 'left', 'centre', "Press Esc to pause", cols.WHITE, 30, self.fonts.monospaced)
 
         # Stall warning
         warning_x = C.WN_W//2-145
@@ -1526,6 +1600,16 @@ class GameScreen(State):
         pg.draw.circle(hud_surface, (51, 43, 37), (warning_x, C.WN_H*0.965), 10)
         pg.draw.circle(hud_surface, (warning_col), (warning_x, C.WN_H*0.965), 8)
 
+    def draw_hud(self):
+
+        self.hud_surface.fill((0, 0, 0, 0))  # clear with transparency
+
+        # Exit controls
+        if self.time_elapsed < 5_000 or not self.plane.flyable:
+            draw_text(self.hud_surface, (15, 30), 'left', 'centre', "Press Esc to pause", cols.WHITE, 30, self.fonts.monospaced)
+
+        self.draw_cockpit()
+
         # Render map
         if self.map_up:
             self.draw_map()
@@ -1576,89 +1660,14 @@ class GameScreen(State):
             self.hud_surface.blit(transparent_surface, (0, 0))
 
             if self.in_controls_screen:
-                self.back_button.draw(self.hud_surface)
-
-                draw_transparent_rect(
-                    self.hud_surface, (C.WN_W * 0.1, C.WN_H * 0.15), (C.WN_W * 0.8, C.WN_H*0.65),
-                    border_thickness=3
-                )
-
-                draw_text(
-                    self.hud_surface, (C.WN_W//2, C.WN_H*0.22), 'centre', 'centre',
-                    'Controls', (255, 255, 255), 50, self.fonts.monospaced
-                )
-
-                # Show controls
-                draw_text(self.hud_surface, (C.WN_W * 0.3, C.WN_H*0.31), 'centre', 'centre', "Main Controls", (0, 192, 255), 40, self.fonts.monospaced)
-
-                controls: dict[str, str] = {
-                    "W/S": "Throttle",
-                    "Z/X": "Flaps Up/Down",
-                    "A/D": "Rudder",
-                    "Arrows": "Pitch/Yaw",
-                    "B": "Brake",
-                    "G": "Cycle GPS dest.",
-                    "Esc": "Pause"
-                }
-
-                for i, (key, desc) in enumerate(controls.items()):
-                    draw_text(self.hud_surface, (C.WN_W//2 - 340, C.WN_H * (0.4 + 0.05*i)), 'right', 'centre', key, (150, 230, 255), 27, self.fonts.monospaced)
-                    draw_text(self.hud_surface, (C.WN_W//2 - 300, C.WN_H * (0.4 + 0.05*i)), 'left', 'centre', desc, cols.WHITE, 27, self.fonts.monospaced)
-
-                draw_text(self.hud_surface, (C.WN_W * 0.71, C.WN_H*0.3), 'centre', 'centre', "Map Controls", (0, 192, 255), 30, self.fonts.monospaced)
-
-                controls: dict[str, str] = {
-                    "M": "Show/Hide Map",
-                }
-
-                for i, (key, desc) in enumerate(controls.items()):
-                    draw_text(self.hud_surface, (C.WN_W//2 + 190, C.WN_H * (0.38 + 0.05*i)), 'right', 'centre', key, (150, 230, 255), 27, self.fonts.monospaced)
-                    draw_text(self.hud_surface, (C.WN_W//2 + 230, C.WN_H * (0.38 + 0.05*i)), 'left', 'centre', desc, cols.WHITE, 27, self.fonts.monospaced)
-
-                draw_text(self.hud_surface, (C.WN_W * 0.71, C.WN_H*0.47), 'centre', 'centre', "While Map Open:", (0, 192, 255), 30, self.fonts.monospaced)
-
-                controls: dict[str, str] = {
-                    "W/S": "Zoom In/Out",
-                    "Arrows": "Pan",
-                    "Space": "Re-centre",
-                    "H (hold)": "Show advanced info",
-                }
-
-                for i, (key, desc) in enumerate(controls.items()):
-                    draw_text(self.hud_surface, (C.WN_W//2 + 190, C.WN_H * (0.55 + 0.05*i)), 'right', 'centre', key, (150, 230, 255), 27, self.fonts.monospaced)
-                    draw_text(self.hud_surface, (C.WN_W//2 + 230, C.WN_H * (0.55 + 0.05*i)), 'left', 'centre', desc, cols.WHITE, 27, self.fonts.monospaced)
-
+                self.draw_controls_screen()
             elif self.in_help_screen:
                 self.draw_help_screen()
-
             else:
-                for button in (
-                    self.continue_button, self.restart_button,
-                    self.menu_button, self.help_button, self.controls_button
-                ):
-                    button.draw(self.hud_surface)
-
-                draw_text(
-                    self.hud_surface, (C.WN_W//2, C.WN_H*0.35), 'centre', 'centre',
-                    'Game Paused', (255, 255, 255), 50, self.fonts.monospaced
-                )
-
-                if self.in_menu_confirmation or self.in_restart_confirmation:
-                    draw_transparent_rect(
-                        self.hud_surface, (C.WN_W//2 - 400, C.WN_H//2 - 175), (800, C.WN_H*0.3),
-                        border_thickness=3
-                    )
-
-                    draw_text(
-                        self.hud_surface, (C.WN_W//2, C.WN_H*0.4), 'centre', 'centre',
-                        'Are you sure?', (255, 255, 255), 50, self.fonts.monospaced
-                    )
-
-                    for button in (self.yes_button, self.no_button):
-                        button.draw(self.hud_surface)
+                self.draw_pause_screen()
 
         # Upload HUD surface to OpenGL
-        hud_data = pg.image.tostring(hud_surface, "RGBA", True)
+        hud_data = pg.image.tostring(self.hud_surface, "RGBA", True)
 
         gl.glEnable(gl.GL_BLEND)
         gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
