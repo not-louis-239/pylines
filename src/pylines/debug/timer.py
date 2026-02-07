@@ -13,6 +13,8 @@
 # limitations under the License.
 
 import time
+from typing import Callable
+from functools import wraps
 
 START_TIME = time.perf_counter()
 last_segment_time = START_TIME
@@ -43,3 +45,15 @@ def log_total_time():
     elapsed_time = time.perf_counter() - START_TIME
 
     print(f"Total time elapsed: {COL_EMPHASIS}{elapsed_time:,.4f}s{COL_RESET}")
+
+def timer(func: Callable) -> Callable:
+    @wraps(func)
+    def timed_func(*args, **kwargs):
+        start = time.perf_counter()
+        result = func(*args, **kwargs)
+        time_taken = time.perf_counter() - start
+
+        print(f"Time taken for {func.__name__}: {time_taken * 1000:.2f} ms")
+        return result
+
+    return timed_func

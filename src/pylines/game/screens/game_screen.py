@@ -16,6 +16,8 @@
 
 from __future__ import annotations
 
+import time
+
 import ctypes
 import math
 from dataclasses import dataclass
@@ -1165,21 +1167,56 @@ class GameScreen(State):
 
                 tile_world_x = -C.HALF_WORLD_SIZE + tile_x * C.METRES_PER_TILE
                 tile_world_z = -C.HALF_WORLD_SIZE + tile_z * C.METRES_PER_TILE
+                tile_world_x2 = tile_world_x + C.METRES_PER_TILE
+                tile_world_z2 = tile_world_z + C.METRES_PER_TILE
 
-                # Position of the tile on the screen
-                screen_pos_x = (tile_world_x - viewport_top_left_x) / self.viewport_zoom
-                screen_pos_z = (tile_world_z - viewport_top_left_z) / self.viewport_zoom
+                inter_left = max(tile_world_x, viewport_top_left_x)
+                inter_top = max(tile_world_z, viewport_top_left_z)
+                inter_right = min(tile_world_x2, viewport_top_left_x + 2 * viewport_half_size_metres)
+                inter_bottom = min(tile_world_z2, viewport_top_left_z + 2 * viewport_half_size_metres)
 
-                tile_size_on_screen = C.METRES_PER_TILE / self.viewport_zoom
+                if inter_left >= inter_right or inter_top >= inter_bottom:
+                    continue
 
-                dest_rect = pg.Rect(
-                    screen_pos_x,
-                    screen_pos_z,
-                    tile_size_on_screen,
-                    tile_size_on_screen,
-                )
+                px_per_m = tile_surface.get_width() / C.METRES_PER_TILE
+                src_x = (inter_left - tile_world_x) * px_per_m
+                src_y = (inter_top - tile_world_z) * px_per_m
+                src_w = (inter_right - inter_left) * px_per_m
+                src_h = (inter_bottom - inter_top) * px_per_m
 
-                scaled_tile = pg.transform.scale(tile_surface, (int(tile_size_on_screen) + 1, int(tile_size_on_screen) + 1))
+                dest_x = (inter_left - viewport_top_left_x) / self.viewport_zoom
+                dest_y = (inter_top - viewport_top_left_z) / self.viewport_zoom
+                dest_w = (inter_right - inter_left) / self.viewport_zoom
+                dest_h = (inter_bottom - inter_top) / self.viewport_zoom
+
+                src_left = int(math.floor(src_x))
+                src_top = int(math.floor(src_y))
+                src_right = int(math.ceil(src_x + src_w))
+                src_bottom = int(math.ceil(src_y + src_h))
+
+                src_left = max(0, min(src_left, tile_surface.get_width()))
+                src_top = max(0, min(src_top, tile_surface.get_height()))
+                src_right = max(0, min(src_right, tile_surface.get_width()))
+                src_bottom = max(0, min(src_bottom, tile_surface.get_height()))
+
+                if src_right <= src_left or src_bottom <= src_top:
+                    continue
+
+                src_rect = pg.Rect(src_left, src_top, src_right - src_left, src_bottom - src_top)
+
+                world_left = tile_world_x + (src_left / px_per_m)
+                world_top = tile_world_z + (src_top / px_per_m)
+                world_w = (src_rect.w / px_per_m)
+                world_h = (src_rect.h / px_per_m)
+
+                dest_x = (world_left - viewport_top_left_x) / self.viewport_zoom
+                dest_y = (world_top - viewport_top_left_z) / self.viewport_zoom
+                dest_w = world_w / self.viewport_zoom
+                dest_h = world_h / self.viewport_zoom
+                dest_rect = pg.Rect(dest_x, dest_y, dest_w, dest_h)
+
+                tile_crop = tile_surface.subsurface(src_rect)
+                scaled_tile = pg.transform.scale(tile_crop, (max(1, int(dest_rect.w) + 1), max(1, int(dest_rect.h) + 1)))
                 self.map_surface.blit(scaled_tile, dest_rect)
 
         # Show buildings
@@ -1730,6 +1767,8 @@ class GameScreen(State):
     def draw(self, wn: Surface):
         assert self.game.config_presets is not None
 
+        start = time.perf_counter()
+
         colour_scheme = sky_colour_from_hour(fetch_hour())
 
         gl.glClear(cast(int, gl.GL_COLOR_BUFFER_BIT) | cast(int, gl.GL_DEPTH_BUFFER_BIT))
@@ -1779,3 +1818,6 @@ class GameScreen(State):
 
         self.draw_buildings(cloud_attenuation)
         self.draw_hud()
+
+        time_elapsed = time.perf_counter() - start
+        print(f"Elapsed: {time_elapsed * 1000:.2f} / {1000 / C.FPS:.2f} ms")
