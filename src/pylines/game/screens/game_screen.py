@@ -48,6 +48,7 @@ from pylines.core.utils import (
     draw_text,
     draw_transparent_rect,
     wrap_text,
+    frange
 )
 from pylines.core.asset_manager import FLine
 from pylines.game.states import State, StateID
@@ -210,10 +211,13 @@ class GameScreen(State):
 
         # Persistent surfaces avoids pg.Surface churn which wastes resources
         self.cockpit_surface = pg.Surface((C.WN_W, C.WN_H), pg.SRCALPHA)
-        self.cockpit_rect = self.images.cockpit.get_rect()
+        self.cockpit_rect = self.images.cockpit.get_bounding_rect()
         self.cockpit_rect.centerx = C.WN_W // 2
         self.cockpit_rect.bottom = C.WN_H
         self._populate_cockpit()
+
+        # Crop to bounding box (ignore transparent pixels)
+        self.cockpit_surface = self.cockpit_surface.subsurface(self.cockpit_rect).copy()
 
         self.map_surface = pg.Surface((C.MAP_OVERLAY_SIZE, C.MAP_OVERLAY_SIZE), pg.SRCALPHA)
         self.map_surface.fill((0, 0, 0, 255))
@@ -226,6 +230,12 @@ class GameScreen(State):
 
         inner_ai_rect = pg.Rect(0, 0, ai_size[0]-4, ai_size[1]-4)
         self.ai_surface = pg.Surface(inner_ai_rect.size, pg.SRCALPHA)
+
+        # Cache rotated compasses to save resources when drawing
+        self.rotated_compasses: list[pg.Surface] = [
+            pg.transform.rotate(assets.images.compass, theta)
+            for theta in frange(0, 360, 360/C.COMPASS_QUANTISATION_STEPS)
+        ]
 
     def _populate_cockpit(self) -> None:
         """Draw static cockpit elements, e.g. cockpit background, static
@@ -873,7 +883,7 @@ class GameScreen(State):
         hud_surface = self.hud_surface
 
         log_segment()
-        hud_surface.blit(self.cockpit_surface, self.cockpit_rect.topleft, area=self.cockpit_rect)
+        hud_surface.blit(self.cockpit_surface, (0, C.WN_H - self.cockpit_surface.get_rect().height))
         log_segment("cockpit_static_blit")
 
         # Stall warning
@@ -898,9 +908,9 @@ class GameScreen(State):
 
         # Compass (heading + ground track)
         centre = (C.WN_W//2-300, C.WN_H*0.85)
-        compass_rot = pg.transform.rotate(self.images.compass, yaw)
-        rect = compass_rot.get_rect(center=centre)
-        hud_surface.blit(compass_rot, rect)
+        surf = self.rotated_compasses[int(yaw / (360 / C.COMPASS_QUANTISATION_STEPS))]
+        rect = surf.get_rect(center=centre)
+        hud_surface.blit(surf, rect)
 
         vel_flat = pg.Vector3(self.plane.vel.x, 0, self.plane.vel.z)
         ground_track_deg = math.degrees(
@@ -938,29 +948,20 @@ class GameScreen(State):
         # Altimeter (left)
         alt_centre = (C.WN_W//2 - 110, int(C.WN_H*0.74))
         draw_text(
-            hud_surface,
-            (alt_centre[0], alt_centre[1]-15),
-            'centre', 'centre',
-            f"{self.plane.pos.y * 3.28084:,.0f} ft",
-            cols.WHITE,
-            27,
-            self.fonts.monospaced
+            hud_surface, (alt_centre[0], alt_centre[1]-15), 'centre', 'centre',
+            f"{self.plane.pos.y * 3.28084:,.0f} ft", cols.WHITE, 27, self.fonts.monospaced
         )
+        log_segment("altitude")
 
         # VSI (below altimeter)
         vsi_centre = (alt_centre[0], alt_centre[1]+15)
         vs_ft_per_min = self.plane.vel.y * 196.85
         text_colour: Colour = cols.BLUE if vs_ft_per_min > 0 else cols.WHITE if vs_ft_per_min == 0 else cols.BROWN
         draw_text(
-            hud_surface,
-            vsi_centre,
-            'centre', 'centre',
-            f"{vs_ft_per_min:+,.0f}/min",
-            text_colour,
-            22,
-            self.fonts.monospaced
+            hud_surface, vsi_centre, 'centre', 'centre',
+            f"{vs_ft_per_min:+,.0f}/min", text_colour, 22, self.fonts.monospaced
         )
-        log_segment("alt_vsi")
+        log_segment("vsi")
 
         # Location / LOC (right)
         loc_centre = (C.WN_W//2 + 85, int(C.WN_H*0.74))
