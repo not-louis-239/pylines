@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import math
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Generator, Literal
 
@@ -184,3 +183,29 @@ def lerp(start: float, end: float, t: float):
     """
 
     return start + (end - start) * t
+
+def wrap_text(text: str, width: RealNumber, font_family: pg.font.Font) -> list[str]:
+    """Wrap text such that when it is displayed, each line is no longer than
+    width pixels, in accordance to the given font size and font family."""
+
+    words: list[str] = text.split()
+
+    lines: list[str] = []
+    current_line = ""
+
+    for word in words:
+        if not current_line:
+            current_line = word
+            continue
+
+        candidate = f"{current_line} {word}"
+        if font_family.size(candidate)[0] <= width:
+            current_line = candidate
+        else:
+            lines.append(current_line)
+            current_line = word
+
+    if current_line:
+        lines.append(current_line)
+
+    return lines

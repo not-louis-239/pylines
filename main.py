@@ -18,7 +18,8 @@ import os
 import sys
 
 import pygame as pg
-from OpenGL import GL as gl, GLU as glu
+from OpenGL import GL as gl
+from OpenGL import GLU as glu
 
 # Add src directory to Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), 'src')))
@@ -35,47 +36,57 @@ from pylines.game.game import Game
 
 
 def main():
-    pg.init()
+    game = None
 
-    TICK = pg.USEREVENT + 1
-    clock = pg.time.Clock()
-    pg.time.set_timer(TICK, int(1000/TPS))
+    try:
+        pg.init()
 
-    wn = pg.display.set_mode((WN_W, WN_H), pg.DOUBLEBUF | pg.OPENGL)
-    pg.display.set_caption("Pylines")
-    pg.mixer.set_num_channels(32)
+        TICK = pg.USEREVENT + 1
+        clock = pg.time.Clock()
+        pg.time.set_timer(TICK, int(1000/TPS))
 
-    # Initialize OpenGL
-    gl.glViewport(0, 0, WN_W, WN_H)
-    gl.glMatrixMode(gl.GL_PROJECTION)
-    gl.glLoadIdentity()
-    glu.gluPerspective(45, WN_W/WN_H, INNER_RENDER_LIMIT, OUTER_RENDER_LIMIT)  # Field of view, aspect ratio, near, far clipping plane
-    gl.glMatrixMode(gl.GL_MODELVIEW)
-    gl.glLoadIdentity()
-    gl.glEnable(gl.GL_DEPTH_TEST)  # Enable depth testing for 3D objects
+        wn = pg.display.set_mode((WN_W, WN_H), pg.DOUBLEBUF | pg.OPENGL)
+        pg.display.set_caption("Pylines")
+        pg.mixer.set_num_channels(32)
 
-    game = Game()
+        # Initialize OpenGL
+        gl.glViewport(0, 0, WN_W, WN_H)
+        gl.glMatrixMode(gl.GL_PROJECTION)
+        gl.glLoadIdentity()
+        glu.gluPerspective(45, WN_W/WN_H, INNER_RENDER_LIMIT, OUTER_RENDER_LIMIT)  # Field of view, aspect ratio, near, far clipping plane
+        gl.glMatrixMode(gl.GL_MODELVIEW)
+        gl.glLoadIdentity()
+        gl.glEnable(gl.GL_DEPTH_TEST)  # Enable depth testing for 3D objects
 
-    running = True
-    while running:
-        events = pg.event.get()
-        for event in events:
-            # Quit
-            if event.type == pg.QUIT:
-                game.quit_game()
-                running = False
+        game = Game()
 
-            if event.type == TICK:
-                game.update(1000/TPS)
+        running = True
+        while running:
+            events = pg.event.get()
+            for event in events:
+                # Quit
+                if event.type == pg.QUIT:
+                    game.quit_game()
+                    running = False
 
-        dt = clock.tick(FPS)
-        keys = pg.key.get_pressed()
+                if event.type == TICK:
+                    game.update(1000/TPS)
 
-        game.take_input(keys, events, dt)
-        game.draw(wn)
-        pg.display.flip()
+            dt = clock.tick(FPS)
+            keys = pg.key.get_pressed()
 
-    pg.quit()
+            game.take_input(keys, events, dt)
+            game.draw(wn)
+            pg.display.flip()
+
+    except KeyboardInterrupt:
+        if game is not None:
+            game.quit_game()  # cleanup + save data to disk
+
+        print("\nKeyboardInterrupt received. Exiting.")
+
+    finally:
+        pg.quit()
 
 if __name__ == "__main__":
     main()

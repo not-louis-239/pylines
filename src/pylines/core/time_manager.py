@@ -13,14 +13,15 @@
 # limitations under the License.
 
 import math
-import pygame as pg
 from datetime import datetime
+
+import pygame as pg
 
 from . import constants as C
 from .colours import SKY_COLOUR_SCHEMES, ColourScheme, lerp_colour
 from .custom_types import RealNumber
 from .utils import map_value
-from .constants import MOON_BRIGHTNESS, SUN_BRIGHTNESS
+
 
 def fetch_hour() -> float:
     """Returns a value between 0 and 24 to represent the current hour."""
@@ -75,18 +76,26 @@ def sky_colour_from_hour(hour: float) -> ColourScheme:
             )
     return SKY_COLOUR_SCHEMES["night"]  # fallback
 
-def sun_direction_from_hour(hour: float) -> pg.Vector3:
-    """Returns a normalized 3D vector representing the sun's direction."""
+def rotation_offset_from_hour(hour: float) -> tuple[float, float]:
+    """Return the expected azimuth offset for sun and stars
+    in radians, with 0 being east."""
+
     pi = math.pi
 
     azimuth = (-pi/2 + 2*pi * hour/24) % (2*pi)  # radians, with 0 = east
-    elevation = math.sin((hour - 6) * (2*pi / 24))   # -1 = directly underneath, 1 = directly overhead
+    elevation = math.sin((hour - 6) * (2*pi / 24))  # -1 = directly underneath, 1 = directly overhead
+
+    return azimuth, elevation
+
+def sun_direction_from_hour(hour: float) -> pg.Vector3:
+    """Returns a normalized 3D vector representing the sun's direction."""
+    azimuth, elevation = rotation_offset_from_hour(hour)
 
     h = (1 - elevation**2)**0.5
     direction = pg.Vector3(
         h * math.cos(azimuth),  # X
-        elevation,         # Y
+        elevation,  # Y
         -h * math.sin(azimuth)  # Z
-    )
-    return direction.normalize()
+    ).normalize()
 
+    return direction

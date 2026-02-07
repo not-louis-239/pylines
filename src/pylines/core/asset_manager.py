@@ -20,9 +20,10 @@ asset_manager.py
     not be involved in computations or logic beyond asset file management.
 """
 
+from enum import Enum, auto
 import json
 from pathlib import Path
-from dataclasses import dataclass
+from typing import cast
 
 import numpy as np
 import pygame as pg
@@ -32,6 +33,29 @@ from pygame.transform import scale, scale_by
 import pylines.core.paths as paths
 from pylines.core.custom_types import Sound, Surface
 
+
+class FLine:
+    """Formatted line for help text"""
+
+    class Style(Enum):
+        NORMAL = auto()
+        HEADING_1 = auto()
+        HEADING_2 = auto()
+        BULLET = auto()
+
+    def __init__(self, text: str, indent: int, style: Style = Style.NORMAL):
+        self.text = text
+        self.indent = indent
+        self.style = style
+
+    def __repr__(self) -> str:
+        return (
+            f"{self.__class__.__name__}("
+            f"text={self.text!r}, "
+            f"indent={self.indent}, "
+            f"style={self.style}"
+            f")"
+        )
 
 class AssetBank:
     """Base class to store assets. Objects of this type should be
@@ -79,6 +103,8 @@ class Images(AssetBank):
 
         self.logo = self._load("logo.png")
 
+        self.help_icon = self._load("help_icon.png")
+
         self.damage_overlays: tuple[Surface, ...] = (
             self._load("damage_1.png"),
             self._load("damage_2.png"),
@@ -90,6 +116,7 @@ class Images(AssetBank):
 
         self.plane_icon = self._load("plane_icon.png")
         self.gps_dest_marker = self._load("gps_dest_marker.png")
+
         self.cloud_blob = self._load("cloud_blob.png")
 
         self.augment()
@@ -100,6 +127,7 @@ class Images(AssetBank):
         self.logo = scale_by(self.logo, 0.2)
         self.plane_icon = scale(self.plane_icon, (24, 24))
         self.gps_dest_marker = scale(self.gps_dest_marker, (24, 24))
+        self.help_icon = scale(self.help_icon, (50, 50))
 
     def _load(self, name: str):
         return pg.image.load(paths.IMAGES_DIR / name).convert_alpha()
@@ -162,28 +190,18 @@ class WorldData(AssetBank):
 
         self.noise = pg.image.load(paths.WORLD_DIR / "noise.png").convert_alpha()
 
-        # Runway data
-        with open(paths.WORLD_DIR / "runways.json") as f:
-            self.runway_data: list = json.load(f)["runways"]
-
-        # Building definitions
-        with open(paths.WORLD_DIR / "building_defs.json") as f:
-            self.building_defs: dict = json.load(f)["building_defs"]
-
-        # Building placements
-        with open(paths.WORLD_DIR / "building_placements.json") as f:
-            self.building_placements: list = json.load(f)["buildings"]
-
-        # Prohibited zones
-        with open(paths.WORLD_DIR / "prohibited_zones.json") as f:
-            self.prohibited_zones: list = json.load(f)["prohibited_zones"]
-
-        # Starfield data
-        with open(paths.WORLD_DIR / "starfield_data.json") as f:
-            self.starfield_data: dict = json.load(f)["starfield"]
+        self.runway_data: list = cast(list, self._load_json("runways.json", "runways"))
+        self.building_defs: dict = cast(dict, self._load_json("building_defs.json", "building_defs"))
+        self.building_placements: list = cast(list, self._load_json("building_placements.json", "buildings"))
+        self.prohibited_zones: list = cast(list, self._load_json("prohibited_zones.json", "prohibited_zones"))
+        self.starfield_data: dict = cast(dict, self._load_json("starfield_data.json", "starfield"))
 
     def _load(self, name: str) -> Path:
         return paths.WORLD_DIR / name
+
+    def _load_json(self, name: str, key: str) -> dict | list:
+        with open(paths.WORLD_DIR / name, "r", encoding="utf-8") as f:
+            return json.load(f)[key]
 
 class ConfigPresets(AssetBank):
     """Data container for presets such as clouds that
@@ -198,6 +216,55 @@ class ConfigPresets(AssetBank):
     def _load(self, name: str) -> Path:
         return paths.PRESETS_DIR / name
 
+class TextAssets(AssetBank):
+    """Data container for text-based assets"""
+
+    COMMENT_SYMBOL = '#'
+    SPACES_PER_INDENT = 4
+
+    def __init__(self) -> None:
+        self.briefing_text: list[str] = self._load("briefing.txt")
+
+        raw_lines: list[str] = self._load("help.txt", cmt_symbol="//")
+        self.help_lines: list[FLine] = []
+
+        Style = FLine.Style
+        for i, line in enumerate(raw_lines, start=1):
+            # TODO: fix line counting for error messages
+
+            stripped = line.lstrip(' ')
+            leading_ws = line[:len(line) - len(stripped)]
+
+            if '\t' in leading_ws:
+                raise IndentationError(
+                    f"Line {i}: Tabs are not allowed in help.txt; use {TextAssets.SPACES_PER_INDENT} spaces per indent."
+                )
+
+            num_leading_spaces = len(leading_ws)
+
+            if num_leading_spaces % TextAssets.SPACES_PER_INDENT != 0:
+                raise IndentationError(f"Line {i}: Expected {TextAssets.SPACES_PER_INDENT} spaces per indent, got {num_leading_spaces} leading spaces.")
+
+            indentation_lvl = num_leading_spaces // TextAssets.SPACES_PER_INDENT
+
+            if stripped.startswith('##'):
+                fline = FLine(stripped[2:].strip(), indentation_lvl, Style.HEADING_2)
+            elif stripped.startswith('#'):
+                fline = FLine(stripped[1:].strip(), indentation_lvl, Style.HEADING_1)
+            elif stripped.startswith('*'):
+                fline = FLine(stripped[1:].strip(), indentation_lvl, Style.BULLET)
+            else:
+                fline = FLine(stripped.strip(), indentation_lvl, Style.NORMAL)
+
+            self.help_lines.append(fline)
+
+    def _load(self, name: str, /, *, cmt_symbol: str = COMMENT_SYMBOL) -> list[str]:
+        with open(paths.TEXT_DIR / name, "r", encoding="utf-8") as f:
+            return [
+                line.rstrip("\n")
+                for line in f if not line.lstrip().startswith(cmt_symbol)
+            ]
+
 class Assets:
     def __init__(self) -> None:
         self.images: Images = Images()
@@ -205,3 +272,4 @@ class Assets:
         self.sounds: Sounds = Sounds()
         self.world: WorldData = WorldData()
         self.config_presets: ConfigPresets = ConfigPresets()
+        self.texts: TextAssets = TextAssets()

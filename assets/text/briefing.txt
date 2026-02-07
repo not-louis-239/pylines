@@ -1,0 +1,32 @@
+# Copyright 2025-2026 Louis Masarei-Boulton
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# This is the briefing page.
+# Lines starting with '#' are ignored.
+# Players, do not touch this file please.
+#
+You have been cleared for takeoff at Darculus Metropolis. Apply full power
+and raise the nose at 55 knots. Do not raise the nose too high or you will stall.
+
+While cruising, keep the flaps fully up to reduce drag, but be aware that this also
+increases stall speed. Roll or use the rudder to turn if necessary. Use the map to
+guide your navigation. If you stall, recover by pitching downward until the stall
+warning stops.
+
+When you are close to your selected GPS destination, the glidescope will activate to
+provide landing assistance. Reduce throttle to avoid potentially overspeeding the
+plane during descent. Lower the flaps and follow the glidepath for a smooth
+landing.
+
+Happy flying!

@@ -1,0 +1,129 @@
+// Copyright 2025-2026 Louis Masarei-Boulton
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// Help page text.
+//
+// Text formats
+// Normal
+// * Bullet
+// # Heading
+// ## Subheading
+//
+// Lines starting with '//' are ignored.
+// Indents must be 4 spaces each.
+// Tabs are not allowed for indentation.
+// Do not modify this file.
+//
+# Overview
+
+You have just started your flight training at Darculus Metropolis. This is a flight sandbox; you are free to explore the region as you wish. Sightsee the mountains near the Central Remote Fields, or fly above the beach east of the Rebased District, but make sure not to get too close to the Darculus Airbase or protected wildlife, or you might just have your license revoked!
+
+# The Cockpit
+
+## Layout
+
+The cockpit includes:
+* Throttle and flaps status
+* Airspeed in knots
+* MSL (Mean Sea Level) Altitude and VSI (Vertical Speed Indicator), in feet and ft/min respectively.
+* Compass
+    * Red needle = heading
+    * Yellow needle = direction of velocity
+    * Green needle = direction to GPS destination
+    * Blue line = runway heading; only shows if you are close to your GPS destination. Use this to align yourself with the runway when preparing to land.
+* Artificial Horizon
+* Coordinates,
+    * -Z = north and +X = east
+* AGL (Above Ground Level) Altitude Indicator (feet)
+* Clock (with GMT offset)
+* Glidescope
+    * Indicates your height relative to the correct (3°) glidepath when you are close to your GPS destination.
+* GPS Destination and Distance
+    * GPS destination and distance to destination in kilometres.
+* Warning lights for stall or overspeed
+
+## Map View
+
+Your cockpit also has a built-in map for navigation assistance. Altitude is conveyed by colour and prohibited zones are shown as red-bordered areas.
+
+While advanced map info is shown, you will also see a coordinate grid and keys for interpreting the map's various colours and symbols.
+
+# Flight Procedure
+
+## Adjustments and Specifications
+
+The flaps have been pre-adjusted to be slightly down, which is optimal for takeoff. Lowering the flaps increases lift and significantly increases drag, especially at high deflections.
+
+## Takeoff
+
+To begin takeoff, apply full throttle and at 55 knots, raise the nose by 10-15°. Do not raise the nose too high or you will stall. Wait until you reach a speed of 70 knots before attempting to climb more steeply.
+
+Be careful to promptly raise the nose to initiate takeoff as letting the plane run along bare terrain will quickly accumulate structural damage.
+
+## Cruise
+
+As you fly, you can raise or lower the nose, or roll to adjust your direction. You also have a map available for navigation guidance.
+
+If you raise the nose too high, you will stall. To recover from a stall, pitch down to regain speed until the stall warning stops.
+
+For cruise, it is optimal to have the flaps fully up as it reduces both lift and drag. However, it also increases stall speed, so be careful.
+
+Additionally, be careful to manage your kinetic energy as overspeeding (letting your speed exceed your plane's structural speed limit, as indicated by the red region on your speedometer) may severely damage the airplane and quickly render it unflyable at very high speeds.
+
+## Landing
+
+To land, ensure you are inline with the target runway. The trick is to keep the speed at 65 knots by controlling your pitch and throttle. Put the flaps fully down to increase drag and reduce speed in preparation for landing.
+
+Your glidescope will help you with landing by indicating your altitude relative to the optimal glidepath. It is located to the bottom right of your artificial horizon.
+
+* The green needle indicates the correct glidepath. Keep it near the central line.
+* If the green needle is above the central white line, you are too low. Raise the nose slightly or add throttle.
+* If the green needle is below the central white line, you are too high. Drop the nose or reduce throttle.
+
+Add more throttle if you get too low or less if you get too high. Optimal vertical speed for descent is around -500 ft/min, however you should aim to touch down at no faster than -200 to -300 ft/min, or else you could damage the airplane. Slowly level out at 10 feet above the runway, then drop to 5 feet and reduce throttle to zero before touching down gently, slightly nose-up.
+
+After touching down, reduce throttle to none if you haven't already, keep the nose neutral to slightly up, and apply the brakes to reduce your speed to zero, coming to a gentle stop on the runway.
+
+## Contingency
+
+Stall: Push the nose down until the stall warning stops, then pull up slightly to regain altitude.
+
+Overspeed: Reduce power, pull up and wait until the speed reduces to safe levels (<130-140 knots). Be careful as very high speeds can render the plane unusable in seconds.
+
+# World Information
+
+## Towns and Runways
+
+Each town has a runway marked on the map. Use the GPS to cycle runways and the map for guidance. Coordinates are in metres.
+
+* DCM - Darculus Metropolis
+    * Runway: (200, -3,000), heading 130°/310°
+    * The central city and most populated area. Your home base for training.
+
+* CRF - Central Remote Fields
+    * Runway: (2,250, -17,500), heading 35°/215°
+    * Sparse mid-altitude flatlands north of Darculus, near the mountains.
+
+* RDS - Rebased District
+    * Runway: (26,250, 2,500), heading 108°/288°
+    * Eastern low-to-mid altitude plains with coastal winds and nearby beaches.
+
+## Prohibited Areas
+
+Some areas are restricted for safety, military activity, or wildlife protection. Flying into a prohibited area will trigger warnings and may affect pilot standing.
+
+Prohibited zones are indicated by red areas on your map. Using advanced map info will display each zone's code.
+
+
+# Happy Flying!

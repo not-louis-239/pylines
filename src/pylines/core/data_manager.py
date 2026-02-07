@@ -20,9 +20,11 @@ import json
 from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass, fields
 from enum import Enum, auto
-from typing import Any, Mapping, Self, TypeAlias
 from pathlib import Path
+from typing import Any, Mapping, Self, TypeAlias
+
 import pylines.core.paths as paths
+from pylines.core.constants import __version__
 
 JSONValue: TypeAlias = (
     str | int | float | bool | None |
@@ -58,6 +60,8 @@ class JSONConvertible(ABC):
 class ConfigObject(JSONConvertible):
     invert_y_axis: bool = False
     cloud_config_idx: int = 0
+    show_briefing: bool = True
+    version: str = __version__
 
     def to_json(self) -> JSONValue:
         return asdict(self)

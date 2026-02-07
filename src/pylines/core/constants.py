@@ -17,6 +17,7 @@
 from dataclasses import dataclass
 from enum import IntEnum
 
+__version__ = "0.12.8"
 
 @dataclass
 class PlaneModel:

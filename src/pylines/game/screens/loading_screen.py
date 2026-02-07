@@ -14,18 +14,17 @@
 
 from __future__ import annotations
 
-from typing import cast, TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
-from OpenGL import GL as gl, GLU as glu
 import pygame as pg
+from OpenGL import GL as gl
+from OpenGL import GLU as glu
 
 from pylines.core import constants as C
 from pylines.core.utils import draw_text
-
 from pylines.game.environment import Environment
 from pylines.game.screens.game_screen import GameScreen
 from pylines.game.states import State, StateID
-from pylines.game.live_config_presets import LiveConfigPresets
 
 if TYPE_CHECKING:
     from pylines.game.game import Game
