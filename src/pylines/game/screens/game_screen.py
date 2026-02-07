@@ -1063,8 +1063,6 @@ class GameScreen(State):
         pitch, yaw, roll = self.plane.rot
         hud_surface = self.hud_surface
 
-        hud_surface.blit(self.cockpit_surface, (0, C.WN_H - self.cockpit_surface.get_rect().height))
-
         # Stall warning
         warning_x = C.WN_W//2-145
         if self.show_stall_warning:
@@ -1082,6 +1080,9 @@ class GameScreen(State):
             overlay_idx = min(len(overlays) - 1, int(self.plane.damage_level * (len(overlays))))
             overlay = overlays[overlay_idx]
             hud_surface.blit(overlay, (0, 0))
+
+        # Static cockpit surface
+        hud_surface.blit(self.cockpit_surface, (0, C.WN_H - self.cockpit_surface.get_rect().height))
 
         # Compass (heading + ground track)
         centre = (C.WN_W//2-300, C.WN_H*0.85)
@@ -1139,13 +1140,8 @@ class GameScreen(State):
         # Location / LOC (right)
         loc_centre = (C.WN_W//2 + 85, int(C.WN_H*0.74))
         draw_text(
-            hud_surface,
-            loc_centre,
-            'centre', 'centre',
-            f"({self.plane.pos.x:,.0f}m, {self.plane.pos.z:,.0f}m)",
-            cols.WHITE,
-            22,
-            self.fonts.monospaced
+            hud_surface, loc_centre, 'centre', 'centre',
+            f"({self.plane.pos.x:,.0f}m, {self.plane.pos.z:,.0f}m)", cols.WHITE, 22, self.fonts.monospaced
         )
 
         # Time readout
@@ -1154,13 +1150,8 @@ class GameScreen(State):
         now = datetime.now().astimezone()
         offset_hours = int(cast(timedelta, now.utcoffset()).total_seconds() // 3600)
         draw_text(
-            hud_surface,
-            time_centre,
-            'centre', 'centre',
-            f"{now.hour:02d}:{now.minute:02d} ({offset_hours:+d})",
-            cols.WHITE,
-            18,
-            self.fonts.monospaced
+            hud_surface, time_centre, 'centre', 'centre',
+            f"{now.hour:02d}:{now.minute:02d} ({offset_hours:+d})", cols.WHITE, 18, self.fonts.monospaced
         )
 
         # AGL readout
@@ -1168,13 +1159,8 @@ class GameScreen(State):
         x, z = self.plane.pos.x, self.plane.pos.z
         altitude_agl = self.plane.pos.y - self.env.ground_height(x, z)
         draw_text(
-            hud_surface,
-            (agl_centre[0] + 45, agl_centre[1]),
-            'right', 'centre',
-            f"{units.convert_units(altitude_agl, units.METRES, units.FEET):,.0f} ft",
-            cols.WHITE,
-            18,
-            self.fonts.monospaced
+            hud_surface, (agl_centre[0] + 45, agl_centre[1]), 'right', 'centre',
+            f"{units.convert_units(altitude_agl, units.METRES, units.FEET):,.0f} ft", cols.WHITE, 18, self.fonts.monospaced
         )
 
         # GPS information
