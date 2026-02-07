@@ -230,6 +230,8 @@ class TextAssets(AssetBank):
 
         Style = FLine.Style
         for i, line in enumerate(raw_lines, start=1):
+            # TODO: fix line counting for error messages
+
             stripped = line.lstrip(' ')
             leading_ws = line[:len(line) - len(stripped)]
 
