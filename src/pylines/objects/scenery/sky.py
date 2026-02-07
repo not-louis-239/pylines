@@ -164,9 +164,6 @@ class CloudLayer(LargeSceneryObject):
 
         up = right.cross(camera_fwd).normalize() * size_half
 
-        gl.glEnable(gl.GL_TEXTURE_2D)
-        gl.glBindTexture(gl.GL_TEXTURE_2D, self.texture_id)
-
         gl.glColor4f(final_brightness, final_brightness, final_brightness, alpha)
 
         gl.glBegin(gl.GL_QUADS)
@@ -219,6 +216,8 @@ class CloudLayer(LargeSceneryObject):
         gl.glEnable(gl.GL_BLEND)
         gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
         gl.glDepthMask(gl.GL_FALSE)
+        gl.glEnable(gl.GL_TEXTURE_2D)
+        gl.glBindTexture(gl.GL_TEXTURE_2D, self.texture_id)
 
         fwd_flat = pg.Vector3(camera_fwd.x, 0, camera_fwd.z).normalize()
 
@@ -267,3 +266,5 @@ class CloudLayer(LargeSceneryObject):
         gl.glDisable(gl.GL_BLEND)
         gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
         gl.glDepthMask(gl.GL_TRUE)
+        gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
+        gl.glDisable(gl.GL_TEXTURE_2D)
