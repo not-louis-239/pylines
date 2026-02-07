@@ -48,6 +48,7 @@ class TitleScreen(State):
         self.in_help_screen = False
         self.help_screen_offset = 0
         self.help_max_offset = 0
+        self.help_scroll_vel = 0.0
 
         self.return_button = Button(
             (C.WN_W - 120, C.WN_H - 60), 200, 60, (25, 75, 75), (200, 255, 255),
@@ -68,22 +69,37 @@ class TitleScreen(State):
         elif self.return_button.check_click(events) and self.in_help_screen:
             self.in_help_screen = False
             self.help_screen_offset = 0  # reset scrolling
+            self.help_scroll_vel = 0.0
 
         if self.in_help_screen:
+            scroll_accel = 0.004 * dt
+            wheel_impulse = 25
+
             for event in events:
                 if event.type == pg.MOUSEWHEEL:
-                    self.help_screen_offset -= event.y * 40
+                    self.help_scroll_vel -= event.y * wheel_impulse
 
             if keys[pg.K_UP]:
-                self.help_screen_offset -= 0.6 * dt
+                self.help_scroll_vel -= scroll_accel
             if keys[pg.K_DOWN]:
-                self.help_screen_offset += 0.6 * dt
+                self.help_scroll_vel += scroll_accel
             if self.pressed(keys, pg.K_PAGEUP):
-                self.help_screen_offset -= 240
+                self.help_scroll_vel -= 220
             if self.pressed(keys, pg.K_PAGEDOWN):
-                self.help_screen_offset += 240
+                self.help_scroll_vel += 220
 
-            self.help_screen_offset = max(0, min(self.help_screen_offset, self.help_max_offset))
+            self.help_screen_offset += self.help_scroll_vel
+
+            self.help_scroll_vel *= 0.85
+            if abs(self.help_scroll_vel) < 0.02:
+                self.help_scroll_vel = 0.0
+
+            if self.help_screen_offset < 0:
+                self.help_screen_offset = 0
+                self.help_scroll_vel = 0.0
+            elif self.help_screen_offset > self.help_max_offset:
+                self.help_screen_offset = self.help_max_offset
+                self.help_scroll_vel = 0.0
 
         self.update_prev_keys(keys)
 
