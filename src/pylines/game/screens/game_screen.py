@@ -536,19 +536,62 @@ class GameScreen(State):
                 tile_start_z = -C.HALF_WORLD_SIZE + C.METRES_PER_TILE * tile_z
 
                 # Make a new Surface for each tile
-                current_tile = pg.Surface((C.MAP_PIXELS_PER_TILE, C.MAP_PIXELS_PER_TILE))
-                pix_array = pg.PixelArray(current_tile)
+                current_tile = pg.Surface((C.MAP_PIXELS_PER_TILE, C.MAP_PIXELS_PER_TILE)).convert()
 
-                # Loop over pixels within a tile
-                for pix_z in range(C.MAP_PIXELS_PER_TILE):
-                    for pix_x in range(C.MAP_PIXELS_PER_TILE):
-                        world_x = tile_start_x + pix_x * C.MAP_METRES_PER_PX
-                        world_z = tile_start_z + pix_z * C.MAP_METRES_PER_PX
-                        pix_array[pix_x, pix_z] = HEIGHT_COLOUR_LOOKUP[clamp(  # type: ignore[index]
-                            int(self.game.env.height_at(world_x, world_z)), (-4_000, 6_000)
-                        ) + 4_000]
+                # Vectorized tile sampling from heightmap
+                env = self.game.env
+                height_arr = env.height_array
+                hmap_h, hmap_w = height_arr.shape
 
-                del pix_array  # Unlock the Surface so it can be used
+                xs = tile_start_x + np.arange(C.MAP_PIXELS_PER_TILE, dtype=np.float32) * C.MAP_METRES_PER_PX
+                zs = tile_start_z + np.arange(C.MAP_PIXELS_PER_TILE, dtype=np.float32) * C.MAP_METRES_PER_PX
+
+                ix = (xs + C.HALF_WORLD_SIZE) / (2 * C.HALF_WORLD_SIZE) * hmap_w
+                iz = (zs + C.HALF_WORLD_SIZE) / (2 * C.HALF_WORLD_SIZE) * hmap_h
+
+                ix_grid, iz_grid = np.meshgrid(ix, iz, indexing='xy')
+                ix_grid = np.clip(ix_grid, 0, hmap_w - (1 + C.EPSILON))
+                iz_grid = np.clip(iz_grid, 0, hmap_h - (1 + C.EPSILON))
+
+                x1 = ix_grid.astype(np.int32)
+                y1 = iz_grid.astype(np.int32)
+                x2 = np.clip(x1 + 1, 0, hmap_w - 1)
+                y2 = np.clip(y1 + 1, 0, hmap_h - 1)
+
+                fx = ix_grid - x1
+                fy = iz_grid - y1
+
+                h00 = height_arr[y1, x1]
+                h10 = height_arr[y1, x2]
+                h01 = height_arr[y2, x1]
+                h11 = height_arr[y2, x2]
+
+                if env.diagonal_split == 'AD':
+                    mask = fy < fx
+                    u = np.where(mask, 1 - fx, 1 - fy)
+                    v = np.where(mask, fx - fy, fy - fx)
+                    w = np.where(mask, fy, fx)
+                    interp = np.where(
+                        mask,
+                        u * h00 + v * h10 + w * h11,
+                        u * h00 + v * h01 + w * h11
+                    )
+                else:
+                    mask = (1 - fx) > fy
+                    u = np.where(mask, 1 - fx - fy, 1 - fy)
+                    v = np.where(mask, fx, 1 - fx)
+                    w = np.where(mask, fy, fx + fy - 1)
+                    interp = u * h00 + v * h10 + w * h01
+
+                raw_height = env.min_h + (interp / 65535.0) * (env.max_h - env.min_h)
+                idx = np.clip(raw_height, -4_000, 6_000).astype(np.int32) + 4_000
+
+                lookup = np.asarray(HEIGHT_COLOUR_LOOKUP, dtype=np.uint8)
+                colours = lookup[idx]
+
+                pixels = pg.surfarray.pixels3d(current_tile)
+                pixels[:] = colours.swapaxes(0, 1)
+                del pixels
                 pg.image.save(current_tile, str(tile_cache_path))
 
                 tile_row.append(current_tile)
