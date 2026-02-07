@@ -76,13 +76,13 @@ class BriefingScreen(State):
         self.return_button.draw(self.display_surface)
         self.dont_show_again.draw(self.display_surface)
 
-        draw_text(self.display_surface, (C.WN_W//2, C.WN_H*0.15), 'centre', 'centre', "Flight Briefing", (0, 192, 255), 40, self.fonts.monospaced)
+        draw_text(self.display_surface, (C.WN_W//2, C.WN_H*0.075), 'centre', 'centre', "Flight Briefing", (0, 192, 255), 40, self.fonts.monospaced)
 
         instructions: list[str] = self.game.assets.texts.briefing_text
 
         for i, line in enumerate(instructions):
             draw_text(
-                self.display_surface, (C.WN_W//2, C.WN_H * (0.3 + 0.05*i)), 'centre', 'centre',
+                self.display_surface, (C.WN_W//2, C.WN_H * (0.17 + 0.04*i)), 'centre', 'centre',
                 line, cols.WHITE, 25, self.fonts.monospaced
             )
 
