@@ -62,7 +62,7 @@ from pylines.objects.objects import CrashReason, Plane
 from pylines.objects.scenery.ground import Ground
 from pylines.objects.scenery.ocean import Ocean
 from pylines.objects.scenery.runway import Runway
-from pylines.objects.scenery.sky import Moon, Sky, Sun
+from pylines.objects.scenery.sky import Moon, Sky, Sun, Star
 from pylines.shaders.shader_manager import load_shader_script
 
 if TYPE_CHECKING:
@@ -931,6 +931,94 @@ class GameScreen(State):
         gl.glDisableVertexAttribArray(self.building_emissive_loc)
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
         gl.glUseProgram(0)
+
+    @timer
+    def draw_stars(self) -> None:
+        hour = fetch_hour()
+        if 18 >= hour > 6:  # daytime
+            opacity = 0
+        elif 20 >= hour > 18:  # sunset
+            opacity = (hour - 18) / 2
+        elif 6 >= hour > 4:  # sunrise
+            opacity = 1 - (hour - 4) / 2
+        else:  # night
+            opacity = 1
+
+        opacity = clamp(opacity, (0, 1))
+        if opacity == 0:
+            return
+
+        pitch, yaw, _ = self.plane.rot
+        camera_fwd = pg.Vector3(
+            sin(rad(yaw)) * cos(rad(pitch)),
+            sin(rad(-pitch)),
+            -cos(rad(yaw)) * cos(rad(pitch)),
+        ).normalize()
+
+        cos_fov = cos(rad(C.FOV))
+        distance = 19000.0
+
+        sun_dir = sun_direction_from_hour(hour)
+        ref_dir = pg.Vector3(0, 0, -1)
+
+        # Save OpenGL states
+        was_blend_enabled = gl.glIsEnabled(gl.GL_BLEND)
+        was_depth_mask_enabled = gl.glGetBooleanv(gl.GL_DEPTH_WRITEMASK)
+        current_point_size = gl.glGetFloatv(gl.GL_POINT_SIZE)
+        was_texture_2d_enabled = gl.glIsEnabled(gl.GL_TEXTURE_2D)
+
+        gl.glEnable(gl.GL_BLEND)
+        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
+        gl.glDepthMask(gl.GL_FALSE)
+        gl.glDisable(gl.GL_TEXTURE_2D)
+
+        # Bucket stars by size to reduce glPointSize changes
+        buckets: dict[float, list[Star]] = {}
+        for star in self.env.stars:
+            size_key = round(star.size, 2)
+            buckets.setdefault(size_key, []).append(star)
+
+        for size_key, stars in buckets.items():
+            gl.glPointSize(size_key)
+            gl.glBegin(gl.GL_POINTS)
+            for star in stars:
+                # Rodrigues’ rotation formula
+                k = ref_dir.cross(sun_dir)
+                if k.length() < C.EPSILON:
+                    rotated_dir = star.direction.copy() if ref_dir.dot(sun_dir) > 0 else -star.direction
+                else:
+                    k = k.normalize()
+                    cos_theta = clamp(ref_dir.dot(sun_dir), (-1, 1))
+                    theta = math.acos(cos_theta)
+                    v = star.direction
+                    rotated_dir = (
+                        v * math.cos(theta) +
+                        k.cross(v) * math.sin(theta) +
+                        k * (k.dot(v)) * (1 - math.cos(theta))
+                    )
+
+                norm_dir = rotated_dir.normalize()
+                if camera_fwd.dot(norm_dir) <= cos_fov:
+                    continue
+
+                pos = norm_dir * distance
+                gl.glColor4f(
+                    star.colour[0] / 255.0,
+                    star.colour[1] / 255.0,
+                    star.colour[2] / 255.0,
+                    opacity * star.brightness
+                )
+                gl.glVertex3f(pos.x, pos.y, pos.z)
+            gl.glEnd()
+
+        # Restore OpenGL states
+        gl.glPointSize(current_point_size)
+        gl.glDepthMask(was_depth_mask_enabled)
+        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
+        if was_texture_2d_enabled:
+            gl.glEnable(gl.GL_TEXTURE_2D)
+        if not was_blend_enabled:
+            gl.glDisable(gl.GL_BLEND)
 
     @timer
     def draw_cockpit(self) -> None:
@@ -1885,6 +1973,7 @@ class GameScreen(State):
         assert self.game.config_presets is not None
 
         print(f"Frame {self._frame_count:,}")
+        log_segment()
 
         colour_scheme = sky_colour_from_hour(fetch_hour())
 
@@ -1892,6 +1981,7 @@ class GameScreen(State):
 
         # Draw sky gradient background
         self.sky.draw(colour_scheme)
+        log_segment("sky_draw")
 
         gl.glMatrixMode(gl.GL_MODELVIEW)
         gl.glLoadIdentity()
@@ -1913,11 +2003,12 @@ class GameScreen(State):
             -cos(rad(yaw)) * cos(rad(pitch)),
         ).normalize()
 
-        for star in self.env.stars:
-            star.draw(camera_fwd)
+        self.draw_stars()
+        log_segment("star_draw")
 
         self.sun.draw()
         self.moon.draw()
+        log_segment("sun_moon_draw")
 
         cloud_attenuation = 1.0
         for layer in self.game.config_presets.cloud_configs[self.game.save_data.cloud_config_idx].layers:
@@ -1925,13 +2016,17 @@ class GameScreen(State):
 
         self.ground.draw(cloud_attenuation)
         self.ocean.draw(cloud_attenuation)
+        log_segment("terrain_draw")
 
         for runway in self.env.runways:
             runway.draw(cloud_attenuation)
+        log_segment("runway_draw")
 
         cloud_layers = self.game.config_presets.cloud_configs[self.game.save_data.cloud_config_idx]
         for cloud_layer in cloud_layers.layers:
             cloud_layer.draw(self.plane.pos, camera_fwd)
+        log_segment("cloud_layers")
 
         self.draw_buildings(cloud_attenuation)
+        log_segment("buildings")
         self.draw_hud()
