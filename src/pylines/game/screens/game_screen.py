@@ -206,6 +206,13 @@ class GameScreen(State):
             inner_ai_rect.width//2
         )
 
+        # Persistent surfaces avoids pg.Surface churn which wastes resources
+        self.map_surface = pg.Surface((C.MAP_OVERLAY_SIZE, C.MAP_OVERLAY_SIZE), pg.SRCALPHA)
+        self.map_surface.fill((0, 0, 0, 255))
+
+        self.grid_surface = pg.Surface((C.MAP_OVERLAY_SIZE, C.MAP_OVERLAY_SIZE), pg.SRCALPHA)
+        self.grid_surface.fill((0, 0, 0, 0))
+
     def _build(self) -> Generator[tuple[float, str], None, None]:
         yield from self._init_ground(0.3, 0.45)
 
@@ -1118,9 +1125,10 @@ class GameScreen(State):
         pg.draw.circle(hud_surface, (warning_col), (warning_x, C.WN_H*0.965), 8)
 
     def draw_map(self):
+        self.map_surface.fill((0, 0, 0, 255))
+
         hud_surface = self.hud_surface
         NUM_TILES = math.ceil(C.HALF_WORLD_SIZE*2 / (C.METRES_PER_TILE))
-        MAP_OVERLAY_SIZE = 500  # size of the map overlay in pixels
 
         if self.viewport_auto_panning:
             self.viewport_pos = self.plane.pos.copy()
@@ -1131,17 +1139,13 @@ class GameScreen(State):
         map_centre = C.WN_W//2, int(285 + C.WN_H * (1-self.map_up))
 
         # Map border
-        outer_map_rect = pg.Rect(0, 0, MAP_OVERLAY_SIZE+10, MAP_OVERLAY_SIZE+10)
+        outer_map_rect = pg.Rect(0, 0, C.MAP_OVERLAY_SIZE+10, C.MAP_OVERLAY_SIZE+10)
         outer_map_rect.center = map_centre
         pg.draw.rect(hud_surface, cols.MAP_BORDER_COLOUR, outer_map_rect)
 
-        # Base
-        map_surface = pg.Surface((MAP_OVERLAY_SIZE, MAP_OVERLAY_SIZE))
-        map_surface.fill((0, 0, 0))
-
         # Draw map tiles
         # World coordinates of the top-left corner of the map viewport
-        viewport_half_size_metres = MAP_OVERLAY_SIZE / 2 * self.viewport_zoom
+        viewport_half_size_metres = C.MAP_OVERLAY_SIZE / 2 * self.viewport_zoom
         viewport_top_left_x = px - viewport_half_size_metres
         viewport_top_left_z = pz - viewport_half_size_metres
 
@@ -1176,7 +1180,7 @@ class GameScreen(State):
                 )
 
                 scaled_tile = pg.transform.scale(tile_surface, (int(tile_size_on_screen) + 1, int(tile_size_on_screen) + 1))
-                map_surface.blit(scaled_tile, dest_rect)
+                self.map_surface.blit(scaled_tile, dest_rect)
 
         # Show buildings
         if self.viewport_zoom < 10:  # Only show if zoomed in far enough for performance
@@ -1186,23 +1190,23 @@ class GameScreen(State):
                 screen_y = (building.pos.z - viewport_top_left_z) / self.viewport_zoom
 
                 SAFETY_BUFFER = 25  # for smoothness
-                if (-SAFETY_BUFFER < screen_x < MAP_OVERLAY_SIZE + SAFETY_BUFFER
-                and -SAFETY_BUFFER < screen_y < MAP_OVERLAY_SIZE + SAFETY_BUFFER):
+                if (-SAFETY_BUFFER < screen_x < C.MAP_OVERLAY_SIZE + SAFETY_BUFFER
+                and -SAFETY_BUFFER < screen_y < C.MAP_OVERLAY_SIZE + SAFETY_BUFFER):
                     # Retrieve building definition
                     def_ = self.env.building_defs[building.type_]
 
                     # Draw the building icon
-                    draw_building_icon(map_surface, screen_x, screen_y, def_.appearance, self.viewport_zoom)
+                    draw_building_icon(self.map_surface, screen_x, screen_y, def_.appearance, self.viewport_zoom)
 
         # Show buliding legend if advanced map info is enabled
         if self.map_show_advanced_info:
             draw_transparent_rect(
                 hud_surface,
-                (map_centre[0] + MAP_OVERLAY_SIZE/2 + 20, map_centre[1] - 180),
+                (map_centre[0] + C.MAP_OVERLAY_SIZE/2 + 20, map_centre[1] - 180),
                 (200, 360), border_thickness=2, border_colour=cols.MAP_BORDER_COLOUR
             )
 
-            draw_text(hud_surface, (map_centre[0] + MAP_OVERLAY_SIZE/2 + 120, map_centre[1] - 155), 'centre', 'centre', "Buildings", cols.WHITE, 20, self.fonts.monospaced)
+            draw_text(hud_surface, (map_centre[0] + C.MAP_OVERLAY_SIZE/2 + 120, map_centre[1] - 155), 'centre', 'centre', "Buildings", cols.WHITE, 20, self.fonts.monospaced)
 
             screen_y = map_centre[1] - 120
             items = list(self.env.building_defs.items())
@@ -1223,7 +1227,7 @@ class GameScreen(State):
                 # draw icon + label
                 draw_text(
                     hud_surface,
-                    (map_centre[0] + MAP_OVERLAY_SIZE/2 + 90, screen_y),
+                    (map_centre[0] + C.MAP_OVERLAY_SIZE/2 + 90, screen_y),
                     'left', 'centre',
                     f"{name}",
                     cols.WHITE, 15,
@@ -1231,7 +1235,7 @@ class GameScreen(State):
                 )
                 draw_building_icon(
                     hud_surface,
-                    map_centre[0] + MAP_OVERLAY_SIZE/2 + 55,
+                    map_centre[0] + C.MAP_OVERLAY_SIZE/2 + 55,
                     screen_y,
                     def_.appearance
                 )
@@ -1261,14 +1265,14 @@ class GameScreen(State):
             # Create a semi-transparent surface for the fill
             zone_fill_surface = pg.Surface(zone_rect.size, pg.SRCALPHA)
             zone_fill_surface.fill(cols.MAP_PROHIBITED_FILL_COLOR)
-            map_surface.blit(zone_fill_surface, zone_rect.topleft)
+            self.map_surface.blit(zone_fill_surface, zone_rect.topleft)
 
             # Draw border
-            pg.draw.rect(map_surface, cols.MAP_PROHIBITED_BORDER_COLOR, zone_rect, 2)
+            pg.draw.rect(self.map_surface, cols.MAP_PROHIBITED_BORDER_COLOR, zone_rect, 2)
 
             if self.map_show_advanced_info:
                 text_centre = (screen_pos_x + screen_w / 2, screen_pos_z + screen_h / 2)
-                draw_text(map_surface, text_centre, 'centre', 'centre', zone.code, cols.MAP_PROHIBITED_TEXT_COLOUR, 20, self.fonts.monospaced)
+                draw_text(self.map_surface, text_centre, 'centre', 'centre', zone.code, cols.MAP_PROHIBITED_TEXT_COLOUR, 20, self.fonts.monospaced)
 
         # Draw runways
         for runway in self.env.runways:
@@ -1290,29 +1294,29 @@ class GameScreen(State):
             runway_rect_on_map = rotated_runway_surface.get_rect(center=(runway_map_center_x, runway_map_center_y))
 
             # Blit runway onto map surface
-            map_surface.blit(rotated_runway_surface, runway_rect_on_map)
+            self.map_surface.blit(rotated_runway_surface, runway_rect_on_map)
 
             runway_cx, runway_cy = runway_map_center_x, runway_map_center_y  # local alias
 
             # Show GPS pointer
             if runway is self.env.runways[self.gps_runway_index]:
                 gps_rect = self.images.gps_dest_marker.get_rect(center=(runway_cx, runway_cy))
-                map_surface.blit(self.images.gps_dest_marker, gps_rect)
+                self.map_surface.blit(self.images.gps_dest_marker, gps_rect)
 
             # Runway information
-            draw_text(map_surface, (runway_cx, runway_cy - 50), 'centre', 'centre', runway.name, cols.WHITE, 20, self.fonts.monospaced)
+            draw_text(self.map_surface, (runway_cx, runway_cy - 50), 'centre', 'centre', runway.name, cols.WHITE, 20, self.fonts.monospaced)
 
             info_text = f"{runway.heading:03d}°, {units.convert_units(runway.pos.y, units.METRES, units.FEET):,.0f} ft"
-            draw_text(map_surface, (runway_cx, runway_cy - 30), 'centre', 'centre', info_text, cols.WHITE, 15, self.fonts.monospaced)
+            draw_text(self.map_surface, (runway_cx, runway_cy - 30), 'centre', 'centre', info_text, cols.WHITE, 15, self.fonts.monospaced)
 
         # Draw plane icon
-        cx, cz = MAP_OVERLAY_SIZE/2, MAP_OVERLAY_SIZE/2
+        cx, cz = C.MAP_OVERLAY_SIZE/2, C.MAP_OVERLAY_SIZE/2
         icon_x = cx - (self.viewport_pos.x - self.plane.pos.x) / self.viewport_zoom
         icon_z = cz - (self.viewport_pos.z - self.plane.pos.z) / self.viewport_zoom
 
         plane_icon_rotated = pg.transform.rotate(self.images.plane_icon, -self.plane.rot.y)
         rotated_icon_rect = plane_icon_rotated.get_rect(center=(icon_x, icon_z))
-        map_surface.blit(plane_icon_rotated, rotated_icon_rect)
+        self.map_surface.blit(plane_icon_rotated, rotated_icon_rect)
 
         # Define scale bar size here as the world length is also used in grid rendering
         MAX_SCALE_BAR_SIZE = 80  # pixels
@@ -1329,8 +1333,7 @@ class GameScreen(State):
             MINOR_INTERVAL = scale_bar_length_world
             MAJOR_INTERVAL = 5 * MINOR_INTERVAL
 
-            # Draw grid
-            grid_surface = pg.Surface((MAP_OVERLAY_SIZE, MAP_OVERLAY_SIZE), pg.SRCALPHA)
+            self.grid_surface.fill((0, 0, 0, 0))
 
             def world_to_map(world_x, world_z) -> tuple[float, float]:
                 screen_x = (world_x - viewport_top_left_x) * (1/self.viewport_zoom)
@@ -1339,34 +1342,34 @@ class GameScreen(State):
 
             # Grid overlay bounds
             start_grid_x = int(viewport_top_left_x // MINOR_INTERVAL) * MINOR_INTERVAL
-            end_grid_x = int((viewport_top_left_x + MAP_OVERLAY_SIZE * self.viewport_zoom) // MINOR_INTERVAL) * MINOR_INTERVAL + MINOR_INTERVAL
+            end_grid_x = int((viewport_top_left_x + C.MAP_OVERLAY_SIZE * self.viewport_zoom) // MINOR_INTERVAL) * MINOR_INTERVAL + MINOR_INTERVAL
             start_grid_z = int(viewport_top_left_z // MINOR_INTERVAL) * MINOR_INTERVAL
-            end_grid_z = int((viewport_top_left_z + MAP_OVERLAY_SIZE * self.viewport_zoom) // MINOR_INTERVAL) * MINOR_INTERVAL + MINOR_INTERVAL
+            end_grid_z = int((viewport_top_left_z + C.MAP_OVERLAY_SIZE * self.viewport_zoom) // MINOR_INTERVAL) * MINOR_INTERVAL + MINOR_INTERVAL
 
             # Draw grid
             for world_x in range(start_grid_x, end_grid_x, MINOR_INTERVAL):
                 p1 = world_to_map(world_x, viewport_top_left_z)
-                p2 = world_to_map(world_x, viewport_top_left_z + MAP_OVERLAY_SIZE * self.viewport_zoom)
-                pg.draw.line(grid_surface, GRID_MAJOR_COL if abs(world_x % MAJOR_INTERVAL) < C.EPSILON else GRID_MINOR_COL, p1, p2, 1)
+                p2 = world_to_map(world_x, viewport_top_left_z + C.MAP_OVERLAY_SIZE * self.viewport_zoom)
+                pg.draw.line(self.grid_surface, GRID_MAJOR_COL if abs(world_x % MAJOR_INTERVAL) < C.EPSILON else GRID_MINOR_COL, p1, p2, 1)
 
                 if abs(world_x % MAJOR_INTERVAL) <= C.EPSILON:
-                    draw_text(grid_surface, (p1[0], MAP_OVERLAY_SIZE - 15), 'centre', 'centre', f"{int(world_x):,.0f}", cols.WHITE, 18, self.fonts.monospaced)
+                    draw_text(self.grid_surface, (p1[0], C.MAP_OVERLAY_SIZE - 15), 'centre', 'centre', f"{int(world_x):,.0f}", cols.WHITE, 18, self.fonts.monospaced)
 
             for world_z in range(start_grid_z, end_grid_z, MINOR_INTERVAL):
                 p1 = world_to_map(viewport_top_left_x, world_z)
-                p2 = world_to_map(viewport_top_left_x + MAP_OVERLAY_SIZE * self.viewport_zoom, world_z)
-                pg.draw.line(grid_surface, GRID_MAJOR_COL if abs(world_z % MAJOR_INTERVAL) < C.EPSILON else GRID_MINOR_COL, p1, p2, 1)
+                p2 = world_to_map(viewport_top_left_x + C.MAP_OVERLAY_SIZE * self.viewport_zoom, world_z)
+                pg.draw.line(self.grid_surface, GRID_MAJOR_COL if abs(world_z % MAJOR_INTERVAL) < C.EPSILON else GRID_MINOR_COL, p1, p2, 1)
 
                 if abs(world_z % MAJOR_INTERVAL) <= C.EPSILON:
-                    draw_text(grid_surface, (5, p1[1]), 'left', 'centre', f"{int(world_z):,.0f}", cols.WHITE, 18, self.fonts.monospaced)
+                    draw_text(self.grid_surface, (5, p1[1]), 'left', 'centre', f"{int(world_z):,.0f}", cols.WHITE, 18, self.fonts.monospaced)
 
             # Draw origin
             origin_map_x, origin_map_y = world_to_map(0, 0)
-            if 0 <= origin_map_x <= MAP_OVERLAY_SIZE and 0 <= origin_map_y <= MAP_OVERLAY_SIZE:
-                pg.draw.circle(grid_surface, ORIGIN_POINT_COLOUR, (origin_map_x, origin_map_y), 5)
+            if 0 <= origin_map_x <= C.MAP_OVERLAY_SIZE and 0 <= origin_map_y <= C.MAP_OVERLAY_SIZE:
+                pg.draw.circle(self.grid_surface, ORIGIN_POINT_COLOUR, (origin_map_x, origin_map_y), 5)
 
             # Blit grid surface onto map surface
-            map_surface.blit(grid_surface, (0, 0))
+            self.map_surface.blit(self.grid_surface, (0, 0))
 
         # North indicator - draw an arrow pointing upwards
         north_indicator_size = 20
@@ -1382,8 +1385,8 @@ class GameScreen(State):
             (ni_center_x, ni_center_y + north_indicator_size // 4),  # Bottom-middle (for dart shape)
             (ni_center_x + north_indicator_size // 4, ni_center_y + north_indicator_size // 2),  # Bottom-right
         ]
-        pg.draw.polygon(map_surface, cols.WHITE, arrow_points)
-        draw_text(map_surface, (ni_center_x, ni_center_y - north_indicator_offset_y), 'centre', 'top', "N", cols.WHITE, 25, self.fonts.monospaced)
+        pg.draw.polygon(self.map_surface, cols.WHITE, arrow_points)
+        draw_text(self.map_surface, (ni_center_x, ni_center_y - north_indicator_offset_y), 'centre', 'top', "N", cols.WHITE, 25, self.fonts.monospaced)
 
         # Draw scale bar
         scale_bar_offset = (12, 80)
@@ -1391,15 +1394,15 @@ class GameScreen(State):
         scale_bar_length_pix = scale_bar_length_world / self.viewport_zoom
         scale_bar_rect = pg.Rect(scale_bar_offset[0], scale_bar_offset[1], scale_bar_length_pix, 5)
 
-        pg.draw.rect(map_surface, cols.WHITE, scale_bar_rect)
-        draw_text(map_surface, (scale_bar_offset[0], scale_bar_offset[1] + 20), 'left', 'centre', f"{scale_bar_length_world:,} m", cols.WHITE, 20, self.fonts.monospaced)
+        pg.draw.rect(self.map_surface, cols.WHITE, scale_bar_rect)
+        draw_text(self.map_surface, (scale_bar_offset[0], scale_bar_offset[1] + 20), 'left', 'centre', f"{scale_bar_length_world:,} m", cols.WHITE, 20, self.fonts.monospaced)
 
         # Calculate ground speed
         ground_speed_vec = pg.Vector3(self.plane.vel.x, 0, self.plane.vel.z)
         ground_speed_mag = ground_speed_vec.length()
 
-        draw_text(map_surface, (MAP_OVERLAY_SIZE//2 - 100, 30), 'left', 'centre', 'GS', (100, 255, 255), 25, self.fonts.monospaced)
-        draw_text(map_surface, (MAP_OVERLAY_SIZE//2 - 45, 30), 'left', 'centre', f"{units.convert_units(ground_speed_mag, units.METRES/units.SECONDS, units.KNOTS):,.0f}", cols.WHITE, 25, self.fonts.monospaced)
+        draw_text(self.map_surface, (C.MAP_OVERLAY_SIZE//2 - 100, 30), 'left', 'centre', 'GS', (100, 255, 255), 25, self.fonts.monospaced)
+        draw_text(self.map_surface, (C.MAP_OVERLAY_SIZE//2 - 45, 30), 'left', 'centre', f"{units.convert_units(ground_speed_mag, units.METRES/units.SECONDS, units.KNOTS):,.0f}", cols.WHITE, 25, self.fonts.monospaced)
 
         # Calculate ETA
         dest_runway = self.env.runways[self.gps_runway_index]
@@ -1437,28 +1440,28 @@ class GameScreen(State):
 
             eta_text = f"{eta_text_mins:02d}:{eta_text_secs:02d}"
 
-        draw_text(map_surface, (MAP_OVERLAY_SIZE//2 - 100, 55), 'left', 'centre', 'ETA', (100, 255, 255), 25, self.fonts.monospaced)
-        draw_text(map_surface, (MAP_OVERLAY_SIZE//2 - 45, 55), 'left', 'centre', eta_text, cols.WHITE, 25, self.fonts.monospaced)
+        draw_text(self.map_surface, (C.MAP_OVERLAY_SIZE//2 - 100, 55), 'left', 'centre', 'ETA', (100, 255, 255), 25, self.fonts.monospaced)
+        draw_text(self.map_surface, (C.MAP_OVERLAY_SIZE//2 - 45, 55), 'left', 'centre', eta_text, cols.WHITE, 25, self.fonts.monospaced)
 
         # Blit the completed map to the main HUD surface
-        map_rect = map_surface.get_rect(center=(map_centre))
-        hud_surface.blit(map_surface, map_rect)
+        map_rect = self.map_surface.get_rect(center=(map_centre))
+        hud_surface.blit(self.map_surface, map_rect)
 
         # Show height key
         if self.map_show_advanced_info:
             draw_transparent_rect(
                 hud_surface,
-                (C.WN_W//2 - MAP_OVERLAY_SIZE//2 - 200, map_centre[1] - 180),
+                (C.WN_W//2 - C.MAP_OVERLAY_SIZE//2 - 200, map_centre[1] - 180),
                 (180, 360), border_thickness=2, border_colour=cols.MAP_BORDER_COLOUR
             )
 
-            hud_surface.blit(self.height_key, (C.WN_W//2 - MAP_OVERLAY_SIZE//2 - 95, map_centre[1] - 125))
-            draw_text(hud_surface, (C.WN_W//2 - MAP_OVERLAY_SIZE//2 - 110, map_centre[1] - 155), 'centre', 'centre', "Altitude (ft)", cols.WHITE, 20, self.fonts.monospaced)
+            hud_surface.blit(self.height_key, (C.WN_W//2 - C.MAP_OVERLAY_SIZE//2 - 95, map_centre[1] - 125))
+            draw_text(hud_surface, (C.WN_W//2 - C.MAP_OVERLAY_SIZE//2 - 110, map_centre[1] - 155), 'centre', 'centre', "Altitude (ft)", cols.WHITE, 20, self.fonts.monospaced)
 
             # Show heightmap labels in feet
             for h in range(-12_000, 18_001, 2_000):
                 text_y = map_centre[1] - 125 + (self.HEIGHT_KEY_H * (1 - ((h + 12_000) / 30_000)))
-                draw_text(hud_surface, (C.WN_W//2 - MAP_OVERLAY_SIZE//2 - 100, text_y), 'right', 'centre', f"{h:,.0f}", cols.WHITE, 15, self.fonts.monospaced)
+                draw_text(hud_surface, (C.WN_W//2 - C.MAP_OVERLAY_SIZE//2 - 100, text_y), 'right', 'centre', f"{h:,.0f}", cols.WHITE, 15, self.fonts.monospaced)
 
     def draw_pause_screen(self) -> None:
         for button in (
