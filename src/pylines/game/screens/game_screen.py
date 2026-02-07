@@ -128,6 +128,7 @@ class GameScreen(State):
         self.paused: bool = False
         self.in_menu_confirmation = False
         self.in_restart_confirmation = False
+        self.in_controls_screen = False
 
         self.continue_button = Button(
             (C.WN_W//2-400, C.WN_H//2), 250, 50, (0, 96, 96), (128, 255, 255),
@@ -149,6 +150,15 @@ class GameScreen(State):
         self.no_button = Button(
             (C.WN_W//2+200, C.WN_H//2+20), 150, 50, (0, 96, 96), (128, 255, 255),
             "No", self.fonts.monospaced, 30
+        )
+
+        self.controls_button = Button(
+            (C.WN_W//2, C.WN_H - 100), 250, 50, (0, 96, 96), (128, 255, 255),
+            "Controls", self.fonts.monospaced, 30
+        )
+        self.back_button = Button(
+            (C.WN_W//2, C.WN_H - 100), 250, 50, (0, 96, 96), (128, 255, 255),
+            "Back", self.fonts.monospaced, 30
         )
 
         self.help_button = ImageButton((C.WN_W - 75, C.WN_H - 75), self.images.help_icon)
@@ -494,6 +504,11 @@ class GameScreen(State):
             self.channel_scrape.stop()
 
         if self.paused and not (self.in_menu_confirmation or self.in_restart_confirmation):
+            if self.controls_button.check_click(events) and not self.in_controls_screen:
+                self.in_controls_screen = True
+            elif self.back_button.check_click(events) and self.in_controls_screen:
+                self.in_controls_screen = False
+
             if self.continue_button.check_click(events):
                 self.paused = False
 
@@ -1444,31 +1459,89 @@ class GameScreen(State):
 
         # If paused, show overlay
         if self.paused:
+            # Always show transparent dark overlay
             transparent_surface = pg.Surface((C.WN_W, C.WN_H), pg.SRCALPHA)
             transparent_surface.fill((0, 0, 0, 100))
             self.hud_surface.blit(transparent_surface, (0, 0))
 
-            for button in (self.continue_button, self.restart_button, self.menu_button, self.help_button):
-                button.draw(self.hud_surface)
+            if self.in_controls_screen:
+                self.back_button.draw(self.hud_surface)
 
-            draw_text(
-                self.hud_surface, (C.WN_W//2, C.WN_H*0.35), 'centre', 'centre',
-                'Game Paused', (255, 255, 255), 50, self.fonts.monospaced
-            )
-
-            if self.in_menu_confirmation or self.in_restart_confirmation:
                 draw_transparent_rect(
-                    self.hud_surface, (C.WN_W//2 - 400, C.WN_H//2 - 175), (800, C.WN_H*0.3),
+                    self.hud_surface, (C.WN_W * 0.1, C.WN_H * 0.15), (C.WN_W * 0.8, C.WN_H*0.65),
                     border_thickness=3
                 )
 
                 draw_text(
-                    self.hud_surface, (C.WN_W//2, C.WN_H*0.4), 'centre', 'centre',
-                    'Are you sure?', (255, 255, 255), 50, self.fonts.monospaced
+                    self.hud_surface, (C.WN_W//2, C.WN_H*0.22), 'centre', 'centre',
+                    'Controls', (255, 255, 255), 50, self.fonts.monospaced
                 )
 
-                for button in (self.yes_button, self.no_button):
+                # Show controls
+                draw_text(self.hud_surface, (C.WN_W * 0.3, C.WN_H*0.31), 'centre', 'centre', "Main Controls", (0, 192, 255), 40, self.fonts.monospaced)
+
+                controls: dict[str, str] = {
+                    "W/S": "Throttle",
+                    "Z/X": "Flaps Up/Down",
+                    "A/D": "Rudder",
+                    "Arrows": "Pitch/Yaw",
+                    "B": "Brake",
+                    "G": "Cycle GPS dest.",
+                    "Esc": "Pause"
+                }
+
+                for i, (key, desc) in enumerate(controls.items()):
+                    draw_text(self.hud_surface, (C.WN_W//2 - 340, C.WN_H * (0.4 + 0.05*i)), 'right', 'centre', key, (150, 230, 255), 27, self.fonts.monospaced)
+                    draw_text(self.hud_surface, (C.WN_W//2 - 300, C.WN_H * (0.4 + 0.05*i)), 'left', 'centre', desc, cols.WHITE, 27, self.fonts.monospaced)
+
+                draw_text(self.hud_surface, (C.WN_W * 0.71, C.WN_H*0.3), 'centre', 'centre', "Map Controls", (0, 192, 255), 30, self.fonts.monospaced)
+
+                controls: dict[str, str] = {
+                    "M": "Show/Hide Map",
+                }
+
+                for i, (key, desc) in enumerate(controls.items()):
+                    draw_text(self.hud_surface, (C.WN_W//2 + 190, C.WN_H * (0.38 + 0.05*i)), 'right', 'centre', key, (150, 230, 255), 27, self.fonts.monospaced)
+                    draw_text(self.hud_surface, (C.WN_W//2 + 230, C.WN_H * (0.38 + 0.05*i)), 'left', 'centre', desc, cols.WHITE, 27, self.fonts.monospaced)
+
+                draw_text(self.hud_surface, (C.WN_W * 0.71, C.WN_H*0.47), 'centre', 'centre', "While Map Open:", (0, 192, 255), 30, self.fonts.monospaced)
+
+                controls: dict[str, str] = {
+                    "W/S": "Zoom In/Out",
+                    "Arrows": "Pan",
+                    "Space": "Re-centre",
+                    "H (hold)": "Show advanced info",
+                }
+
+                for i, (key, desc) in enumerate(controls.items()):
+                    draw_text(self.hud_surface, (C.WN_W//2 + 190, C.WN_H * (0.55 + 0.05*i)), 'right', 'centre', key, (150, 230, 255), 27, self.fonts.monospaced)
+                    draw_text(self.hud_surface, (C.WN_W//2 + 230, C.WN_H * (0.55 + 0.05*i)), 'left', 'centre', desc, cols.WHITE, 27, self.fonts.monospaced)
+
+            else:
+                for button in (
+                    self.continue_button, self.restart_button,
+                    self.menu_button, self.help_button, self.controls_button
+                ):
                     button.draw(self.hud_surface)
+
+                draw_text(
+                    self.hud_surface, (C.WN_W//2, C.WN_H*0.35), 'centre', 'centre',
+                    'Game Paused', (255, 255, 255), 50, self.fonts.monospaced
+                )
+
+                if self.in_menu_confirmation or self.in_restart_confirmation:
+                    draw_transparent_rect(
+                        self.hud_surface, (C.WN_W//2 - 400, C.WN_H//2 - 175), (800, C.WN_H*0.3),
+                        border_thickness=3
+                    )
+
+                    draw_text(
+                        self.hud_surface, (C.WN_W//2, C.WN_H*0.4), 'centre', 'centre',
+                        'Are you sure?', (255, 255, 255), 50, self.fonts.monospaced
+                    )
+
+                    for button in (self.yes_button, self.no_button):
+                        button.draw(self.hud_surface)
 
         # Upload HUD surface to OpenGL
         hud_data = pg.image.tostring(hud_surface, "RGBA", True)
