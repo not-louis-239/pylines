@@ -19,7 +19,9 @@ from functools import wraps
 START_TIME = time.perf_counter()
 last_segment_time = START_TIME
 
-COL_EMPHASIS = "\033[32m"
+COL_EMPHASIS = "\033[32m"        # Green
+COL_NAMES_SEGMENTS = "\033[31m"  # Red
+COL_NAMES_FUNCS = "\033[34m"     # Blue
 COL_RESET = "\033[0m"
 
 def log_segment(seg_name: str | None = None):
@@ -35,7 +37,7 @@ def log_segment(seg_name: str | None = None):
             # Detect empty string as misuse
             raise ValueError("Segment name cannot be empty.")
 
-        print(f"Segment '{seg_name}' completed in: {COL_EMPHASIS}{segment_duration:,.4f}s{COL_RESET}")
+        print(f"Segment {COL_NAMES_SEGMENTS}'{seg_name}'{COL_RESET} completed in: {COL_EMPHASIS}{segment_duration * 1000:,.2f} ms{COL_RESET}")
 
     # Start a new segment
     last_segment_time = now
@@ -53,7 +55,7 @@ def timer(func: Callable) -> Callable:
         result = func(*args, **kwargs)
         time_taken = time.perf_counter() - start
 
-        print(f"Time taken for function \x1b[34m'{func.__name__}'\x1b[0m: \x1b[32m{time_taken * 1000:.2f} ms\x1b[0m")
+        print(f"Time taken for function {COL_NAMES_FUNCS}'{func.__name__}'{COL_RESET}: {COL_EMPHASIS}{time_taken * 1000:.2f} ms{COL_RESET}")
         return result
 
     return timed_func

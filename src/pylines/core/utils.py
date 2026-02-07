@@ -165,10 +165,6 @@ def point_in_aabb(
     inside = abs(local_x) <= half_length and abs(local_z) <= half_width
     return inside, (local_x, local_z)
 
-# For debug only
-def _prettyvec(vec: pg.Vector3, dp: int = 3) -> str:
-    return f"({vec.x:,.{dp}f}, {vec.y:,.{dp}f}, {vec.z:,.{dp}f})"
-
 def lerp(start: float, end: float, t: float):
     """
     Linear interpolation between a and b.

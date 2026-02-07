@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-from pylines.debug.timer import timer
+from pylines.debug.timer import timer, log_segment
 
 import ctypes
 import math
@@ -210,6 +210,9 @@ class GameScreen(State):
 
         # Persistent surfaces avoids pg.Surface churn which wastes resources
         self.cockpit_surface = pg.Surface((C.WN_W, C.WN_H), pg.SRCALPHA)
+        self.cockpit_rect = self.images.cockpit.get_rect()
+        self.cockpit_rect.centerx = C.WN_W // 2
+        self.cockpit_rect.bottom = C.WN_H
         self._populate_cockpit()
 
         self.map_surface = pg.Surface((C.MAP_OVERLAY_SIZE, C.MAP_OVERLAY_SIZE), pg.SRCALPHA)
@@ -234,10 +237,7 @@ class GameScreen(State):
 
         # Cockpit background
         cockpit = self.images.cockpit
-        cockpit_w, cockpit_h = cockpit.get_size()
-        x = (C.WN_W - cockpit_w) // 2
-        y = C.WN_H - cockpit_h
-        surf.blit(cockpit, (x, y))
+        surf.blit(cockpit, self.cockpit_rect.topleft)
 
         # Speed dial (static background)
         speed_centre = (C.WN_W//2+300, C.WN_H*0.85)
@@ -872,7 +872,9 @@ class GameScreen(State):
         pitch, yaw, roll = self.plane.rot
         hud_surface = self.hud_surface
 
-        hud_surface.blit(self.cockpit_surface, (0, 0))
+        log_segment()
+        hud_surface.blit(self.cockpit_surface, self.cockpit_rect.topleft, area=self.cockpit_rect)
+        log_segment("cockpit_static_blit")
 
         # Stall warning
         warning_x = C.WN_W//2-145
@@ -883,6 +885,7 @@ class GameScreen(State):
         warning_x = C.WN_W//2+145
         if self.show_overspeed_warning:
             draw_text(hud_surface, (C.WN_W//2, C.WN_H*0.57), 'centre', 'centre', "OVERSPEED", (210, 0, 0), 50, self.fonts.monospaced)
+        log_segment("warnings_text")
 
         # Damage overlay
         if self.plane.damage_level > 0:
@@ -891,6 +894,7 @@ class GameScreen(State):
             overlay_idx = min(len(overlays) - 1, int(self.plane.damage_level * (len(overlays))))
             overlay = overlays[overlay_idx]
             hud_surface.blit(overlay, (0, 0))
+        log_segment("damage_overlay")
 
         # Compass (heading + ground track)
         centre = (C.WN_W//2-300, C.WN_H*0.85)
@@ -921,6 +925,7 @@ class GameScreen(State):
         if gps_distance_flat.length() < 8000:
             draw_needle(hud_surface, centre, 90 - (selected_runway.heading-yaw), 50, (0, 120, 255))
             draw_needle(hud_surface, centre, 270 - (selected_runway.heading-yaw), 50, (0, 120, 255))
+        log_segment("compass_and_needles")
 
         # ASI (Airspeed Indicator)
         centre = (C.WN_W//2+300, C.WN_H*0.85)
@@ -928,6 +933,7 @@ class GameScreen(State):
         angle = 90 - min(336, 270 * speed_knots/160)
         draw_text(hud_surface, (C.WN_W//2+300, C.WN_H*0.85 + 30), 'centre', 'centre', f"{int(self.plane.vel.length() * 1.94384):03d}", (192, 192, 192), 25, self.font)
         draw_needle(hud_surface, centre, angle, 100)
+        log_segment("airspeed")
 
         # Altimeter (left)
         alt_centre = (C.WN_W//2 - 110, int(C.WN_H*0.74))
@@ -954,6 +960,7 @@ class GameScreen(State):
             22,
             self.fonts.monospaced
         )
+        log_segment("alt_vsi")
 
         # Location / LOC (right)
         loc_centre = (C.WN_W//2 + 85, int(C.WN_H*0.74))
@@ -966,6 +973,7 @@ class GameScreen(State):
             22,
             self.fonts.monospaced
         )
+        log_segment("location")
 
         # Time readout
         time_centre = (C.WN_W//2 - 130, int(C.WN_H*0.81))
@@ -981,6 +989,7 @@ class GameScreen(State):
             18,
             self.fonts.monospaced
         )
+        log_segment("time")
 
         # AGL readout
         agl_centre = (C.WN_W//2 + 130, int(C.WN_H*0.81))
@@ -995,6 +1004,7 @@ class GameScreen(State):
             18,
             self.fonts.monospaced
         )
+        log_segment("agl")
 
         # GPS information
         gps_centre = (C.WN_W//2 - 135, int(C.WN_H*0.87))
@@ -1008,6 +1018,7 @@ class GameScreen(State):
             hud_surface, (gps_centre[0] - 35, gps_centre[1] + 14),
             'left', 'centre', f"{gps_distance_flat.length() / 1000:,.2f}km", cols.WHITE, 20, self.fonts.monospaced
         )
+        log_segment("gps")
 
         # Glidescope
         glide_centre = (C.WN_W//2 + 105, int(C.WN_H*0.91))
@@ -1039,6 +1050,8 @@ class GameScreen(State):
             # White line
             pg.draw.line(hud_surface, cols.WHITE, (glide_centre_x-7, glide_centre_y), (glide_centre_x+6, glide_centre_y), 2)
 
+        log_segment("glidescope")
+
         # Throttle bar
         size = 40, 20
         rect = pg.Rect(0, 0, *size)
@@ -1050,6 +1063,7 @@ class GameScreen(State):
         rect = pg.Rect(0, 0, *size)
         rect.center = (C.WN_W*0.90, C.WN_H*0.93 - C.WN_H*0.17*(self.plane.flaps))  # type: ignore[arg-type]
         pg.draw.rect(hud_surface, (220, 220, 220), rect)
+        log_segment("throttle_flaps")
 
         # Attitude indicator
         self.ai_surface.fill((0, 0, 0, 0))  # clear AI surface
@@ -1150,6 +1164,7 @@ class GameScreen(State):
         masked.blit(self.ai_mask, (0, 0), special_flags=pg.BLEND_RGBA_MULT)
 
         hud_surface.blit(masked, inner_ai_rect.topleft)
+        log_segment("attitude_indicator")
 
         # Static V-bar for AI must be drawn in draw_cockpit as
         # it is infront of the artificial horizon overlay
@@ -1167,6 +1182,7 @@ class GameScreen(State):
         warning_x = C.WN_W//2-190  # Overspeed
         warning_col = (255, 0, 0) if self.show_overspeed_warning else cols.BLACK
         pg.draw.circle(hud_surface, (warning_col), (warning_x, C.WN_H*0.965), 8)
+        log_segment("warning_lights")
 
     def draw_map(self):
         self.map_surface.fill((0, 0, 0, 255))
