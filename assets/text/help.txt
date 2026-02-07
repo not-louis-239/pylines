@@ -21,6 +21,8 @@
 // ## Subheading
 //
 // Lines starting with '//' are ignored.
+// Indents must be 4 spaces each.
+// Tabs are not allowed for indentation.
 // Do not modify this file.
 //
 # Overview
@@ -84,9 +86,11 @@ Additionally, be careful to manage your kinetic energy as overspeeding (letting 
 To land, ensure you are inline with the target runway. The trick is to keep the speed at 65 knots by controlling your pitch and throttle. Put the flaps fully down to increase drag and reduce speed in preparation for landing.
 
 Your glidescope will help you with landing by indicating your altitude relative to the optimal glidepath. It is located to the bottom right of your artificial horizon.
+
 * The green needle indicates the correct glidepath. Keep it near the central line.
 * If the green needle is above the central white line, you are too low. Raise the nose slightly or add throttle.
 * If the green needle is below the central white line, you are too high. Drop the nose or reduce throttle.
+
 Add more throttle if you get too low or less if you get too high. Optimal vertical speed for descent is around -500 ft/min, however you should aim to touch down at no faster than -200 to -300 ft/min, or else you could damage the airplane. Slowly level out at 10 feet above the runway, then drop to 5 feet and reduce throttle to zero before touching down gently, slightly nose-up.
 
 After touching down, reduce throttle to none if you haven't already, keep the nose neutral to slightly up, and apply the brakes to reduce your speed to zero, coming to a gentle stop on the runway.

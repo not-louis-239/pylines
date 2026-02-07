@@ -43,9 +43,19 @@ class FLine:
         HEADING_2 = auto()
         BULLET = auto()
 
-    def __init__(self, text: str, style: Style = Style.NORMAL):
+    def __init__(self, text: str, indent: int, style: Style = Style.NORMAL):
         self.text = text
+        self.indent = indent
         self.style = style
+
+    def __repr__(self) -> str:
+        return (
+            f"{self.__class__.__name__}("
+            f"text={self.text!r}, "
+            f"indent={self.indent}, "
+            f"style={self.style}"
+            f")"
+        )
 
 class AssetBank:
     """Base class to store assets. Objects of this type should be
@@ -210,6 +220,7 @@ class TextAssets(AssetBank):
     """Data container for text-based assets"""
 
     COMMENT_SYMBOL = '#'
+    SPACES_PER_INDENT = 4
 
     def __init__(self) -> None:
         self.briefing_text: list[str] = self._load("briefing.txt")
@@ -218,16 +229,30 @@ class TextAssets(AssetBank):
         self.help_lines: list[FLine] = []
 
         Style = FLine.Style
-        for line in raw_lines:
-            stripped = line.strip()
+        for i, line in enumerate(raw_lines, start=1):
+            stripped = line.lstrip(' ')
+            leading_ws = line[:len(line) - len(stripped)]
+
+            if '\t' in leading_ws:
+                raise IndentationError(
+                    f"Line {i}: Tabs are not allowed in help.txt; use {TextAssets.SPACES_PER_INDENT} spaces per indent."
+                )
+
+            num_leading_spaces = len(leading_ws)
+
+            if num_leading_spaces % TextAssets.SPACES_PER_INDENT != 0:
+                raise IndentationError(f"Line {i}: Expected {TextAssets.SPACES_PER_INDENT} spaces per indent, got {num_leading_spaces} leading spaces.")
+
+            indentation_lvl = num_leading_spaces // TextAssets.SPACES_PER_INDENT
+
             if stripped.startswith('##'):
-                fline = FLine(stripped[2:].strip(), Style.HEADING_2)
+                fline = FLine(stripped[2:].strip(), indentation_lvl, Style.HEADING_2)
             elif stripped.startswith('#'):
-                fline = FLine(stripped[1:].strip(), Style.HEADING_1)
+                fline = FLine(stripped[1:].strip(), indentation_lvl, Style.HEADING_1)
             elif stripped.startswith('*'):
-                fline = FLine(stripped[1:].strip(), Style.BULLET)
+                fline = FLine(stripped[1:].strip(), indentation_lvl, Style.BULLET)
             else:
-                fline = FLine(stripped, Style.NORMAL)
+                fline = FLine(stripped.strip(), indentation_lvl, Style.NORMAL)
 
             self.help_lines.append(fline)
 
