@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-import time
+from pylines.debug.timer import timer
 
 import ctypes
 import math
@@ -209,6 +209,9 @@ class GameScreen(State):
         )
 
         # Persistent surfaces avoids pg.Surface churn which wastes resources
+        self.cockpit_surface = pg.Surface((C.WN_W, C.WN_H), pg.SRCALPHA)
+        self._populate_cockpit()
+
         self.map_surface = pg.Surface((C.MAP_OVERLAY_SIZE, C.MAP_OVERLAY_SIZE), pg.SRCALPHA)
         self.map_surface.fill((0, 0, 0, 255))
 
@@ -217,6 +220,118 @@ class GameScreen(State):
 
         self.zone_overlay = pg.Surface((C.MAP_OVERLAY_SIZE, C.MAP_OVERLAY_SIZE), pg.SRCALPHA)
         self.zone_overlay.fill((0, 0, 0, 0))
+
+        inner_ai_rect = pg.Rect(0, 0, ai_size[0]-4, ai_size[1]-4)
+        self.ai_surface = pg.Surface(inner_ai_rect.size, pg.SRCALPHA)
+
+    def _populate_cockpit(self) -> None:
+        """Draw static cockpit elements, e.g. cockpit background, static
+        rectangles. Does not include text or elements that are only
+        sometimes drawn."""
+
+        surf = self.cockpit_surface
+        surf.fill((0, 0, 0, 0))
+
+        # Cockpit background
+        cockpit = self.images.cockpit
+        cockpit_w, cockpit_h = cockpit.get_size()
+        x = (C.WN_W - cockpit_w) // 2
+        y = C.WN_H - cockpit_h
+        surf.blit(cockpit, (x, y))
+
+        # Speed dial (static background)
+        speed_centre = (C.WN_W//2+300, C.WN_H*0.85)
+        rect = self.images.speed_dial.get_rect(center=speed_centre)
+        surf.blit(self.images.speed_dial, rect)
+
+        # Altimeter static boxes
+        alt_centre = (C.WN_W//2 - 110, int(C.WN_H*0.74))
+        alt_size = 160, 70
+        alt_rect = pg.Rect(0, 0, *alt_size)
+        alt_rect.center = alt_centre
+        pg.draw.rect(surf, cols.WHITE, alt_rect)
+        inner_alt_rect = pg.Rect(0, 0, alt_size[0]-4, alt_size[1]-4)
+        inner_alt_rect.center = alt_centre
+        pg.draw.rect(surf, cols.BLACK, inner_alt_rect)
+
+        # Location static boxes
+        loc_centre = (C.WN_W//2 + 85, int(C.WN_H*0.74))
+        loc_size = 210, 70
+        loc_rect = pg.Rect(0, 0, *loc_size)
+        loc_rect.center = loc_centre
+        pg.draw.rect(surf, cols.WHITE, loc_rect)
+        inner_loc_rect = pg.Rect(0, 0, loc_size[0]-4, loc_size[1]-4)
+        inner_loc_rect.center = loc_centre
+        pg.draw.rect(surf, cols.BLACK, inner_loc_rect)
+
+        # Time readout static boxes
+        time_centre = (C.WN_W//2 - 130, int(C.WN_H*0.81))
+        time_size = 100, 30
+        time_rect = pg.Rect(0, 0, *time_size)
+        time_rect.center = time_centre
+        pg.draw.rect(surf, cols.WHITE, time_rect)
+        inner_time_rect = pg.Rect(0, 0, time_size[0]-4, time_size[1]-4)
+        inner_time_rect.center = time_centre
+        pg.draw.rect(surf, cols.BLACK, inner_time_rect)
+
+        # AGL readout static boxes + label
+        agl_centre = (C.WN_W//2 + 130, int(C.WN_H*0.81))
+        agl_size = 100, 30
+        agl_rect = pg.Rect(0, 0, *agl_size)
+        agl_rect.center = agl_centre
+        pg.draw.rect(surf, cols.WHITE, agl_rect)
+        inner_agl_rect = pg.Rect(0, 0, agl_size[0]-4, agl_size[1]-4)
+        inner_agl_rect.center = agl_centre
+        pg.draw.rect(surf, cols.BLACK, inner_agl_rect)
+        draw_text(
+            surf,
+            (agl_centre[0] - 45, agl_centre[1]),
+            'left', 'centre',
+            "AGL",
+            cols.WHITE,
+            12,
+            self.fonts.monospaced
+        )
+
+        # GPS static boxes
+        gps_centre = (C.WN_W//2 - 135, int(C.WN_H*0.87))
+        gps_size = 80, 60
+        gps_rect = pg.Rect(0, 0, *gps_size)
+        gps_rect.center = gps_centre
+        pg.draw.rect(surf, cols.WHITE, gps_rect)
+        inner_gps_rect = pg.Rect(0, 0, gps_size[0]-4, gps_size[1]-4)
+        inner_gps_rect.center = gps_centre
+        pg.draw.rect(surf, cols.BLACK, inner_gps_rect)
+
+        # Glidescope frame
+        glide_centre = (C.WN_W//2 + 105, int(C.WN_H*0.91))
+        glide_size = 18, 125
+        glide_rect = pg.Rect(0, 0, *glide_size)
+        glide_rect.center = glide_centre
+        pg.draw.rect(surf, cols.WHITE, glide_rect)
+        inner_glide_rect = pg.Rect(0, 0, glide_size[0]-4, glide_size[1]-4)
+        inner_glide_rect.center = glide_centre
+        pg.draw.rect(surf, cols.BLACK, inner_glide_rect)
+
+        # Throttle rail + label
+        draw_text(surf, (C.WN_W*0.86, C.WN_H*0.97), 'centre', 'centre', "Throttle", (25, 20, 18), 30, self.fonts.monospaced)
+        pg.draw.line(surf, (51, 43, 37), (C.WN_W*0.86, C.WN_H*0.94), (C.WN_W*0.86, C.WN_H*0.75), 3)
+
+        # Flaps rail
+        pg.draw.line(surf, (51, 43, 37), (C.WN_W*0.90, C.WN_H*0.93), (C.WN_W*0.90, C.WN_H*0.76), 3)
+
+        # Attitude indicator static ring
+        ai_centre = (C.WN_W//2, int(C.WN_H*0.89))
+        pg.draw.circle(surf, cols.WHITE, ai_centre, 85)
+
+        # Cockpit warning light labels + sockets
+        warning_x = C.WN_W//2-180
+        draw_text(surf, (warning_x + 20, C.WN_H*0.93), 'left', 'centre', "STALL", (25, 20, 18), 20, self.fonts.monospaced)
+        pg.draw.circle(surf, (51, 43, 37), (warning_x, C.WN_H*0.93), 10)
+
+        warning_x = C.WN_W//2-190
+        draw_text(surf, (warning_x + 20, C.WN_H*0.965), 'left', 'centre', "OVERSPEED", (25, 20, 18), 20, self.fonts.monospaced)
+        pg.draw.circle(surf, (51, 43, 37), (warning_x, C.WN_H*0.965), 10)
 
     def _build(self) -> Generator[tuple[float, str], None, None]:
         yield from self._init_ground(0.3, 0.45)
@@ -415,6 +530,7 @@ class GameScreen(State):
         self.dialog_box.reset()
         self.time_elapsed = 0
 
+    @timer
     def update(self, dt: int):
         self._frame_count += 1
         self.time_elapsed += dt
@@ -751,9 +867,12 @@ class GameScreen(State):
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
         gl.glUseProgram(0)
 
+    @timer
     def draw_cockpit(self) -> None:
         pitch, yaw, roll = self.plane.rot
         hud_surface = self.hud_surface
+
+        hud_surface.blit(self.cockpit_surface, (0, 0))
 
         # Stall warning
         warning_x = C.WN_W//2-145
@@ -772,13 +891,6 @@ class GameScreen(State):
             overlay_idx = min(len(overlays) - 1, int(self.plane.damage_level * (len(overlays))))
             overlay = overlays[overlay_idx]
             hud_surface.blit(overlay, (0, 0))
-
-        # Draw cockpit
-        cockpit = self.images.cockpit
-        cockpit_w, cockpit_h = cockpit.get_size()
-        x = (C.WN_W - cockpit_w) // 2   # centre horizontally (optional)
-        y = C.WN_H - cockpit_h          # bottom-aligned
-        hud_surface.blit(cockpit, (x, y))
 
         # Compass (heading + ground track)
         centre = (C.WN_W//2-300, C.WN_H*0.85)
@@ -812,9 +924,6 @@ class GameScreen(State):
 
         # ASI (Airspeed Indicator)
         centre = (C.WN_W//2+300, C.WN_H*0.85)
-        rect = self.images.speed_dial.get_rect(center=centre)
-        hud_surface.blit(self.images.speed_dial, rect)
-
         speed_knots = self.plane.vel.length() * 1.94384  # Convert to knots
         angle = 90 - min(336, 270 * speed_knots/160)
         draw_text(hud_surface, (C.WN_W//2+300, C.WN_H*0.85 + 30), 'centre', 'centre', f"{int(self.plane.vel.length() * 1.94384):03d}", (192, 192, 192), 25, self.font)
@@ -822,13 +931,6 @@ class GameScreen(State):
 
         # Altimeter (left)
         alt_centre = (C.WN_W//2 - 110, int(C.WN_H*0.74))
-        alt_size = 160, 70
-        alt_rect = pg.Rect(0, 0, *alt_size)
-        alt_rect.center = alt_centre
-        pg.draw.rect(hud_surface, cols.WHITE, alt_rect)
-        inner_alt_rect = pg.Rect(0, 0, alt_size[0]-4, alt_size[1]-4)
-        inner_alt_rect.center = alt_centre
-        pg.draw.rect(hud_surface, cols.BLACK, inner_alt_rect)
         draw_text(
             hud_surface,
             (alt_centre[0], alt_centre[1]-15),
@@ -855,13 +957,6 @@ class GameScreen(State):
 
         # Location / LOC (right)
         loc_centre = (C.WN_W//2 + 85, int(C.WN_H*0.74))
-        loc_size = 210, 70
-        loc_rect = pg.Rect(0, 0, *loc_size)
-        loc_rect.center = loc_centre
-        pg.draw.rect(hud_surface, cols.WHITE, loc_rect)
-        inner_loc_rect = pg.Rect(0, 0, loc_size[0]-4, loc_size[1]-4)
-        inner_loc_rect.center = loc_centre
-        pg.draw.rect(hud_surface, cols.BLACK, inner_loc_rect)
         draw_text(
             hud_surface,
             loc_centre,
@@ -874,13 +969,6 @@ class GameScreen(State):
 
         # Time readout
         time_centre = (C.WN_W//2 - 130, int(C.WN_H*0.81))
-        time_size = 100, 30
-        time_rect = pg.Rect(0, 0, *time_size)
-        time_rect.center = time_centre
-        pg.draw.rect(hud_surface, cols.WHITE, time_rect)
-        inner_time_rect = pg.Rect(0, 0, time_size[0]-4, time_size[1]-4)
-        inner_time_rect.center = time_centre
-        pg.draw.rect(hud_surface, cols.BLACK, inner_time_rect)
 
         now = datetime.now().astimezone()
         offset_hours = int(cast(timedelta, now.utcoffset()).total_seconds() // 3600)
@@ -896,25 +984,8 @@ class GameScreen(State):
 
         # AGL readout
         agl_centre = (C.WN_W//2 + 130, int(C.WN_H*0.81))
-        agl_size = 100, 30
-        agl_rect = pg.Rect(0, 0, *agl_size)
-        agl_rect.center = agl_centre
-        pg.draw.rect(hud_surface, cols.WHITE, agl_rect)
-        inner_agl_rect = pg.Rect(0, 0, agl_size[0]-4, agl_size[1]-4)
-        inner_agl_rect.center = agl_centre
-        pg.draw.rect(hud_surface, cols.BLACK, inner_agl_rect)
-
         x, z = self.plane.pos.x, self.plane.pos.z
         altitude_agl = self.plane.pos.y - self.env.ground_height(x, z)
-        draw_text(
-            hud_surface,
-            (agl_centre[0] - 45, agl_centre[1]),
-            'left', 'centre',
-            "AGL",
-            cols.WHITE,
-            12,
-            self.fonts.monospaced
-        )
         draw_text(
             hud_surface,
             (agl_centre[0] + 45, agl_centre[1]),
@@ -927,43 +998,19 @@ class GameScreen(State):
 
         # GPS information
         gps_centre = (C.WN_W//2 - 135, int(C.WN_H*0.87))
-        gps_size = 80, 60
-        gps_rect = pg.Rect(0, 0, *gps_size)
-        gps_rect.center = gps_centre
-        pg.draw.rect(hud_surface, cols.WHITE, gps_rect)
-        inner_gps_rect = pg.Rect(0, 0, gps_size[0]-4, gps_size[1]-4)
-        inner_gps_rect.center = gps_centre
-        pg.draw.rect(hud_surface, cols.BLACK, inner_gps_rect)
 
         draw_text(
-            hud_surface,
-            (gps_centre[0] - 35, gps_centre[1] - 14),
-            'left', 'centre',
-            selected_runway.name,
-            (0, 120, 255),
-            20,
-            self.fonts.monospaced
+            hud_surface, (gps_centre[0] - 35, gps_centre[1] - 14),
+            'left', 'centre', selected_runway.name, (0, 120, 255), 20, self.fonts.monospaced
         )
 
         draw_text(
-            hud_surface,
-            (gps_centre[0] - 35, gps_centre[1] + 14),
-            'left', 'centre',
-            f"{gps_distance_flat.length() / 1000:,.2f}km",
-            cols.WHITE,
-            20,
-            self.fonts.monospaced
+            hud_surface, (gps_centre[0] - 35, gps_centre[1] + 14),
+            'left', 'centre', f"{gps_distance_flat.length() / 1000:,.2f}km", cols.WHITE, 20, self.fonts.monospaced
         )
 
         # Glidescope
         glide_centre = (C.WN_W//2 + 105, int(C.WN_H*0.91))
-        glide_size = 18, 125
-        glide_rect = pg.Rect(0, 0, *glide_size)
-        glide_rect.center = glide_centre
-        pg.draw.rect(hud_surface, cols.WHITE, glide_rect)
-        inner_glide_rect = pg.Rect(0, 0, glide_size[0]-4, glide_size[1]-4)
-        inner_glide_rect.center = glide_centre
-        pg.draw.rect(hud_surface, cols.BLACK, inner_glide_rect)
 
         # Compute comparison for glidescope
         GLIDEPATH_SLOPE = math.tan(math.radians(3.0))  # glidescope is 3°
@@ -993,31 +1040,25 @@ class GameScreen(State):
             pg.draw.line(hud_surface, cols.WHITE, (glide_centre_x-7, glide_centre_y), (glide_centre_x+6, glide_centre_y), 2)
 
         # Throttle bar
-        draw_text(hud_surface, (C.WN_W*0.86, C.WN_H*0.97), 'centre', 'centre', "Throttle", (25, 20, 18), 30, self.fonts.monospaced)
-        pg.draw.line(hud_surface, (51, 43, 37), (C.WN_W*0.86, C.WN_H*0.94), (C.WN_W*0.86, C.WN_H*0.75), 3)
         size = 40, 20
         rect = pg.Rect(0, 0, *size)
         rect.center = (C.WN_W*0.86, C.WN_H*0.94 - C.WN_H*0.19*(self.plane.throttle_frac))  # type: ignore[arg-type]
         pg.draw.rect(hud_surface, cols.WHITE, rect)
 
         # Flaps indicator
-        pg.draw.line(hud_surface, (51, 43, 37), (C.WN_W*0.90, C.WN_H*0.93), (C.WN_W*0.90, C.WN_H*0.76), 3)
         size = 30, 15
         rect = pg.Rect(0, 0, *size)
         rect.center = (C.WN_W*0.90, C.WN_H*0.93 - C.WN_H*0.17*(self.plane.flaps))  # type: ignore[arg-type]
         pg.draw.rect(hud_surface, (220, 220, 220), rect)
 
         # Attitude indicator
+        self.ai_surface.fill((0, 0, 0, 0))  # clear AI surface
         ai_centre = (C.WN_W//2, int(C.WN_H*0.89))
         ai_size = 170, 170
         ai_rect = pg.Rect(0, 0, *ai_size)
         ai_rect.center = ai_centre
-        pg.draw.circle(hud_surface, cols.WHITE, ai_centre, 85)
         inner_ai_rect = pg.Rect(0, 0, ai_size[0]-4, ai_size[1]-4)
         inner_ai_rect.center = ai_centre
-
-        # AI fill surface (clipped)
-        ai_surface = pg.Surface(inner_ai_rect.size, pg.SRCALPHA)
 
         tick_spacing = 5  # pixels per 5° of pitch
 
@@ -1026,14 +1067,14 @@ class GameScreen(State):
 
         # Sky (above horizon)
         pg.draw.rect(
-            ai_surface,
+            self.ai_surface,
             cols.DARK_BLUE,
             (0, 0, inner_ai_rect.width, horizon_y)
         )
 
         # Ground (below horizon)
         pg.draw.rect(
-            ai_surface,
+            self.ai_surface,
             cols.DARK_BROWN,
             (0, horizon_y, inner_ai_rect.width, inner_ai_rect.height - horizon_y)
         )
@@ -1051,7 +1092,7 @@ class GameScreen(State):
 
             if 0 <= y <= inner_ai_rect.height:
                 pg.draw.line(
-                    ai_surface,
+                    self.ai_surface,
                     cols.WHITE,
                     (inner_ai_rect.width//2 - width, y),
                     (inner_ai_rect.width//2 + width, y),
@@ -1067,7 +1108,7 @@ class GameScreen(State):
         # Nose too low -> point up
         if pitch >= C.CHEVRON_ANGLE:
             pg.draw.polygon(
-                ai_surface, cols.WHITE,
+                self.ai_surface, cols.WHITE,
                 [
                     (cx - (chev_w+7), bot_y+2),
                     (cx + (chev_w+7), bot_y+2),
@@ -1075,7 +1116,7 @@ class GameScreen(State):
                 ]
             )
             pg.draw.polygon(
-                ai_surface, C.CHEVRON_COLOUR,
+                self.ai_surface, C.CHEVRON_COLOUR,
                 [
                     (cx - chev_w, bot_y),
                     (cx + chev_w, bot_y),
@@ -1085,7 +1126,7 @@ class GameScreen(State):
         # Nose too high -> point down
         elif pitch <= -C.CHEVRON_ANGLE:
             pg.draw.polygon(
-                ai_surface, cols.WHITE,
+                self.ai_surface, cols.WHITE,
                 [
                     (cx - (chev_w+7), top_y-2),
                     (cx + (chev_w+7), top_y-2),
@@ -1093,7 +1134,7 @@ class GameScreen(State):
                 ]
             )
             pg.draw.polygon(
-                ai_surface, C.CHEVRON_COLOUR,
+                self.ai_surface, C.CHEVRON_COLOUR,
                 [
                     (cx - chev_w, top_y),
                     (cx + chev_w, top_y),
@@ -1101,7 +1142,7 @@ class GameScreen(State):
                 ]
             )
 
-        rotated_ai = pg.transform.rotate(ai_surface, roll)
+        rotated_ai = pg.transform.rotate(self.ai_surface, roll)
         rot_rect = rotated_ai.get_rect(center=(inner_ai_rect.width//2, inner_ai_rect.height//2))
 
         masked = pg.Surface(inner_ai_rect.size, pg.SRCALPHA)
@@ -1110,23 +1151,21 @@ class GameScreen(State):
 
         hud_surface.blit(masked, inner_ai_rect.topleft)
 
-        # Inverted V-bar (should stay fixed to the HUD in a consistent position)
-        pg.draw.line(hud_surface, (255, 255, 0), (ai_centre[0]-35, ai_centre[1]), (ai_centre[0]-15, ai_centre[1]), 3)
-        pg.draw.line(hud_surface, (255, 255, 0), (ai_centre[0]+35, ai_centre[1]), (ai_centre[0]+15, ai_centre[1]), 3)
-        pg.draw.line(hud_surface, (255, 255, 0), ai_centre, (ai_centre[0]-10, ai_centre[1]+5), 3)
-        pg.draw.line(hud_surface, (255, 255, 0), ai_centre, (ai_centre[0]+10, ai_centre[1]+5), 3)
+        # Static V-bar for AI must be drawn in draw_cockpit as
+        # it is infront of the artificial horizon overlay
+        ai_centre = (C.WN_W//2, int(C.WN_H*0.89))
+        pg.draw.line(self.hud_surface, (255, 255, 0), (ai_centre[0]-35, ai_centre[1]), (ai_centre[0]-15, ai_centre[1]), 3)
+        pg.draw.line(self.hud_surface, (255, 255, 0), (ai_centre[0]+35, ai_centre[1]), (ai_centre[0]+15, ai_centre[1]), 3)
+        pg.draw.line(self.hud_surface, (255, 255, 0), ai_centre, (ai_centre[0]-10, ai_centre[1]+5), 3)
+        pg.draw.line(self.hud_surface, (255, 255, 0), ai_centre, (ai_centre[0]+10, ai_centre[1]+5), 3)
 
         # Cockpit warning lights
         warning_x = C.WN_W//2-180
-        draw_text(hud_surface, (warning_x +20, C.WN_H*0.93), 'left', 'centre', "STALL", (25, 20, 18), 20, self.fonts.monospaced)
         warning_col = (255, 0, 0) if self.show_stall_warning else cols.BLACK
-        pg.draw.circle(hud_surface, (51, 43, 37), (warning_x, C.WN_H*0.93), 10)
         pg.draw.circle(hud_surface, (warning_col), (warning_x, C.WN_H*0.93), 8)
 
         warning_x = C.WN_W//2-190  # Overspeed
-        draw_text(hud_surface, (warning_x + 20, C.WN_H*0.965), 'left', 'centre', "OVERSPEED", (25, 20, 18), 20, self.fonts.monospaced)
         warning_col = (255, 0, 0) if self.show_overspeed_warning else cols.BLACK
-        pg.draw.circle(hud_surface, (51, 43, 37), (warning_x, C.WN_H*0.965), 10)
         pg.draw.circle(hud_surface, (warning_col), (warning_x, C.WN_H*0.965), 8)
 
     def draw_map(self):
@@ -1654,6 +1693,7 @@ class GameScreen(State):
             thumb = pg.Rect(scrollbar_x, thumb_y, scrollbar_w, thumb_h)
             pg.draw.rect(self.hud_surface, (185, 185, 185), thumb)
 
+    @timer
     def draw_hud(self):
 
         self.hud_surface.fill((0, 0, 0, 0))  # clear with transparency
@@ -1772,10 +1812,9 @@ class GameScreen(State):
         gl.glEnable(gl.GL_DEPTH_TEST)
         gl.glDisable(gl.GL_TEXTURE_2D)
 
+    @timer
     def draw(self, wn: Surface):
         assert self.game.config_presets is not None
-
-        start = time.perf_counter()
 
         colour_scheme = sky_colour_from_hour(fetch_hour())
 
@@ -1826,6 +1865,3 @@ class GameScreen(State):
 
         self.draw_buildings(cloud_attenuation)
         self.draw_hud()
-
-        time_elapsed = time.perf_counter() - start
-        print(f"Elapsed: {time_elapsed * 1000:.2f} / {1000 / C.FPS:.2f} ms")

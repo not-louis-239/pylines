@@ -53,7 +53,7 @@ def timer(func: Callable) -> Callable:
         result = func(*args, **kwargs)
         time_taken = time.perf_counter() - start
 
-        print(f"Time taken for {func.__name__}: {time_taken * 1000:.2f} ms")
+        print(f"Time taken for function \x1b[34m'{func.__name__}'\x1b[0m: \x1b[32m{time_taken * 1000:.2f} ms\x1b[0m")
         return result
 
     return timed_func
