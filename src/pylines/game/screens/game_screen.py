@@ -502,7 +502,13 @@ class GameScreen(State):
     def take_input(self, keys: ScancodeWrapper, events: EventList, dt: int) -> None:
         # Meta controls
         if self.pressed(keys, pg.K_ESCAPE):
-            self.paused = not self.paused
+            if self.in_controls_screen or self.in_help_screen:
+                self.in_controls_screen = False
+                self.in_help_screen = False
+                self.help_screen_offset = 0
+                self.help_scroll_vel = 0
+            else:
+                self.paused = not self.paused
 
             self.channel_wind.stop()
             self.channel_engine_active.stop()
