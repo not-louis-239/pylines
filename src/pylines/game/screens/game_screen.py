@@ -370,7 +370,7 @@ class GameScreen(State):
 
         screen_y = 60
         for idx, (name, def_) in enumerate(items):
-            draw_text(surf, (75, screen_y), 'left', 'centre', f"{name}", cols.WHITE, 15, self.fonts.monospaced)
+            draw_text(surf, (75, screen_y), 'left', 'centre', f"{def_.common_name}", cols.WHITE, 15, self.fonts.monospaced)
             draw_building_icon(surf, 35, screen_y, def_.appearance)
 
             curr_h = icon_height(def_)

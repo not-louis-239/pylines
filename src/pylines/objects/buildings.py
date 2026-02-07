@@ -45,9 +45,15 @@ class Building(SmallSceneryObject):
         return f"Building( pos = ({x}, {y}, {z}), parts = {self.parts} )"
 
 class BuildingDefinition:
-    def __init__(self, parts: list[BuildingPart], appearance: BuildingMapAppearance) -> None:
+    def __init__(
+            self,
+            parts: list[BuildingPart],
+            appearance: BuildingMapAppearance,
+            common_name: str
+        ) -> None:
         self.parts = parts
         self.appearance = appearance
+        self.common_name = common_name
 
 class BuildingMapIconType(Enum):
     SQUARE = auto()
