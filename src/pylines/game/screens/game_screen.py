@@ -1405,15 +1405,23 @@ class GameScreen(State):
             runway_width_on_map = max(1, int(runway.w / self.viewport_zoom))
             runway_length_on_map = max(1, int(runway.l / self.viewport_zoom))
 
+            # Calculate the runway's center position on the map_surface in pixels.
+            runway_map_center_x = (runway.pos.x - viewport_top_left_x) / self.viewport_zoom
+            runway_map_center_y = (runway.pos.z - viewport_top_left_z) / self.viewport_zoom
+
+            # Skip if completely off-screen
+            half_diag = 0.5 * math.hypot(runway_width_on_map, runway_length_on_map)
+            if (runway_map_center_x + half_diag < 0
+                or runway_map_center_x - half_diag > C.MAP_OVERLAY_SIZE
+                or runway_map_center_y + half_diag < 0
+                or runway_map_center_y - half_diag > C.MAP_OVERLAY_SIZE):
+                continue
+
             # Create a base surface for the runway. Its length (l) will align with the Y-axis when unrotated.
             runway_surface_base = pg.Surface((runway_width_on_map, runway_length_on_map), pg.SRCALPHA)
             runway_surface_base.fill((cols.MAP_RUNWAY_COLOUR))
 
             rotated_runway_surface = pg.transform.rotate(runway_surface_base, -runway.heading)
-
-            # Calculate the runway's center position on the map_surface in pixels.
-            runway_map_center_x = (runway.pos.x - viewport_top_left_x) / self.viewport_zoom
-            runway_map_center_y = (runway.pos.z - viewport_top_left_z) / self.viewport_zoom
 
             # Get bounding rectangle for the rotated surface and set its center.
             runway_rect_on_map = rotated_runway_surface.get_rect(center=(runway_map_center_x, runway_map_center_y))
