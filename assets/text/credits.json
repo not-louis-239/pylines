@@ -1,5 +1,5 @@
 {
-    "version": "0.13.2",
+    "version": "0.13.3",
     "sections": [
         {
             "heading": "Lead Development",
@@ -70,6 +70,16 @@
                             "name": "NumPy",
                             "role": "Math",
                             "license": "BSD-Style License 3-Clause"
+                        },
+                        {
+                            "name": "Pillow",
+                            "role": "Image Manipulation",
+                            "license": "PIL Software License (MIT-style)"
+                        },
+                        {
+                            "name": "Noise",
+                            "role": "Clouds",
+                            "license": "MIT License"
                         }
                     ]
                 }
