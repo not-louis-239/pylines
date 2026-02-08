@@ -29,8 +29,6 @@ import numpy as np
 import pygame as pg
 from OpenGL import GL as gl
 
-from pylines.debug.timer import timer
-
 import pylines.core.colours as cols
 import pylines.core.constants as C
 import pylines.core.paths as paths
@@ -983,7 +981,6 @@ class GameScreen(State):
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
         gl.glUseProgram(0)
 
-    @timer
     def draw_stars(self) -> None:
         hour = fetch_hour()
         if 18 >= hour > 6:  # daytime
