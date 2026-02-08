@@ -97,7 +97,7 @@ SOFT_TRAVEL_LIMIT = HALF_WORLD_SIZE * 0.95  # past this, forces push the user ba
 
 # Rendering
 INNER_RENDER_LIMIT: float = 2.0
-OUTER_RENDER_LIMIT: float = 20_000
+OUTER_RENDER_LIMIT: float = 25_000
 
 CAMERA_RADIUS: float = 4  # The camera is a sphere collider now
 

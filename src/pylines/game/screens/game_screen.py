@@ -999,26 +999,50 @@ class GameScreen(State):
         if opacity == 0:
             return
 
+        # Initialize star buffers if needed
         if self._star_dirs is None:
             dirs = np.array([s.direction for s in self.env.stars], dtype=np.float32)
-            # Normalize once to be safe
+            # Normalize directions once safely
             norms = np.linalg.norm(dirs, axis=1, keepdims=True)
             norms[norms == 0] = 1
             self._star_dirs = dirs / norms
             self._star_colors = np.array([s.colour for s in self.env.stars], dtype=np.float32) / 255.0
             self._star_brightness = np.array([s.brightness for s in self.env.stars], dtype=np.float32)
             self._star_count = len(self.env.stars)
+
+            # Create VBOs
             self._star_vbo = gl.glGenBuffers(1)
             self._star_color_vbo = gl.glGenBuffers(1)
 
-        # Recompute positions/colors when hour bucket or opacity changes
+        # Only update VBOs if hour bucket or opacity changed
         assert self._star_brightness is not None
-        
-        hour_bucket = round(hour, 2)
+        assert self._star_dirs is not None
+
+        hour_bucket = round(fetch_hour(), 2)
         cache_key = (hour_bucket, round(opacity, 3))
         if self._star_cache_key != cache_key:
-            assert self._star_dirs is not None
-            rotated = self._star_dirs
+            sun_dir = sun_direction_from_hour(hour_bucket)
+            ref_dir = np.array([0.0, 0.0, -1.0], dtype=np.float32)
+            sun = np.array([sun_dir.x, sun_dir.y, sun_dir.z], dtype=np.float32)
+
+            k = np.cross(ref_dir, sun)
+            k_norm = np.linalg.norm(k)
+            if k_norm < C.EPSILON:
+                if np.dot(ref_dir, sun) > 0:
+                    rotated = self._star_dirs
+                else:
+                    rotated = -self._star_dirs
+            else:
+                k = k / k_norm
+                cos_theta = np.clip(np.dot(ref_dir, sun), -1.0, 1.0)
+                theta = math.acos(cos_theta)
+                sin_t = math.sin(theta)
+                v = self._star_dirs
+                rotated = (
+                    v * cos_theta +
+                    np.cross(k, v) * sin_t +
+                    k * (np.dot(v, k))[:, None] * (1 - cos_theta)
+                )
 
             norms = np.linalg.norm(rotated, axis=1, keepdims=True)
             norms[norms == 0] = 1
@@ -1028,6 +1052,7 @@ class GameScreen(State):
             colors[:, :3] = self._star_colors
             colors[:, 3] = self._star_brightness * opacity
 
+            # Upload to GPU
             gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self._star_vbo)
             gl.glBufferData(gl.GL_ARRAY_BUFFER, positions.nbytes, positions, gl.GL_DYNAMIC_DRAW)
             gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self._star_color_vbo)
@@ -1043,23 +1068,28 @@ class GameScreen(State):
         current_point_size = gl.glGetFloatv(gl.GL_POINT_SIZE)
         was_texture_2d_enabled = gl.glIsEnabled(gl.GL_TEXTURE_2D)
 
+        # Configure GL for point rendering
         gl.glEnable(gl.GL_BLEND)
         gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
         gl.glDepthMask(gl.GL_FALSE)
         gl.glDisable(gl.GL_TEXTURE_2D)
         gl.glDisable(gl.GL_DEPTH_TEST)
-
         gl.glPointSize(2.0)
+
+        # Enable vertex/color arrays
         gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
         gl.glEnableClientState(gl.GL_COLOR_ARRAY)
 
+        # Bind VBOs
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self._star_vbo)
         gl.glVertexPointer(3, gl.GL_FLOAT, 0, None)
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self._star_color_vbo)
         gl.glColorPointer(4, gl.GL_FLOAT, 0, None)
 
+        # Draw stars
         gl.glDrawArrays(gl.GL_POINTS, 0, self._star_count)
 
+        # Cleanup
         gl.glDisableClientState(gl.GL_COLOR_ARRAY)
         gl.glDisableClientState(gl.GL_VERTEX_ARRAY)
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
