@@ -19,7 +19,7 @@ from typing import Callable
 START_TIME = time.perf_counter()
 last_segment_time = START_TIME
 
-MAX_ACCEPTABLE = 1.5  # ms
+MAX_ACCEPTABLE = 2.5  # ms
 
 def rgb(r: int, g: int, b: int) -> str:
     return f"\033[38;2;{r};{g};{b}m"

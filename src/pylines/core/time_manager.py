@@ -26,8 +26,11 @@ from .utils import map_value
 def fetch_hour() -> float:
     """Returns a value between 0 and 24 to represent the current hour."""
 
+    return 20  # DEBUG lock
+
     now = datetime.now()
     hour = now.hour + now.minute/60 + now.second/3_600 + now.microsecond/3_600/1e6
+
     return hour
 
 def sunlight_strength_from_hour(hour: RealNumber) -> RealNumber:

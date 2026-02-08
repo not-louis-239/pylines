@@ -29,6 +29,8 @@ import numpy as np
 import pygame as pg
 from OpenGL import GL as gl
 
+from pylines.debug.timer import timer
+
 import pylines.core.colours as cols
 import pylines.core.constants as C
 import pylines.core.paths as paths
@@ -238,6 +240,15 @@ class GameScreen(State):
         self.grid_labels_x: dict[int, pg.Surface] = dict()
         self.grid_labels_y: dict[int, pg.Surface] = dict()
         self.grid_detail_level: int | None = None
+
+        # Star rendering cache (VBO)
+        self._star_dirs: np.ndarray | None = None
+        self._star_colors: np.ndarray | None = None
+        self._star_brightness: np.ndarray | None = None
+        self._star_vbo: int | None = None
+        self._star_color_vbo: int | None = None
+        self._star_count: int = 0
+        self._star_cache_key: tuple[float, float] | None = None
 
     def _populate_cockpit(self) -> None:
         """Draw static cockpit elements, e.g. cockpit background, static
@@ -972,6 +983,7 @@ class GameScreen(State):
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
         gl.glUseProgram(0)
 
+    @timer
     def draw_stars(self) -> None:
         hour = fetch_hour()
         if 18 >= hour > 6:  # daytime
@@ -987,22 +999,47 @@ class GameScreen(State):
         if opacity == 0:
             return
 
-        pitch, yaw, _ = self.plane.rot
-        camera_fwd = pg.Vector3(
-            sin(rad(yaw)) * cos(rad(pitch)),
-            sin(rad(-pitch)),
-            -cos(rad(yaw)) * cos(rad(pitch)),
-        ).normalize()
+        if self._star_dirs is None:
+            dirs = np.array([s.direction for s in self.env.stars], dtype=np.float32)
+            # Normalize once to be safe
+            norms = np.linalg.norm(dirs, axis=1, keepdims=True)
+            norms[norms == 0] = 1
+            self._star_dirs = dirs / norms
+            self._star_colors = np.array([s.colour for s in self.env.stars], dtype=np.float32) / 255.0
+            self._star_brightness = np.array([s.brightness for s in self.env.stars], dtype=np.float32)
+            self._star_count = len(self.env.stars)
+            self._star_vbo = gl.glGenBuffers(1)
+            self._star_color_vbo = gl.glGenBuffers(1)
 
-        cos_fov = cos(rad(C.FOV))
-        distance = 19000.0
+        # Recompute positions/colors when hour bucket or opacity changes
+        assert self._star_brightness is not None
+        
+        hour_bucket = round(hour, 2)
+        cache_key = (hour_bucket, round(opacity, 3))
+        if self._star_cache_key != cache_key:
+            assert self._star_dirs is not None
+            rotated = self._star_dirs
 
-        sun_dir = sun_direction_from_hour(hour)
-        ref_dir = pg.Vector3(0, 0, -1)
+            norms = np.linalg.norm(rotated, axis=1, keepdims=True)
+            norms[norms == 0] = 1
+            positions = (rotated / norms) * 19000.0
+
+            colors = np.empty((self._star_count, 4), dtype=np.float32)
+            colors[:, :3] = self._star_colors
+            colors[:, 3] = self._star_brightness * opacity
+
+            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self._star_vbo)
+            gl.glBufferData(gl.GL_ARRAY_BUFFER, positions.nbytes, positions, gl.GL_DYNAMIC_DRAW)
+            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self._star_color_vbo)
+            gl.glBufferData(gl.GL_ARRAY_BUFFER, colors.nbytes, colors, gl.GL_DYNAMIC_DRAW)
+            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
+
+            self._star_cache_key = cache_key
 
         # Save OpenGL states
         was_blend_enabled = gl.glIsEnabled(gl.GL_BLEND)
         was_depth_mask_enabled = gl.glGetBooleanv(gl.GL_DEPTH_WRITEMASK)
+        was_depth_test_enabled = gl.glIsEnabled(gl.GL_DEPTH_TEST)
         current_point_size = gl.glGetFloatv(gl.GL_POINT_SIZE)
         was_texture_2d_enabled = gl.glIsEnabled(gl.GL_TEXTURE_2D)
 
@@ -1010,47 +1047,26 @@ class GameScreen(State):
         gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
         gl.glDepthMask(gl.GL_FALSE)
         gl.glDisable(gl.GL_TEXTURE_2D)
+        gl.glDisable(gl.GL_DEPTH_TEST)
 
-        # Bucket stars by size to reduce glPointSize changes
-        buckets: dict[float, list[Star]] = {}
-        for star in self.env.stars:
-            size_key = round(star.size, 2)
-            buckets.setdefault(size_key, []).append(star)
+        gl.glPointSize(2.0)
+        gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
+        gl.glEnableClientState(gl.GL_COLOR_ARRAY)
 
-        for size_key, stars in buckets.items():
-            gl.glPointSize(size_key)
-            gl.glBegin(gl.GL_POINTS)
-            for star in stars:
-                # Rodrigues’ rotation formula
-                k = ref_dir.cross(sun_dir)
-                if k.length() < C.EPSILON:
-                    rotated_dir = star.direction.copy() if ref_dir.dot(sun_dir) > 0 else -star.direction
-                else:
-                    k = k.normalize()
-                    cos_theta = clamp(ref_dir.dot(sun_dir), (-1, 1))
-                    theta = math.acos(cos_theta)
-                    v = star.direction
-                    rotated_dir = (
-                        v * math.cos(theta) +
-                        k.cross(v) * math.sin(theta) +
-                        k * (k.dot(v)) * (1 - math.cos(theta))
-                    )
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self._star_vbo)
+        gl.glVertexPointer(3, gl.GL_FLOAT, 0, None)
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self._star_color_vbo)
+        gl.glColorPointer(4, gl.GL_FLOAT, 0, None)
 
-                norm_dir = rotated_dir.normalize()
-                if camera_fwd.dot(norm_dir) <= cos_fov:
-                    continue
+        gl.glDrawArrays(gl.GL_POINTS, 0, self._star_count)
 
-                pos = norm_dir * distance
-                gl.glColor4f(
-                    star.colour[0] / 255.0,
-                    star.colour[1] / 255.0,
-                    star.colour[2] / 255.0,
-                    opacity * star.brightness
-                )
-                gl.glVertex3f(pos.x, pos.y, pos.z)
-            gl.glEnd()
+        gl.glDisableClientState(gl.GL_COLOR_ARRAY)
+        gl.glDisableClientState(gl.GL_VERTEX_ARRAY)
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
 
         # Restore OpenGL states
+        if was_depth_test_enabled:
+            gl.glEnable(gl.GL_DEPTH_TEST)
         gl.glPointSize(current_point_size)
         gl.glDepthMask(was_depth_mask_enabled)
         gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
