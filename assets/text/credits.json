@@ -80,10 +80,22 @@
             "entries": [
                 {
                     "type": "compact",
-                    "lines": []
+                    "lines": [
+                        {
+                            "name": "Community Contributors",
+                            "role": "Playtesting"
+                        }
+                    ]
                 }
             ]
         }
     ],
-    "notes": "Made with love in 2025-2026."
+    "notes": [
+        "Made with love in 2025-2026.",
+        "Powered by tea, dedication and late nights.",
+        "Thank you for playing.",
+        "",
+        "Friends and family, live life to the fullest.",
+        "Be kind. Help those in need. Make someone's day today."
+    ]
 }

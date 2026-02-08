@@ -97,7 +97,7 @@ class CreditsContainer:
 
     version: str
     sections: list[CreditSection]
-    notes: str
+    notes: list[str]
 
 class AssetBank:
     """Base class to store assets. Objects of this type should be
@@ -322,7 +322,7 @@ class TextAssets(AssetBank):
                             for line in entry.get("lines", [])
                         ]
                         entries.append(CreditEntryCompact(lines))
-                        
+
                     case "notes":
                         info = entry.get("info", {})
                         entries.append(CreditEntryNotes(Notes(

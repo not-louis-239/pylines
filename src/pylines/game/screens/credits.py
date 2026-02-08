@@ -20,6 +20,7 @@ import pygame as pg
 from OpenGL import GL as gl, GLU as glu
 
 import pylines.core.constants as C
+from pylines.core.asset_manager import CreditEntryCompact, CreditEntryCompactNotes, CreditEntryNotes
 from pylines.core.custom_types import EventList, ScancodeWrapper
 from pylines.game.states import State, StateID
 from pylines.core.utils import draw_text, clamp
@@ -45,9 +46,112 @@ class CreditsScreen(State):
         """Draw credits text to a surface once. This avoids wasting
         resources drawing text every frame."""
 
-        surf = pg.Surface((C.WN_W, C.WN_H * 5))
+        STARTING_Y_OFFSET = 100
+        DATA_SEPARATION_MARGIN = 200
+        SECTION_SEPARATION_MARGIN = 100
+        PADDING = C.WN_H
 
-        ...  # TODO: render credits
+        # Temporary surface to which to draw text
+        temp_surf = pg.Surface((C.WN_W, C.WN_H * 5), pg.SRCALPHA)  # Generous height
+        temp_surf.fill((0, 0, 0, 0))
+
+        # Logo
+        y_offset = STARTING_Y_OFFSET  # Base offset
+        rect = self.images.logo.get_rect(center=(C.WN_W//2, y_offset))
+        temp_surf.blit(self.images.logo, rect)
+
+        draw_text(
+            temp_surf, (rect.centerx, rect.bottom + 8), 'centre', 'top',
+            "Credits", (0, 192, 255), 36, self.fonts.monospaced
+        )
+
+        y_offset = rect.bottom + 80  # Visual separation
+        credit_obj = self.game.assets.texts.credits
+
+        # Version
+        draw_text(
+            temp_surf, (C.WN_W//2, y_offset), 'centre', 'centre',
+            f"Version {credit_obj.version}", (0, 192, 255), 36, self.fonts.monospaced
+        )
+
+        # Sections
+        y_offset += DATA_SEPARATION_MARGIN  # Separate version from sections
+
+        for i, section in enumerate(credit_obj.sections):
+            # Heading
+            draw_text(
+                temp_surf, (C.WN_W//2, y_offset), 'centre', 'centre',
+                section.heading, (0, 192, 255), 32, self.fonts.monospaced
+            )
+
+            # Entries
+            for entry in section.entries:
+                y_offset += 10
+
+                if isinstance(entry, CreditEntryCompact):
+                    for line in entry.lines:
+                        y_offset += 32
+                        draw_text(
+                            temp_surf, (C.WN_W//2 - 20, y_offset), 'right', 'centre',
+                            line.name, (180, 235, 255), 25, self.fonts.monospaced
+                        )
+                        draw_text(
+                            temp_surf, (C.WN_W//2 + 20, y_offset), 'left', 'centre',
+                            line.role, (255, 255, 255), 25, self.fonts.monospaced
+                        )
+
+                        if line.license:
+                            y_offset += 25
+                            draw_text(
+                                temp_surf, (C.WN_W//2, y_offset), 'centre', 'centre',
+                                "License: " + line.license, (120, 120, 120), 20, self.fonts.monospaced
+                            )
+
+                elif isinstance(entry, CreditEntryNotes):
+                    y_offset += 32
+
+                    draw_text(temp_surf, (C.WN_W//2, y_offset), 'centre', 'top',
+                            entry.info.upper, (255, 255, 255), 20, self.fonts.monospaced)
+                    y_offset += 25
+                    draw_text(temp_surf, (C.WN_W//2, y_offset), 'centre', 'top',
+                            entry.info.main, (255, 255, 255), 28, self.fonts.monospaced)
+                    y_offset += 32
+                    draw_text(temp_surf, (C.WN_W//2, y_offset), 'centre', 'top',
+                            entry.info.lower, (255, 255, 255), 20, self.fonts.monospaced)
+
+                elif isinstance(entry, CreditEntryCompactNotes):
+                    y_offset += 38
+                    for line in entry.lines:
+                        draw_text(temp_surf, (C.WN_W//2, y_offset), 'centre', 'top',
+                                line, (255, 255, 255), 20, self.fonts.monospaced)
+                        y_offset += 25 if line != "" else 15
+
+                else:
+                    raise ValueError("Invalid entry type")
+
+            # Padding
+            if i == len(credit_obj.sections) - 1:
+                break
+
+            y_offset += SECTION_SEPARATION_MARGIN
+
+        # Notes
+        y_offset += DATA_SEPARATION_MARGIN  # Separate sections from end notes
+
+        for line in credit_obj.notes:
+            draw_text(
+                temp_surf, (C.WN_W//2, y_offset), 'centre', 'centre',
+                line, (255, 255, 255), 25, self.fonts.monospaced
+            )
+            y_offset += 28 if line else 14
+
+        bounding_rect = temp_surf.get_bounding_rect()
+        final_height = bounding_rect.height + 2 * PADDING
+        surf = pg.Surface((C.WN_W, final_height), pg.SRCALPHA)
+        surf.fill((0, 0, 0, 0))  # transparent
+
+        # Center the bounding rect horizontally, and leave PADDING above
+        surf.blit(temp_surf, (bounding_rect.x, PADDING), area=bounding_rect)
 
         return surf
 
@@ -65,18 +169,20 @@ class CreditsScreen(State):
         if keys[pg.K_DOWN]:
             direction += 1
 
-        speed = CreditsScreen.BASE_SCROLL_SPEED * (3 if keys[pg.K_SPACE] else 1)
+        speed = CreditsScreen.BASE_SCROLL_SPEED * (5 if keys[pg.K_SPACE] else 1)
         self.offset_vel = (direction if direction != 0 else 1) * speed
 
     def update(self, dt: int) -> None:
         self.scroll_offset += self.offset_vel * dt/1000
+        height = self.credits_surface.get_height()
+        self.scroll_offset = clamp(self.scroll_offset, (0, height - C.WN_H))
 
     def draw(self, wn: pg.Surface):
         # Fill the display surface
         self.display_surface.fill((0, 0, 0))
 
         height = self.credits_surface.get_height()
-        assert height > C.WN_H, "Credits surface height must be greater than window height to avoid subsurface errors."
+        assert height >= C.WN_H, "Credits surface height must be greater than window height to avoid subsurface errors."
         visible_rect = pg.Rect(0, clamp(self.scroll_offset, (0, height - C.WN_H)), C.WN_W, C.WN_H)  # clamp avoids ValueError
         self.display_surface.blit(self.credits_surface.subsurface(visible_rect), (0, 0))
 
