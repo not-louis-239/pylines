@@ -1,0 +1,89 @@
+{
+    "version": "0.13.1",
+    "sections": [
+        {
+            "heading": "Lead Development",
+            "entries": [
+                {
+                    "type": "compact",
+                    "lines": [
+                        {
+                            "name": "Louis Masarei-Boulton",
+                            "role": "Creator, Developer, Art, Design"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "heading": "Audio, Fonts, Images",
+            "entries": [
+                {
+                    "type": "compact",
+                    "lines": [
+                        {
+                            "name": "Google Fonts",
+                            "role": "Inconsolata Font",
+                            "license": "SIL Open Font License 1.1+"
+                        }
+                    ]
+                },
+                {
+                    "type": "notes",
+                    "info": {
+                        "upper": "Sounds sourced from",
+                        "main": "Freesound",
+                        "lower": "https://freesound.org, CC0"
+                    }
+                },
+                {
+                    "type": "compact_notes",
+                    "lines": [
+                        "All image assets by Louis Masarei-Boulton,",
+                        "except for the moon image (NASA, public domain)"
+                    ]
+                }
+            ]
+        },
+        {
+            "heading": "Libraries",
+            "entries": [
+                {
+                    "type": "compact",
+                    "lines": [
+                        {
+                            "name": "Python",
+                            "role": "Runtime",
+                            "license": "Python Software Foundation License"
+                        },
+                        {
+                            "name": "Pygame",
+                            "role": "Graphics, Input",
+                            "license": "GNU LGPL 2.1+"
+                        },
+                        {
+                            "name": "PyOpenGL",
+                            "role": "3D Rendering",
+                            "license": "BSD-Style License"
+                        },
+                        {
+                            "name": "NumPy",
+                            "role": "Math",
+                            "license": "BSD-Style License 3-Clause"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "heading": "Special Thanks",
+            "entries": [
+                {
+                    "type": "compact",
+                    "lines": []
+                }
+            ]
+        }
+    ],
+    "notes": "Made with love in 2025-2026."
+}

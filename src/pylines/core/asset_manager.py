@@ -29,10 +29,12 @@ import numpy as np
 import pygame as pg
 from PIL import Image
 from pygame.transform import scale, scale_by
+from abc import ABC
 
 import pylines.core.paths as paths
 from pylines.core.custom_types import Sound, Surface
 
+from dataclasses import dataclass
 
 class FLine:
     """Formatted line for help text"""
@@ -56,6 +58,46 @@ class FLine:
             f"style={self.style}"
             f")"
         )
+
+@dataclass
+class CreditLine:
+    name: str
+    role: str
+    license: str
+
+@dataclass
+class Notes:
+    upper: str
+    main: str
+    lower: str
+
+@dataclass
+class CreditEntry(ABC): pass
+
+@dataclass
+class CreditEntryCompact(CreditEntry):
+    lines: list[CreditLine]
+
+@dataclass
+class CreditEntryNotes(CreditEntry):
+    info: Notes
+
+@dataclass
+class CreditEntryCompactNotes(CreditEntry):
+    lines: list[str]
+
+@dataclass
+class CreditSection:
+    heading: str
+    entries: list[CreditEntry]
+
+@dataclass
+class CreditsContainer:
+    """Class designated to storing credits data"""
+
+    version: str
+    sections: list[CreditSection]
+    notes: str
 
 class AssetBank:
     """Base class to store assets. Objects of this type should be
@@ -259,12 +301,68 @@ class TextAssets(AssetBank):
 
             self.help_lines.append(fline)
 
+        credits_raw = self._load_json("credits.json")
+        assert isinstance(credits_raw, dict)
+
+        sections: list[CreditSection] = []
+        for section in credits_raw.get("sections", []):
+            entries: list[CreditEntry] = []
+
+            for entry in section.get("entries", []):
+                entry_type = entry.get("type")
+
+                match entry_type:
+                    case "compact":
+                        lines = [
+                            CreditLine(
+                                name=line.get("name", ""),
+                                role=line.get("role", ""),
+                                license=line.get("license", "")
+                            )
+                            for line in entry.get("lines", [])
+                        ]
+                        entries.append(CreditEntryCompact(lines))
+                        
+                    case "notes":
+                        info = entry.get("info", {})
+                        entries.append(CreditEntryNotes(Notes(
+                            upper=info.get("upper", ""),
+                            main=info.get("main", ""),
+                            lower=info.get("lower", "")
+                        )))
+
+                    case "compact_notes":
+                        entries.append(CreditEntryCompactNotes(entry.get("lines", [])))
+
+                    case _:
+                        raise ValueError(f"Invalid credit entry type: {entry_type}")
+
+            sections.append(CreditSection(
+                heading=section.get("heading", ""),
+                entries=entries
+            ))
+
+        self.credits = CreditsContainer(
+            version=credits_raw.get("version", ""),
+            sections=sections,
+            notes=credits_raw.get("notes", "")
+        )
+
     def _load(self, name: str, /, *, cmt_symbol: str = COMMENT_SYMBOL) -> list[str]:
         with open(paths.TEXT_DIR / name, "r", encoding="utf-8") as f:
             return [
                 line.rstrip("\n")
                 for line in f if not line.lstrip().startswith(cmt_symbol)
             ]
+
+    def _load_json(self, name: str, key: str | None = None) -> dict | list:
+        with open(paths.TEXT_DIR / name, "r", encoding="utf-8") as f:
+            raw = json.load(f)
+
+        if key is None:
+            return raw
+        else:
+            return raw[key]
 
 class Assets:
     def __init__(self) -> None:

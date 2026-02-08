@@ -27,6 +27,7 @@ from pylines.game.live_config_presets import LiveConfigPresets
 from pylines.game.screens.briefing import BriefingScreen
 from pylines.game.screens.loading_screen import LoadingScreen
 from pylines.game.screens.settings import SettingsScreen
+from pylines.game.screens.credits import CreditsScreen
 from pylines.game.screens.title import TitleScreen
 from pylines.game.states import State, StateID
 
@@ -53,6 +54,7 @@ class Game:
             StateID.TITLE: TitleScreen(self),
             StateID.SETTINGS: SettingsScreen(self),
             StateID.BRIEFING: BriefingScreen(self),
+            StateID.CREDITS: CreditsScreen(self)
         }
 
         self.music_channel = pg.mixer.Channel(SFXChannelID.MUSIC)
@@ -69,7 +71,7 @@ class Game:
         # TODO: Move menu music out handling out of Game
         #       and into a separate MusicManager class
 
-        menu_states = (StateID.TITLE, StateID.SETTINGS, StateID.BRIEFING)
+        menu_states = (StateID.TITLE, StateID.SETTINGS, StateID.BRIEFING, StateID.CREDITS)
         was_in_menu = prev_state in menu_states
         is_entering_menu = state_name in menu_states
         # Fade out music if leaving a menu state for a non-menu state

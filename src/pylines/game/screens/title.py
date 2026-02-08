@@ -40,8 +40,12 @@ class TitleScreen(State):
         self.texture_id = gl.glGenTextures(1)
 
         self.settings_button = Button(
-            (120, C.WN_H-90), 200, 80, (25, 75, 75), (200, 255, 255),
+            (90, C.WN_H-50), 150, 60, (25, 75, 75), (200, 255, 255),
             "Settings", self.fonts.monospaced, 30
+        )
+        self.credits_button = Button(
+            (250, C.WN_H-50), 150, 60, (25, 75, 75), (200, 255, 255),
+            "Credits", self.fonts.monospaced, 30
         )
         self.help_button = ImageButton((C.WN_W - 75, C.WN_H - 75), self.images.help_icon)
 
@@ -59,10 +63,12 @@ class TitleScreen(State):
         self.sounds.stall_warning.stop()
 
     def take_input(self, keys: ScancodeWrapper, events: EventList, dt: int) -> None:
-        if self.pressed(keys, pg.K_SPACE):
+        if self.pressed(keys, pg.K_SPACE) and not self.in_help_screen:
             self.game.enter_state(StateID.BRIEFING if self.game.save_data.show_briefing else StateID.GAME)
-        if self.settings_button.check_click(events):
+        if self.settings_button.check_click(events) and not self.in_help_screen:
             self.game.enter_state(StateID.SETTINGS)
+        if self.credits_button.check_click(events) and not self.in_help_screen:
+            self.game.enter_state(StateID.CREDITS)
 
         if self.help_button.check_click(events) and not self.in_help_screen:
             self.in_help_screen = True
@@ -227,6 +233,7 @@ class TitleScreen(State):
             draw_text(self.display_surface, (C.WN_W//2 + 270, C.WN_H * (0.55 + 0.05*i)), 'left', 'centre', desc, WHITE, 27, self.fonts.monospaced)
 
         self.settings_button.draw(self.display_surface)
+        self.credits_button.draw(self.display_surface)
         self.help_button.draw(self.display_surface)
 
     def draw(self, wn: Surface):
