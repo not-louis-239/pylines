@@ -22,7 +22,7 @@ from OpenGL import GL as gl, GLU as glu
 import pylines.core.constants as C
 from pylines.core.custom_types import EventList, ScancodeWrapper
 from pylines.game.states import State, StateID
-from pylines.core.utils import draw_text
+from pylines.core.utils import draw_text, clamp
 from pylines.core.custom_types import Surface
 
 if TYPE_CHECKING:
@@ -36,7 +36,7 @@ class CreditsScreen(State):
         self.display_surface = pg.Surface((C.WN_W, C.WN_H), pg.SRCALPHA)
         self.texture_id = gl.glGenTextures(1)
 
-        self.offset = 0
+        self.scroll_offset = 0
         self.offset_vel = CreditsScreen.BASE_SCROLL_SPEED
 
         self.credits_surface = self._populate_credits_surface()
@@ -45,10 +45,14 @@ class CreditsScreen(State):
         """Draw credits text to a surface once. This avoids wasting
         resources drawing text every frame."""
 
-        ...
+        surf = pg.Surface((C.WN_W, C.WN_H * 5))
+
+        ...  # TODO: render credits
+
+        return surf
 
     def reset(self) -> None:
-        self.offset = 0
+        self.scroll_offset = 0
 
     def take_input(self, keys: ScancodeWrapper, events: EventList, dt: int) -> None:
         if keys[pg.K_ESCAPE]:
@@ -65,11 +69,16 @@ class CreditsScreen(State):
         self.offset_vel = (direction if direction != 0 else 1) * speed
 
     def update(self, dt: int) -> None:
-        self.offset += self.offset_vel * dt/1000
+        self.scroll_offset += self.offset_vel * dt/1000
 
     def draw(self, wn: pg.Surface):
         # Fill the display surface
         self.display_surface.fill((0, 0, 0))
+
+        height = self.credits_surface.get_height()
+        assert height > C.WN_H, "Credits surface height must be greater than window height to avoid subsurface errors."
+        visible_rect = pg.Rect(0, clamp(self.scroll_offset, (0, height - C.WN_H)), C.WN_W, C.WN_H)  # clamp avoids ValueError
+        self.display_surface.blit(self.credits_surface.subsurface(visible_rect), (0, 0))
 
         draw_text(
             self.display_surface, (20, 30), 'left', 'centre',
