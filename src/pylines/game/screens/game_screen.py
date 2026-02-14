@@ -305,13 +305,8 @@ class GameScreen(State):
         inner_agl_rect.center = agl_centre
         pg.draw.rect(surf, cols.BLACK, inner_agl_rect)
         draw_text(
-            surf,
-            (agl_centre[0] - 45, agl_centre[1]),
-            'left', 'centre',
-            "AGL",
-            cols.WHITE,
-            12,
-            self.fonts.monospaced
+            surf, (agl_centre[0] - 45, agl_centre[1]), 'left', 'centre',
+            "AGL", cols.WHITE, 12, self.fonts.monospaced
         )
 
         # GPS static boxes

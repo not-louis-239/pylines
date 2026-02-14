@@ -19,7 +19,7 @@ from typing import Callable
 START_TIME = time.perf_counter()
 last_segment_time = START_TIME
 
-MAX_ACCEPTABLE = 2.5  # ms
+DEFAULT_MAX_ACCEPTABLE = 2.5  # ms
 
 def rgb(r: int, g: int, b: int) -> str:
     return f"\033[38;2;{r};{g};{b}m"
@@ -35,16 +35,14 @@ def lerp_colours(
     b = int(c1[2] + t * (c2[2] - c1[2]))
     return (r, g, b)
 
-def get_duration_colour(ms: float) -> str:
-    """Returns an ANSI escape code based on the duration relative to MAX_ACCEPTABLE."""
-    half_point = MAX_ACCEPTABLE / 2
+def get_duration_colour(ms: float, max_acceptable: float) -> str:
+    """Returns an ANSI escape code based on the duration relative to max_acceptable."""
+    half_point = max_acceptable / 2
 
     if ms <= half_point:
-        # Interpolate Green -> Orange
         weight = ms / half_point
         c = lerp_colours(COL_ACCEPTABLE, COL_HALF_ACCEPTABLE, weight)
     else:
-        # Interpolate Orange -> Red
         weight = (ms - half_point) / half_point
         c = lerp_colours(COL_HALF_ACCEPTABLE, COL_UNACCEPTABLE, weight)
 
@@ -66,7 +64,7 @@ def log_segment(seg_name: str | None = None):
     duration_ms = (now - last_segment_time) * 1000
 
     if seg_name:
-        colour = get_duration_colour(duration_ms)
+        colour = get_duration_colour(duration_ms, DEFAULT_MAX_ACCEPTABLE)
         print(f"Segment {COL_NAMES_SEGMENTS}'{seg_name}'{COL_RESET} completed in: "
               f"{colour}{duration_ms:,.2f} ms{COL_RESET}")
 
@@ -76,15 +74,24 @@ def log_total_time():
     elapsed_time = time.perf_counter() - START_TIME
     print(f"Total time elapsed: {COL_TOTAL}{elapsed_time:,.4f}s{COL_RESET}")
 
-def timer(func: Callable) -> Callable:
-    @wraps(func)
-    def timed_func(*args, **kwargs):
-        start = time.perf_counter()
-        result = func(*args, **kwargs)
-        duration_ms = (time.perf_counter() - start) * 1000
+def timer(_func: Callable | None = None, *, max_acceptable_ms: float = DEFAULT_MAX_ACCEPTABLE):
+    def decorator(func: Callable) -> Callable:
+        @wraps(func)
+        def timed_func(*args, **kwargs):
+            start = time.perf_counter()
+            result = func(*args, **kwargs)
+            duration_ms = (time.perf_counter() - start) * 1000
 
-        colour = get_duration_colour(duration_ms)
-        print(f"Time taken for function {COL_NAMES_FUNCS}'{func.__name__}'{COL_RESET}: "
-              f"{colour}{duration_ms:.2f} ms{COL_RESET}")
-        return result
-    return timed_func
+            colour = get_duration_colour(duration_ms, max_acceptable_ms)
+            print(
+                f"Time taken for function {COL_NAMES_FUNCS}'{func.__name__}'{COL_RESET}: "
+                f"{colour}{duration_ms:.2f} ms{COL_RESET}"
+            )
+            return result
+        return timed_func
+
+    # Handles @timer vs @timer(...)
+    if _func is not None:
+        return decorator(_func)
+
+    return decorator
