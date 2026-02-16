@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from pylines.core.asset_manager import Images
 
 BASE_SMOKE_RISE_SPEED = 200  # pixels per second
-BASE_SMOKE_BLOB_SIZE = 200  # pixels, diameter of the smoke blob when spawned. Will be scaled randomly by each blob, but this is the base size.
+BASE_SMOKE_BLOB_SIZE = 300  # pixels, diameter of the smoke blob when spawned. Will be scaled randomly by each blob, but this is the base size.
 SMOKE_DRIFT_FACTOR = 10
 SMOKE_DENSITY_FACTOR = 15  # number of new smoke blobs per second
 
@@ -52,7 +52,14 @@ class SmokeManager:
         self.smoke_blob_cache_min = max(1, int(BASE_SMOKE_BLOB_SIZE * 0.6))
         self.smoke_blob_cache_max = max(self.smoke_blob_cache_min, int(BASE_SMOKE_BLOB_SIZE * 1.5))
         for size in range(self.smoke_blob_cache_min, self.smoke_blob_cache_max + 1):
-            self.smoke_blob_cache[size] = pg.transform.scale(self.images.smoke_blob, (size, size))
+            scaled = pg.transform.scale(self.images.smoke_blob, (size, size))
+            premultiplied = scaled.copy()
+            rgb = pg.surfarray.pixels3d(premultiplied)
+            alpha = pg.surfarray.pixels_alpha(premultiplied)
+            rgb[:] = (rgb * (alpha[..., None] / 255.0)).astype(rgb.dtype)
+            del rgb
+            del alpha
+            self.smoke_blob_cache[size] = premultiplied
 
     def spawn_smoke_blob(self) -> None:
         safety = BASE_SMOKE_BLOB_SIZE * 1.5  # visual buffer
@@ -93,4 +100,8 @@ class SmokeManager:
                     f"requested={size}, cached_range={self.smoke_blob_cache_min}-{self.smoke_blob_cache_max}"
                 )
 
-            surface.blit(cached_surf, (int(blob.screen_pos.x - size/2), int(blob.screen_pos.y - size/2)))
+            surface.blit(
+                cached_surf,
+                (int(blob.screen_pos.x - size/2), int(blob.screen_pos.y - size/2)),
+                special_flags=pg.BLEND_PREMULTIPLIED,
+            )
