@@ -62,6 +62,7 @@ class Plane(Entity):
         self.sounds = sounds
         self.dialog_box = dialog_box
         self.env = env
+        self.time_since_lethal_crash: float | None = None  # None = hasn't crashed yet, used for explosion animation
         self.reset()
 
     @property
@@ -118,8 +119,15 @@ class Plane(Entity):
 
         self.aoa = 0  # degrees
         self.on_ground = True
+
+        # Reset crash/damage metrics
         self.crash_reason: CrashReason | None = None
+        self.time_since_lethal_crash = None
         self.damage_level = 0
+
+    def increment_crash_timer(self, dt: int) -> None:
+        assert self.time_since_lethal_crash is not None, "Cannot increment if crash hasn't happened"
+        self.time_since_lethal_crash += dt/1000  # convert ms to seconds
 
     def good_landing(self):
         self.sounds.good_landing.play()
@@ -133,9 +141,12 @@ class Plane(Entity):
         self.damage_level = 1 if lethal else min(self.damage_level + damage_taken, 1)
 
         if self.damage_level >= 1:
+            # Lethal crash that renders plane completely unflyable
             self.sounds.crash.play()
+            self.time_since_lethal_crash = 0  # start timer
             self.crash_reason = reason
         else:
+            # Damaging but non-fatal crash
             self.sounds.hard_landing.play()
             if not suppress_dialog: self.dialog_box.set_message("Hard landing. Damage sustained.", (255, 80, 0))
 

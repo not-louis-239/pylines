@@ -18,7 +18,7 @@ from datetime import datetime
 import pygame as pg
 
 from . import constants as C
-from .colours import SKY_COLOUR_SCHEMES, ColourScheme, lerp_colour
+from .colours import SKY_COLOUR_SCHEMES, ColourScheme, lerp_colours
 from .custom_types import RealNumber
 from .utils import map_value
 
@@ -71,9 +71,9 @@ def sky_colour_from_hour(hour: float) -> ColourScheme:
         if start_hour <= hour <= end_hour:
             t = (hour - start_hour) / (end_hour - start_hour)
             return ColourScheme(
-                high=lerp_colour(start_scheme.high, end_scheme.high, t),
-                mid=lerp_colour(start_scheme.mid, end_scheme.mid, t),
-                low=lerp_colour(start_scheme.low, end_scheme.low, t),
+                high=lerp_colours(start_scheme.high, end_scheme.high, t),
+                mid=lerp_colours(start_scheme.mid, end_scheme.mid, t),
+                low=lerp_colours(start_scheme.low, end_scheme.low, t),
             )
     return SKY_COLOUR_SCHEMES["night"]  # fallback
 

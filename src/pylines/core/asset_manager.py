@@ -160,6 +160,7 @@ class Images(AssetBank):
         self.gps_dest_marker = self._load("gps_dest_marker.png")
 
         self.cloud_blob = self._load("cloud_blob.png")
+        self.smoke_blob = self._load("smoke_blob.png")
 
         self.augment()
 

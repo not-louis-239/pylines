@@ -62,6 +62,7 @@ from pylines.objects.scenery.ocean import Ocean
 from pylines.objects.scenery.runway import Runway
 from pylines.objects.scenery.sky import Moon, Sky, Star, Sun
 from pylines.shaders.shader_manager import load_shader_script
+from pylines.game.smoke_manager import SmokeManager
 
 if TYPE_CHECKING:
     from pylines.core.custom_types import ScancodeWrapper, Surface
@@ -251,6 +252,9 @@ class GameScreen(State):
 
         self.controls_quick_ref_up: float = 0  # represents how active it is
         self.controls_quick_ref_state: Visibility = Visibility.HIDDEN
+
+        self.crash_colour_fade_surface: Surface = pg.Surface((C.WN_W, C.WN_H), pg.SRCALPHA)
+        self.smoke_manager = SmokeManager(assets.images)
 
     def _populate_cockpit(self) -> None:
         """Draw static cockpit elements, e.g. cockpit background, static
@@ -542,7 +546,7 @@ class GameScreen(State):
         self.map_show_advanced_info = False
 
         def height_to_colour(h: float) -> Colour:
-            lerp_colour: Callable = cols.lerp_colour
+            lerp_colour: Callable = cols.lerp_colours
 
             THRESHOLDS: list[tuple[float, Colour]] = [
                 (6000, (177, 192, 204)),
@@ -719,7 +723,11 @@ class GameScreen(State):
         self.dialog_box.update(dt)
 
         if self.plane.crashed:
+            self.smoke_manager.update(dt)
+            self.plane.increment_crash_timer(dt)
+
             self.dialog_box.reset()
+
             self.channel_stall.stop()
             self.channel_overspeed.stop()
 
@@ -1178,18 +1186,42 @@ class GameScreen(State):
             gl.glDisable(gl.GL_BLEND)
 
     def draw_cockpit(self) -> None:
+        # Crash colour fade and smoke - should be behind other UI elements but
+        # infront of scenery
+        if self.plane.crashed:
+            # Clear colour fade surface
+            self.crash_colour_fade_surface.fill((0, 0, 0, 0))
+
+            # Draw smoke
+            self.smoke_manager.draw_smoke_blobs(self.hud_surface)
+
+            assert self.plane.time_since_lethal_crash is not None
+
+            colour: cols.AColour
+            if self.plane.time_since_lethal_crash < 1:
+                colour = cols.lerp_colours((255, 255, 255, 255), (255, 180, 100, 255), self.plane.time_since_lethal_crash)
+            elif self.plane.time_since_lethal_crash < 2:
+                colour = cols.lerp_colours((255, 180, 100, 255), (220, 40, 40, 100), self.plane.time_since_lethal_crash - 1)
+            elif self.plane.time_since_lethal_crash < 3:
+                colour = cols.lerp_colours((220, 40, 40, 100), (0, 0, 0, 0), self.plane.time_since_lethal_crash - 2)
+            else:
+                colour = (0, 0, 0, 0)
+
+            self.crash_colour_fade_surface.fill(colour)  # Fill should be infront of smoke
+            self.hud_surface.blit(self.crash_colour_fade_surface, (0, 0))
+
+        # Setup
         pitch, yaw, roll = self.plane.rot
-        hud_surface = self.hud_surface
 
         # Stall warning
         warning_x = C.WN_W//2-145
         if self.show_stall_warning:
-            draw_text(hud_surface, (C.WN_W//2, C.WN_H*0.62), 'centre', 'centre', "STALL", (210, 0, 0), 50, self.fonts.monospaced)
+            draw_text(self.hud_surface, (C.WN_W//2, C.WN_H*0.62), 'centre', 'centre', "STALL", (210, 0, 0), 50, self.fonts.monospaced)
 
         # Overspeed warning
         warning_x = C.WN_W//2+145
         if self.show_overspeed_warning:
-            draw_text(hud_surface, (C.WN_W//2, C.WN_H*0.57), 'centre', 'centre', "OVERSPEED", (210, 0, 0), 50, self.fonts.monospaced)
+            draw_text(self.hud_surface, (C.WN_W//2, C.WN_H*0.57), 'centre', 'centre', "OVERSPEED", (210, 0, 0), 50, self.fonts.monospaced)
 
         # Damage overlay
         if self.plane.damage_level > 0:
@@ -1197,16 +1229,16 @@ class GameScreen(State):
             # Damage_level is 0-1, so we can map it to the number of overlays
             overlay_idx = min(len(overlays) - 1, int(self.plane.damage_level * (len(overlays))))
             overlay = overlays[overlay_idx]
-            hud_surface.blit(overlay, (0, 0))
+            self.hud_surface.blit(overlay, (0, 0))
 
         # Static cockpit surface
-        hud_surface.blit(self.cockpit_surface, (0, C.WN_H - self.cockpit_surface.get_rect().height))
+        self.hud_surface.blit(self.cockpit_surface, (0, C.WN_H - self.cockpit_surface.get_rect().height))
 
         # Compass (heading + ground track)
         centre = (C.WN_W//2-300, C.WN_H*0.85)
         surf = self.rotated_compasses[int(yaw / (360 / C.COMPASS_QUANTISATION_STEPS))]
         rect = surf.get_rect(center=centre)
-        hud_surface.blit(surf, rect)
+        self.hud_surface.blit(surf, rect)
 
         vel_flat = pg.Vector3(self.plane.vel.x, 0, self.plane.vel.z)
         ground_track_deg = math.degrees(
@@ -1221,28 +1253,28 @@ class GameScreen(State):
         ) % 360 if gps_distance_flat.length() >= C.EPSILON else 0
 
         # Ground track (the actual velocity vector of the plane)
-        draw_needle(hud_surface, centre, 90 - (ground_track_deg-yaw), 100, (255, 190, 0))
+        draw_needle(self.hud_surface, centre, 90 - (ground_track_deg-yaw), 100, (255, 190, 0))
         # Heading (where the nose points)
-        draw_needle(hud_surface, centre, 90, 100, (255, 0, 0))
+        draw_needle(self.hud_surface, centre, 90, 100, (255, 0, 0))
         # GPS distance (where the nose points)
-        draw_needle(hud_surface, centre, 90 - (gps_bearing-yaw), 100, (0, 255, 0))
+        draw_needle(self.hud_surface, centre, 90 - (gps_bearing-yaw), 100, (0, 255, 0))
 
         # Show runway alignment (blue needle)
         if gps_distance_flat.length() < 8000:
-            draw_needle(hud_surface, centre, 90 - (selected_runway.heading-yaw), 50, (0, 120, 255))
-            draw_needle(hud_surface, centre, 270 - (selected_runway.heading-yaw), 50, (0, 120, 255))
+            draw_needle(self.hud_surface, centre, 90 - (selected_runway.heading-yaw), 50, (0, 120, 255))
+            draw_needle(self.hud_surface, centre, 270 - (selected_runway.heading-yaw), 50, (0, 120, 255))
 
         # ASI (Airspeed Indicator)
         centre = (C.WN_W//2+300, C.WN_H*0.85)
         speed_knots = self.plane.vel.length() * 1.94384  # Convert to knots
         angle = 90 - min(336, 270 * speed_knots/160)
-        draw_text(hud_surface, (C.WN_W//2+300, C.WN_H*0.85 + 30), 'centre', 'centre', f"{int(self.plane.vel.length() * 1.94384):03d}", (192, 192, 192), 25, self.font)
-        draw_needle(hud_surface, centre, angle, 100)
+        draw_text(self.hud_surface, (C.WN_W//2+300, C.WN_H*0.85 + 30), 'centre', 'centre', f"{int(self.plane.vel.length() * 1.94384):03d}", (192, 192, 192), 25, self.font)
+        draw_needle(self.hud_surface, centre, angle, 100)
 
         # Altimeter (left)
         alt_centre = (C.WN_W//2 - 110, int(C.WN_H*0.74))
         draw_text(
-            hud_surface, (alt_centre[0], alt_centre[1]-15), 'centre', 'centre',
+            self.hud_surface, (alt_centre[0], alt_centre[1]-15), 'centre', 'centre',
             f"{self.plane.pos.y * 3.28084:,.0f} ft", cols.WHITE, 27, self.fonts.monospaced
         )
 
@@ -1251,14 +1283,14 @@ class GameScreen(State):
         vs_ft_per_min = self.plane.vel.y * 196.85
         text_colour: Colour = cols.BLUE if vs_ft_per_min > 0 else cols.WHITE if vs_ft_per_min == 0 else cols.BROWN
         draw_text(
-            hud_surface, vsi_centre, 'centre', 'centre',
+            self.hud_surface, vsi_centre, 'centre', 'centre',
             f"{vs_ft_per_min:+,.0f}/min", text_colour, 22, self.fonts.monospaced
         )
 
         # Location / LOC (right)
         loc_centre = (C.WN_W//2 + 85, int(C.WN_H*0.74))
         draw_text(
-            hud_surface, loc_centre, 'centre', 'centre',
+            self.hud_surface, loc_centre, 'centre', 'centre',
             f"({self.plane.pos.x:,.0f}m, {self.plane.pos.z:,.0f}m)", cols.WHITE, 22, self.fonts.monospaced
         )
 
@@ -1268,7 +1300,7 @@ class GameScreen(State):
         now = datetime.now().astimezone()
         offset_hours = int(cast(timedelta, now.utcoffset()).total_seconds() // 3600)
         draw_text(
-            hud_surface, time_centre, 'centre', 'centre',
+            self.hud_surface, time_centre, 'centre', 'centre',
             f"{now.hour:02d}:{now.minute:02d} ({offset_hours:+d})", cols.WHITE, 18, self.fonts.monospaced
         )
 
@@ -1277,7 +1309,7 @@ class GameScreen(State):
         x, z = self.plane.pos.x, self.plane.pos.z
         altitude_agl = self.plane.pos.y - self.env.ground_height(x, z)
         draw_text(
-            hud_surface, (agl_centre[0] + 45, agl_centre[1]), 'right', 'centre',
+            self.hud_surface, (agl_centre[0] + 45, agl_centre[1]), 'right', 'centre',
             f"{units.convert_units(altitude_agl, units.METRES, units.FEET):,.0f} ft", cols.WHITE, 18, self.fonts.monospaced
         )
 
@@ -1285,12 +1317,12 @@ class GameScreen(State):
         gps_centre = (C.WN_W//2 - 135, int(C.WN_H*0.87))
 
         draw_text(
-            hud_surface, (gps_centre[0] - 35, gps_centre[1] - 14),
+            self.hud_surface, (gps_centre[0] - 35, gps_centre[1] - 14),
             'left', 'centre', selected_runway.name, (0, 120, 255), 20, self.fonts.monospaced
         )
 
         draw_text(
-            hud_surface, (gps_centre[0] - 35, gps_centre[1] + 14),
+            self.hud_surface, (gps_centre[0] - 35, gps_centre[1] + 14),
             'left', 'centre', f"{gps_distance_flat.length() / 1000:,.2f}km", cols.WHITE, 20, self.fonts.monospaced
         )
 
@@ -1313,29 +1345,29 @@ class GameScreen(State):
             glide_centre_x, glide_centre_y = glide_centre
 
             # Tick marks
-            pg.draw.line(hud_surface, (140, 140, 140), (glide_centre_x-7, glide_centre_y + 26), (glide_centre_x+6, glide_centre_y + 26), 2)
-            pg.draw.line(hud_surface, (140, 140, 140), (glide_centre_x-7, glide_centre_y + 52), (glide_centre_x+6, glide_centre_y + 52), 2)
-            pg.draw.line(hud_surface, (140, 140, 140), (glide_centre_x-7, glide_centre_y - 26), (glide_centre_x+6, glide_centre_y - 26), 2)
-            pg.draw.line(hud_surface, (140, 140, 140), (glide_centre_x-7, glide_centre_y - 52), (glide_centre_x+6, glide_centre_y - 52), 2)
+            pg.draw.line(self.hud_surface, (140, 140, 140), (glide_centre_x-7, glide_centre_y + 26), (glide_centre_x+6, glide_centre_y + 26), 2)
+            pg.draw.line(self.hud_surface, (140, 140, 140), (glide_centre_x-7, glide_centre_y + 52), (glide_centre_x+6, glide_centre_y + 52), 2)
+            pg.draw.line(self.hud_surface, (140, 140, 140), (glide_centre_x-7, glide_centre_y - 26), (glide_centre_x+6, glide_centre_y - 26), 2)
+            pg.draw.line(self.hud_surface, (140, 140, 140), (glide_centre_x-7, glide_centre_y - 52), (glide_centre_x+6, glide_centre_y - 52), 2)
 
             # Green circle
-            pg.draw.circle(hud_surface, (0, 255, 0), (glide_centre_x, glide_centre_y + clamp(deviation, (-10, 10)) * 52/10), 5)
+            pg.draw.circle(self.hud_surface, (0, 255, 0), (glide_centre_x, glide_centre_y + clamp(deviation, (-10, 10)) * 52/10), 5)
 
             # White line
-            pg.draw.line(hud_surface, cols.WHITE, (glide_centre_x-7, glide_centre_y), (glide_centre_x+6, glide_centre_y), 2)
+            pg.draw.line(self.hud_surface, cols.WHITE, (glide_centre_x-7, glide_centre_y), (glide_centre_x+6, glide_centre_y), 2)
 
 
         # Throttle bar
         size = 40, 20
         rect = pg.Rect(0, 0, *size)
         rect.center = (C.WN_W*0.86, C.WN_H*0.94 - C.WN_H*0.19*(self.plane.throttle_frac))  # type: ignore[arg-type]
-        pg.draw.rect(hud_surface, cols.WHITE, rect)
+        pg.draw.rect(self.hud_surface, cols.WHITE, rect)
 
         # Flaps indicator
         size = 30, 15
         rect = pg.Rect(0, 0, *size)
         rect.center = (C.WN_W*0.90, C.WN_H*0.93 - C.WN_H*0.17*(self.plane.flaps))  # type: ignore[arg-type]
-        pg.draw.rect(hud_surface, (220, 220, 220), rect)
+        pg.draw.rect(self.hud_surface, (220, 220, 220), rect)
 
         # Attitude indicator
         self.ai_surface.fill((0, 0, 0, 0))  # clear AI surface
@@ -1444,7 +1476,7 @@ class GameScreen(State):
         masked.blit(rotated_ai, rot_rect)
         masked.blit(self.ai_mask, (0, 0), special_flags=pg.BLEND_RGBA_MULT)
 
-        hud_surface.blit(masked, inner_ai_rect.topleft)
+        self.hud_surface.blit(masked, inner_ai_rect.topleft)
 
         # Static V-bar for AI must be drawn in draw_cockpit as
         # it is infront of the artificial horizon overlay
@@ -1457,16 +1489,14 @@ class GameScreen(State):
         # Cockpit warning lights
         warning_x = C.WN_W//2-180
         warning_col = (255, 0, 0) if self.show_stall_warning else cols.BLACK
-        pg.draw.circle(hud_surface, (warning_col), (warning_x, C.WN_H*0.93), 8)
+        pg.draw.circle(self.hud_surface, (warning_col), (warning_x, C.WN_H*0.93), 8)
 
         warning_x = C.WN_W//2-190  # Overspeed
         warning_col = (255, 0, 0) if self.show_overspeed_warning else cols.BLACK
-        pg.draw.circle(hud_surface, (warning_col), (warning_x, C.WN_H*0.965), 8)
+        pg.draw.circle(self.hud_surface, (warning_col), (warning_x, C.WN_H*0.965), 8)
 
     def draw_map(self):
         self.map_surface.fill((0, 0, 0, 255))
-
-        hud_surface = self.hud_surface
         NUM_TILES = math.ceil(C.HALF_WORLD_SIZE*2 / (C.METRES_PER_TILE))
 
         if self.viewport_auto_panning:
@@ -1480,7 +1510,7 @@ class GameScreen(State):
         # Map border
         outer_map_rect = pg.Rect(0, 0, C.MAP_OVERLAY_SIZE+10, C.MAP_OVERLAY_SIZE+10)
         outer_map_rect.center = map_centre
-        pg.draw.rect(hud_surface, cols.MAP_BORDER_COLOUR, outer_map_rect)
+        pg.draw.rect(self.hud_surface, cols.MAP_BORDER_COLOUR, outer_map_rect)
 
         # Draw map tiles
         # World coordinates of the top-left corner of the map viewport
@@ -1575,7 +1605,7 @@ class GameScreen(State):
 
         # Show building legend if advanced map info is enabled
         if self.map_show_advanced_info:
-            hud_surface.blit(
+            self.hud_surface.blit(
                 self.building_legend_surface,
                 (map_centre[0] + C.MAP_OVERLAY_SIZE/2 + 20, map_centre[1] - 180)
             )
@@ -1812,11 +1842,11 @@ class GameScreen(State):
 
         # Blit the completed map to the main HUD surface
         map_rect = self.map_surface.get_rect(center=(map_centre))
-        hud_surface.blit(self.map_surface, map_rect)
+        self.hud_surface.blit(self.map_surface, map_rect)
 
         # Show height key
         if self.map_show_advanced_info:
-            hud_surface.blit(
+            self.hud_surface.blit(
                 self.height_legend_surface,
                 (C.WN_W//2 - C.MAP_OVERLAY_SIZE//2 - 200, map_centre[1] - 180)
             )
@@ -1983,11 +2013,11 @@ class GameScreen(State):
 
         self.hud_surface.fill((0, 0, 0, 0))  # clear with transparency
 
+        self.draw_cockpit()
+
         # Exit controls
         if self.time_elapsed < 5_000 or not self.plane.flyable:
             draw_text(self.hud_surface, (15, 30), 'left', 'centre', "Press Esc to pause", cols.WHITE, 30, self.fonts.monospaced)
-
-        self.draw_cockpit()
 
         # Render map
         if self.map_up:

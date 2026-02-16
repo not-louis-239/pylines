@@ -54,7 +54,7 @@ class Runway(LargeSceneryObject):
 
         # Centreline
         for i in range(300, int(self.l * 4 - 300) + 1, 100):
-            r = pg.Rect(int(self.w * 4) / 2 - 5, 25 + i, 10, 50); pg.draw.rect(texture_surface, (243, 243, 243, 255), r)
+            r = pg.Rect(int(self.w * 4) / 2 - 2.5, 25 + i, 5, 50); pg.draw.rect(texture_surface, (243, 243, 243, 255), r)
 
         # Runway numbers
         if self.heading >= 180:

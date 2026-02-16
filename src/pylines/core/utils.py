@@ -122,9 +122,10 @@ def draw_transparent_rect(
         pg.draw.rect(box_surf, border_colour, box_surf.get_rect(), border_thickness)
     surface.blit(box_surf, pos)
 
-def get_sign(n: int | float):
+def get_sign(n: int | float, /) -> int:
+    """Returns the sign of a number: 1 for positive, -1 for negative, 0 for zero."""
     if not (isinstance(n, int) or isinstance(n, float)):
-        raise ValueError("get sign: invalid number")
+        raise ValueError("get sign: not a number")
 
     return 1 if n > 0 else 0 if n == 0 else -1
 
