@@ -1304,6 +1304,15 @@ class GameScreen(State):
                     (inner_ai_rect.width//2 + width, y),
                     3
                 )
+                if deg % 10 == 0 and deg != 0:  # Add labels for major tick marks (10, 20, 30 etc.)
+                    draw_text(
+                        self.ai_surface, (inner_ai_rect.width//2 + width + 5, y), 'left', 'centre',
+                        str(abs(deg)), cols.WHITE, 19, self.fonts.monospaced
+                    )
+                    draw_text(
+                        self.ai_surface, (inner_ai_rect.width//2 - width - 5, y), 'right', 'centre',
+                        str(abs(deg)), cols.WHITE, 19, self.fonts.monospaced
+                    )
 
         cx = inner_ai_rect.width // 2
         top_y = 20
