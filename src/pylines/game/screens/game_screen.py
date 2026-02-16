@@ -67,9 +67,13 @@ if TYPE_CHECKING:
     from pylines.core.custom_types import ScancodeWrapper, Surface
     from pylines.game.game import Game
 
-class MapState(Enum):
+class Visibility(Enum):
     HIDDEN = 0
     SHOWN = 1
+
+    @staticmethod
+    def toggle(current: Visibility) -> Visibility:
+        return Visibility.HIDDEN if current == Visibility.SHOWN else Visibility.SHOWN
 
 @dataclass
 class DialogMessage:
@@ -185,17 +189,7 @@ class GameScreen(State):
         gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_T, gl.GL_CLAMP_TO_EDGE)
 
         # Allocate empty texture
-        gl.glTexImage2D(
-            gl.GL_TEXTURE_2D,
-            0,
-            gl.GL_RGBA,
-            C.WN_W,
-            C.WN_H,
-            0,
-            gl.GL_RGBA,
-            gl.GL_UNSIGNED_BYTE,
-            None
-        )
+        gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGBA, C.WN_W, C.WN_H, 0, gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, None)
 
         gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
         self.hud_surface = pg.Surface((C.WN_W, C.WN_H), pg.SRCALPHA)
@@ -243,6 +237,9 @@ class GameScreen(State):
         self.grid_labels_y: dict[int, pg.Surface] = dict()
         self.grid_detail_level: int | None = None
 
+        # Build quick ref for controls
+        self.controls_quick_ref_surface = self._populate_controls_quick_ref()
+
         # Star rendering cache (VBO)
         self._star_dirs: np.ndarray | None = None
         self._star_colors: np.ndarray | None = None
@@ -251,6 +248,9 @@ class GameScreen(State):
         self._star_color_vbo: int | None = None
         self._star_count: int = 0
         self._star_cache_key: tuple[float, float] | None = None
+
+        self.controls_quick_ref_up: float = 0  # represents how active it is
+        self.controls_quick_ref_state: Visibility = Visibility.HIDDEN
 
     def _populate_cockpit(self) -> None:
         """Draw static cockpit elements, e.g. cockpit background, static
@@ -353,7 +353,7 @@ class GameScreen(State):
         draw_text(surf, (warning_x + 20, C.WN_H*0.965), 'left', 'centre', "OVERSPEED", (25, 20, 18), 20, self.fonts.monospaced)
         pg.draw.circle(surf, (51, 43, 37), (warning_x, C.WN_H*0.965), 10)
 
-    def _populate_building_legend(self) -> pg.Surface:
+    def _populate_building_legend(self) -> Surface:
         width, height = 200, 360
         surf = pg.Surface((width, height), pg.SRCALPHA)
         surf.fill((0, 0, 0, 180))
@@ -386,7 +386,7 @@ class GameScreen(State):
 
         return surf
 
-    def _populate_height_legend(self) -> pg.Surface:
+    def _populate_height_legend(self) -> Surface:
         width, height = 180, 360
         surf = pg.Surface((width, height), pg.SRCALPHA)
         surf.fill((0, 0, 0, 180))
@@ -398,6 +398,68 @@ class GameScreen(State):
         for h in range(-12_000, 18_001, 2_000):
             text_y = 55 + (self.HEIGHT_KEY_H * (1 - ((h + 12_000) / 30_000)))
             draw_text(surf, (100, text_y), 'right', 'centre', f"{h:,.0f}", cols.WHITE, 15, self.fonts.monospaced)
+
+        return surf
+
+    def _populate_controls_quick_ref(self) -> Surface:
+        """Draw everything to a cached surface for the controls mini-reference
+        to avoid wasting resources drawing it each frame while active."""
+
+        surf = pg.Surface((400, 600), flags=pg.SRCALPHA)
+
+        surf.fill((0, 0, 0, 180))
+        pg.draw.rect(surf, cols.WHITE, surf.get_rect(), 2)  # 2px-wide white border
+
+        title_y = 30
+        draw_text(surf, (200, title_y), 'centre', 'centre', "Controls (Quick Ref)", cols.WHITE, 24, self.fonts.monospaced)
+
+        def draw_section(title: str, start_y: int, items: dict[str, str]) -> int:
+            draw_text(surf, (200, start_y), 'centre', 'centre', title, (0, 192, 255), 20, self.fonts.monospaced)
+            y = start_y + 35
+            for key, desc in items.items():
+                draw_text(surf, (170, y), 'right', 'centre', key, (150, 230, 255), 18, self.fonts.monospaced)
+                draw_text(surf, (185, y), 'left', 'centre', desc, cols.WHITE, 18, self.fonts.monospaced)
+                y += 28
+            return y
+
+        y = 75
+        y = draw_section(
+            "Main Controls",
+            y,
+            {
+                "W/S": "Throttle",
+                "Z/X": "Flaps Up/Down",
+                "A/D": "Rudder",
+                "Arrows": "Pitch/Yaw",
+                "B": "Brake",
+                "G": "Cycle GPS dest.",
+                "Esc": "Pause",
+            },
+        )
+
+        y += 10
+        y = draw_section(
+            "Map Controls",
+            y,
+            {
+                "M": "Show/Hide Map",
+                "O": "Toggle Quick Ref",
+            },
+        )
+
+        y += 10
+        y = draw_section(
+            "While Map Open",
+            y,
+            {
+                "W/S": "Zoom In/Out",
+                "Arrows": "Pan",
+                "Space": "Re-centre",
+                "H (hold)": "Show advanced info",
+            },
+        )
+
+        draw_text(surf, (200, 575), 'centre', 'centre', "Press O to close", (150, 230, 255), 18, self.fonts.monospaced)
 
         return surf
 
@@ -476,7 +538,7 @@ class GameScreen(State):
 
         # Map view setup
         self.map_up: RealNumber = 0  # 1 = fully up, 0 = fully down
-        self.map_state: MapState = MapState.HIDDEN
+        self.map_state: Visibility = Visibility.HIDDEN
         self.map_show_advanced_info = False
 
         def height_to_colour(h: float) -> Colour:
@@ -670,11 +732,18 @@ class GameScreen(State):
             return
 
         # Map update
-        if self.map_state == MapState.HIDDEN:
+        if self.map_state == Visibility.HIDDEN:
             self.map_up -= (dt/1000) / C.MAP_TOGGLE_ANIMATION_DURATION
         else:
             self.map_up += (dt/1000) / C.MAP_TOGGLE_ANIMATION_DURATION
         self.map_up = clamp(self.map_up, (0, 1))
+
+        # Controls ref update
+        if self.controls_quick_ref_state == Visibility.HIDDEN:
+            self.controls_quick_ref_up -= (dt/1000) / C.CONTROLS_REF_TOGGLE_ANIMATION_DURATION
+        else:
+            self.controls_quick_ref_up += (dt/1000) / C.CONTROLS_REF_TOGGLE_ANIMATION_DURATION
+        self.controls_quick_ref_up = clamp(self.controls_quick_ref_up, (0, 1))
 
         self.plane.update(dt)
 
@@ -836,13 +905,17 @@ class GameScreen(State):
 
         # Show/hide map
         if self.pressed(keys, pg.K_m):
-            self.map_state = MapState.HIDDEN if self.map_state == MapState.SHOWN else MapState.SHOWN
+            self.map_state = Visibility.toggle(self.map_state)
+
+        # Show/hide quick ref for controls
+        if self.pressed(keys, pg.K_o):
+            self.controls_quick_ref_state = Visibility.toggle(self.controls_quick_ref_state)
 
         # Cycle GPS waypoint
         if self.pressed(keys, pg.K_g):
             self.gps_runway_index = (self.gps_runway_index + 1) % len(self.env.runways)
 
-        if self.map_state == MapState.SHOWN:
+        if self.map_state == Visibility.SHOWN:
             # While map is shown: control zoom
             if keys[pg.K_w]:
                 self.viewport_zoom /= 2.5 ** (dt/1000)
@@ -857,7 +930,7 @@ class GameScreen(State):
                 self.plane.throttle_frac -= C.THROTTLE_SPEED * dt/1000
             self.plane.throttle_frac = clamp(self.plane.throttle_frac, (0, 1))
 
-        self.map_show_advanced_info = self.map_state == MapState.SHOWN and keys[pg.K_h]
+        self.map_show_advanced_info = self.map_state == Visibility.SHOWN and keys[pg.K_h]
 
         # Turning authority
         base_rot_accel = 20 * dt/1000
@@ -866,7 +939,7 @@ class GameScreen(State):
         rot_accel = control_authority * base_rot_accel * speed_authority_factor * (0.2 if self.plane.on_ground else 1)
 
         # Turning or map panning
-        if self.map_state == MapState.SHOWN:
+        if self.map_state == Visibility.SHOWN:
             panning_speed = self.viewport_zoom * 150
 
             # Map shown -> pan map
@@ -910,9 +983,9 @@ class GameScreen(State):
                 self.plane.rot_rate.z += rot_accel
 
         # Input stabilisation
-        if (not (keys[pg.K_UP] or keys[pg.K_DOWN])) or self.map_state == MapState.HIDDEN:
+        if (not (keys[pg.K_UP] or keys[pg.K_DOWN])) or self.map_state == Visibility.HIDDEN:
             self.plane.rot_rate.x *= (1 - 0.8 * dt/1000)
-        if (not (keys[pg.K_LEFT] or keys[pg.K_RIGHT])) or self.map_state == MapState.HIDDEN:
+        if (not (keys[pg.K_LEFT] or keys[pg.K_RIGHT])) or self.map_state == Visibility.HIDDEN:
             self.plane.rot_rate.z *= (1 - 0.8 * dt/1000)
 
         # Flaps
@@ -1920,6 +1993,11 @@ class GameScreen(State):
         if self.map_up:
             self.draw_map()
 
+        # Render controls quick reference
+        if self.controls_quick_ref_up:
+            w, h = self.controls_quick_ref_surface.get_size()
+            self.hud_surface.blit(self.controls_quick_ref_surface, (int(C.WN_W - (w + 30) * self.controls_quick_ref_up), 50))  # centred when fully active
+
         # Show dialog box
         if self.dialog_box.active_time:
             text_size = 30
@@ -1981,16 +2059,7 @@ class GameScreen(State):
         gl.glEnable(gl.GL_BLEND)
         gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
         gl.glBindTexture(gl.GL_TEXTURE_2D, self.hud_tex)
-        gl.glTexSubImage2D(
-            gl.GL_TEXTURE_2D,
-            0,
-            0, 0,
-            C.WN_W,
-            C.WN_H,
-            gl.GL_RGBA,
-            gl.GL_UNSIGNED_BYTE,
-            hud_data
-        )
+        gl.glTexSubImage2D(gl.GL_TEXTURE_2D, 0, 0, 0, C.WN_W, C.WN_H, gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, hud_data)
         gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
 
         gl.glDisable(gl.GL_DEPTH_TEST)

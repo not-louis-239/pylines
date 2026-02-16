@@ -124,6 +124,8 @@ MAP_METRES_PER_PX = 50  # metres per pixel
 MAP_PIXELS_PER_TILE = 100  # pixels
 METRES_PER_TILE = MAP_METRES_PER_PX * MAP_PIXELS_PER_TILE
 
+CONTROLS_REF_TOGGLE_ANIMATION_DURATION = 0.08  # seconds
+
 # Terrain brightness
 SHADE_BRIGHTNESS_MULT = 0.5  # Brightness multiplier when shaded
 MOON_BRIGHTNESS = 0.18  # Moonlight brightness (omnipresent, uniform)
