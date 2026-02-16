@@ -168,6 +168,10 @@ class GameScreen(State):
             (C.WN_W//2, C.WN_H - 70), 250, 50, (0, 96, 96), (128, 255, 255),
             "Back", self.fonts.monospaced, 30
         )
+        self.crash_screen_restart_button = Button(
+            (C.WN_W//2, C.WN_H//2 + 30), 180, 50, (0, 96, 96), (128, 255, 255),
+            "Restart", self.fonts.monospaced, 30
+        )
 
         self.help_button = ImageButton((C.WN_W - 75, C.WN_H - 75), self.images.help_icon)
 
@@ -824,6 +828,9 @@ class GameScreen(State):
 
         # Block flight controls if crashed or disabled
         if not self.plane.flyable:
+            if self.crash_screen_restart_button.check_click(events):
+                self.in_restart_confirmation = True
+
             self.update_prev_keys(keys)
             return
 
@@ -1753,6 +1760,7 @@ class GameScreen(State):
             'Game Paused', (255, 255, 255), 50, self.fonts.monospaced
         )
 
+    def draw_confirmation_menu(self) -> None:
         if self.in_menu_confirmation or self.in_restart_confirmation:
             draw_transparent_rect(
                 self.hud_surface, (C.WN_W//2 - 400, C.WN_H//2 - 175), (800, C.WN_H*0.3),
@@ -1943,12 +1951,13 @@ class GameScreen(State):
                 self.hud_surface, (C.WN_W*0.28, C.WN_H*0.3), (C.WN_W*0.44, C.WN_H*0.3),
                 (0, 0, 0, 180), 2
             )
-            draw_text(self.hud_surface, (C.WN_W//2, C.WN_H*0.40), 'centre', 'centre', 'CRASH', (255, 0, 0), 50, self.fonts.monospaced)
-            draw_text(self.hud_surface, (C.WN_W//2, C.WN_H*0.49), 'centre', 'centre', ui_text, cols.WHITE, 30, self.fonts.monospaced)
+            draw_text(self.hud_surface, (C.WN_W//2, C.WN_H*0.37), 'centre', 'centre', 'CRASH', (255, 0, 0), 50, self.fonts.monospaced)
+            draw_text(self.hud_surface, (C.WN_W//2, C.WN_H*0.45), 'centre', 'centre', ui_text, cols.WHITE, 30, self.fonts.monospaced)
 
         # Show crash reason on screen
         if self.plane.crash_reason is not None:
             show_crash_reason(self.plane.crash_reason)
+            self.crash_screen_restart_button.draw(self.hud_surface)
 
         # If paused, show overlay
         if self.paused:
@@ -1963,6 +1972,8 @@ class GameScreen(State):
                 self.draw_help_screen()
             else:
                 self.draw_pause_screen()
+
+        self.draw_confirmation_menu()  # always show confirmation menu if one is active
 
         # Upload HUD surface to OpenGL
         hud_data = pg.image.tostring(self.hud_surface, "RGBA", True)
