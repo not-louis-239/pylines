@@ -245,6 +245,7 @@ class GameScreen(State):
         self._star_dirs: np.ndarray | None = None
         self._star_colors: np.ndarray | None = None
         self._star_brightness: np.ndarray | None = None
+        self._star_base_positions: np.ndarray | None = None
         self._star_vbo: int | None = None
         self._star_color_vbo: int | None = None
         self._star_count: int = 0
@@ -1094,13 +1095,13 @@ class GameScreen(State):
             self._star_vbo = gl.glGenBuffers(1)
             self._star_color_vbo = gl.glGenBuffers(1)
 
-        # Only update VBOs if hour bucket or opacity changed
+        # Cache base positions when hour bucket or opacity changes; apply camera offset each frame
         assert self._star_brightness is not None
         assert self._star_dirs is not None
 
         hour_bucket = round(fetch_hour(), 2)
         cache_key = (hour_bucket, round(opacity, 3))
-        if self._star_cache_key != cache_key:
+        if self._star_cache_key != cache_key or self._star_base_positions is None:
             sun_dir = sun_direction_from_hour(hour_bucket)
             ref_dir = np.array([0.0, 0.0, -1.0], dtype=np.float32)
             sun = np.array([sun_dir.x, sun_dir.y, sun_dir.z], dtype=np.float32)
@@ -1126,20 +1127,28 @@ class GameScreen(State):
 
             norms = np.linalg.norm(rotated, axis=1, keepdims=True)
             norms[norms == 0] = 1
-            positions = (rotated / norms) * 19000.0
+            self._star_base_positions = (rotated / norms) * 1000
 
             colors = np.empty((self._star_count, 4), dtype=np.float32)
             colors[:, :3] = self._star_colors
             colors[:, 3] = self._star_brightness * opacity
 
-            # Upload to GPU
-            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self._star_vbo)
-            gl.glBufferData(gl.GL_ARRAY_BUFFER, positions.nbytes, positions, gl.GL_DYNAMIC_DRAW)
             gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self._star_color_vbo)
             gl.glBufferData(gl.GL_ARRAY_BUFFER, colors.nbytes, colors, gl.GL_DYNAMIC_DRAW)
             gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
 
             self._star_cache_key = cache_key
+
+        assert self._star_base_positions is not None
+        camera_pos = np.array(
+            [self.plane.pos.x, self.plane.pos.y + C.CAMERA_RADIUS, self.plane.pos.z],
+            dtype=np.float32,
+        )
+        positions = self._star_base_positions + camera_pos
+
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self._star_vbo)
+        gl.glBufferData(gl.GL_ARRAY_BUFFER, positions.nbytes, positions, gl.GL_DYNAMIC_DRAW)
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
 
         # Save OpenGL states
         was_blend_enabled = gl.glIsEnabled(gl.GL_BLEND)
