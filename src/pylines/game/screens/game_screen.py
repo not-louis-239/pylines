@@ -976,9 +976,7 @@ class GameScreen(State):
                 self.viewport_auto_panning = True
 
             # Pitch
-            direction = rot_accel * (1 - (self.plane.rot.x / 90))
-            if self.game.save_data.invert_y_axis:
-                direction = -direction
+            direction = -rot_accel if self.game.save_data.invert_y_axis else rot_accel
 
             if keys[pg.K_UP]:
                 self.plane.rot_rate.x += direction
@@ -1407,7 +1405,7 @@ class GameScreen(State):
         )
 
         # Draw pitch ticks
-        for deg in range(-90, 95, 5):  # pitch marks in degrees
+        for deg in range(-180, 185, 5):  # pitch marks in degrees
             if deg == 0:
                 width = 85
             elif deg % 10 == 0:

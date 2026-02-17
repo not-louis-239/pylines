@@ -418,9 +418,15 @@ class Plane(Entity):
         self.rot_rate.y = clamp(self.rot_rate.y, (-100, 100))
         self.rot_rate.z = clamp(self.rot_rate.z, (-25, 25))
 
-        self.rot.x += self.rot_rate.x * (1 - abs(self.rot.x / 90)) * dt/1000  # Rotation is slower near top or bottom
+        self.rot.x += self.rot_rate.x * dt/1000
         self.rot.y += self.rot_rate.y * dt/1000
         self.rot.z += self.rot_rate.z * dt/1000
+
+        # Normalise pitch to -180 to 180
+        if self.rot.x < -180:
+            self.rot.x += 360
+        elif self.rot.x > 180:
+            self.rot.x -= 360
 
         # Stalling
         if self.stalled:
@@ -430,7 +436,6 @@ class Plane(Entity):
         # Clamp/normalise rotation values
         self.rot.y %= 360
         self.rot.z %= 360
-        self.rot.x = clamp(self.rot.x, (-90, 90))
 
         # Clamp position to prevent going off the map
         self.pos.x = clamp(self.pos.x, (-C.HARD_TRAVEL_LIMIT, C.HARD_TRAVEL_LIMIT))
