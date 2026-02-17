@@ -16,7 +16,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from math import asin, cos, degrees, sin
+from math import asin, atan2, cos, degrees, sin
 from math import radians as rad
 from typing import TYPE_CHECKING
 
@@ -38,6 +38,15 @@ if TYPE_CHECKING:
     from pylines.game.screens.game_screen import DialogMessage
 
 _global_up: pg.Vector3 = pg.Vector3(0, 1, 0)  # world up
+
+def rotate_around_axis(vec: pg.Vector3, axis: pg.Vector3, angle_rad: float) -> pg.Vector3:
+    if axis.length_squared() < C.EPSILON:
+        return vec
+
+    axis = axis.normalize()
+    cos_a = cos(angle_rad)
+    sin_a = sin(angle_rad)
+    return (vec * cos_a) + (axis.cross(vec) * sin_a) + (axis * axis.dot(vec) * (1 - cos_a))
 
 class CrashReason(Enum):
     TERRAIN = "terrain"
@@ -287,9 +296,18 @@ class Plane(Entity):
             -cos(rad(yaw)) * cos(rad(pitch)),
         ).normalize()
 
-        # Right vector (wing span direction)
-        local_right: pg.Vector3 = local_forward.cross(_global_up).normalize()
-        local_up: pg.Vector3 = local_right.cross(local_forward).normalize()  # local up, perpendicular to forward and right
+        # Right/up vectors (banked frame). Start from level frame then apply roll around forward.
+        level_right = local_forward.cross(_global_up)
+        if level_right.length_squared() < C.EPSILON:
+            level_right = pg.Vector3(1, 0, 0)
+        else:
+            level_right = level_right.normalize()
+
+        level_up = level_right.cross(local_forward).normalize()
+
+        roll_rad = rad(roll)
+        local_right: pg.Vector3 = rotate_around_axis(level_right, local_forward, roll_rad).normalize()
+        local_up: pg.Vector3 = rotate_around_axis(level_up, local_forward, roll_rad).normalize()
 
         # Slowly blend velocity towards forward vector to prevent
         # sideslip. This also makes turning easier at low speeds
@@ -426,14 +444,52 @@ class Plane(Entity):
             effective_rudder_roll *= 0.2  # mostly suppressed if on ground
         self.rot_rate.z += self.rudder * effective_rudder_roll * dt/1000
 
-        # Clamp and integrate rotation
+        # Clamp and integrate rotation in local axes
         self.rot_rate.x = clamp(self.rot_rate.x, (-45, 45))
         self.rot_rate.y = clamp(self.rot_rate.y, (-100, 100))
         self.rot_rate.z = clamp(self.rot_rate.z, (-45, 45))
 
-        self.rot.x += self.rot_rate.x * dt/1000
-        self.rot.y += self.rot_rate.y * dt/1000
-        self.rot.z += self.rot_rate.z * dt/1000
+        dt_s = dt / 1000
+        pitch_rad = -rad(self.rot_rate.x * dt_s)
+        yaw_rad = rad(self.rot_rate.y * dt_s)
+        roll_rad = rad(self.rot_rate.z * dt_s)
+
+        # Pitch: rotate around local right
+        local_forward = rotate_around_axis(local_forward, local_right, pitch_rad)
+        local_up = rotate_around_axis(local_up, local_right, pitch_rad)
+
+        # Yaw: rotate around local up
+        local_forward = rotate_around_axis(local_forward, local_up, yaw_rad)
+        local_right = rotate_around_axis(local_right, local_up, yaw_rad)
+
+        # Roll: rotate around local forward
+        local_right = rotate_around_axis(local_right, local_forward, roll_rad)
+        local_up = rotate_around_axis(local_up, local_forward, roll_rad)
+
+        # Re-orthonormalize basis
+        if local_forward.length_squared() > C.EPSILON:
+            local_forward = local_forward.normalize()
+        local_right = local_forward.cross(local_up)
+        if local_right.length_squared() > C.EPSILON:
+            local_right = local_right.normalize()
+        local_up = local_right.cross(local_forward).normalize()
+
+        # Convert basis back to yaw/pitch/roll for the rest of the code/UI
+        pitch = -degrees(asin(clamp(local_forward.y, (-1, 1))))
+        yaw = degrees(atan2(local_forward.x, -local_forward.z))
+
+        level_right = local_forward.cross(_global_up)
+        if level_right.length_squared() < C.EPSILON:
+            level_right = pg.Vector3(1, 0, 0)
+        else:
+            level_right = level_right.normalize()
+        level_up = level_right.cross(local_forward).normalize()
+
+        roll = degrees(atan2(level_right.dot(local_up), level_right.dot(local_right)))
+
+        self.rot.x = pitch
+        self.rot.y = yaw
+        self.rot.z = roll
 
         # Normalise pitch to -180 to 180
         if self.rot.x < -180:
@@ -447,8 +503,29 @@ class Plane(Entity):
 
         # Stalling
         if self.stalled:
-            STALL_DROOP_RATE = 18
-            self.rot_rate.x += STALL_DROOP_RATE * dt/1000  # pitch down sharply
+            # Real stalls: loss of lift, nose drops, a wing can drop, and yaw can develop.
+            stall_severity = clamp(
+                (self.aoa - self.model.stall_angle) / max(self.model.stall_angle, 1),
+                (0, 1),
+            )
+            speed_factor = clamp(1 - airspeed / max(self.model.v_ne * 0.6, 1), (0.2, 1))
+            stall_impact = stall_severity * speed_factor
+
+            STALL_PITCH_RATE = 35  # deg/s equivalent
+            STALL_WING_DROP_RATE = 25
+            STALL_YAW_RATE = 10
+
+            # Nose drop
+            self.rot_rate.x += STALL_PITCH_RATE * stall_impact * dt/1000
+
+            # Wing drop: fall further into current bank; if nearly level, pick a side
+            if abs(self.rot.z) < 5:
+                drop_sign = 1 if self.rudder >= 0 else -1
+            else:
+                drop_sign = 1 if self.rot.z >= 0 else -1
+
+            self.rot_rate.z += drop_sign * STALL_WING_DROP_RATE * stall_impact * dt/1000
+            self.rot_rate.y += drop_sign * STALL_YAW_RATE * stall_impact * dt/1000
 
         # Clamp position to prevent going off the map
         self.pos.x = clamp(self.pos.x, (-C.HARD_TRAVEL_LIMIT, C.HARD_TRAVEL_LIMIT))
