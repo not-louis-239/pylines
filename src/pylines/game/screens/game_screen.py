@@ -1524,11 +1524,30 @@ class GameScreen(State):
 
         # Static V-bar for AI must be drawn in draw_cockpit as
         # it is infront of the artificial horizon overlay
+        inverted = (
+            (90 < self.plane.rot.z % 360 < 270) and (-90 < pitch < 90)
+            or ((self.plane.rot.z % 360 > 270 or self.plane.rot.z % 360 < 90) and (pitch > 90 or pitch < -90))
+        )
+
         ai_centre = (C.WN_W//2, int(C.WN_H*0.89))
+
+        # The two yellow lines either side of the V-bar
         pg.draw.line(self.hud_surface, (255, 255, 0), (ai_centre[0]-35, ai_centre[1]), (ai_centre[0]-15, ai_centre[1]), 3)
         pg.draw.line(self.hud_surface, (255, 255, 0), (ai_centre[0]+35, ai_centre[1]), (ai_centre[0]+15, ai_centre[1]), 3)
-        pg.draw.line(self.hud_surface, (255, 255, 0), ai_centre, (ai_centre[0]-10, ai_centre[1]+5), 3)
-        pg.draw.line(self.hud_surface, (255, 255, 0), ai_centre, (ai_centre[0]+10, ai_centre[1]+5), 3)
+
+        # V-bar itself, draw as inverted if plane is inverted, so it always "points" in the direction of the nose
+        if not inverted:
+            pg.draw.line(self.hud_surface, (255, 255, 0), ai_centre, (ai_centre[0]-10, ai_centre[1]+5), 3)
+            pg.draw.line(self.hud_surface, (255, 255, 0), ai_centre, (ai_centre[0]+10, ai_centre[1]+5), 3)
+        else:
+            pg.draw.line(self.hud_surface, (255, 255, 0), ai_centre, (ai_centre[0]-10, ai_centre[1]-5), 3)
+            pg.draw.line(self.hud_surface, (255, 255, 0), ai_centre, (ai_centre[0]+10, ai_centre[1]-5), 3)
+
+            # Show text "INV" below the V-bar to indicate inverted flight, as it can be easy to miss otherwise
+            draw_text(
+                self.hud_surface, (ai_centre[0], ai_centre[1]+20), 'centre', 'centre',
+                "INV", (255, 255, 0), 18, self.fonts.monospaced
+            )
 
         # Cockpit warning lights
         warning_x = C.WN_W//2-180
