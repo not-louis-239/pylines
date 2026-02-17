@@ -275,7 +275,7 @@ class Plane(Entity):
         CONVERSION_FACTOR = 30
         self.rot.y += sin(rad(self.rot.z)) * clamp(self.vel.length()/30.87, (0, 1)) * CONVERSION_FACTOR * dt/1000
         pitch, yaw, *_ = self.rot
-        roll = (self.rot.z + 180) % 360 - 180
+        roll = (self.rot.z + 180) % 360 - 180  # normalise to -180 to 180
 
         # Forward vector (where nose points)
         forward_vec = pg.Vector3(
@@ -396,8 +396,17 @@ class Plane(Entity):
         if self.vel.length() > 1000:
             self.vel.scale_to_length(1000)
 
-        # Roll stabilisation
-        roll_stability_torque = -roll * self.model.roll_stability_factor
+        # Roll stabilisation - pushes bank towards zero over time
+        if -90 <= roll <= 90:
+            # Normal flight - push to 0°
+            roll_stability_torque = -roll * self.model.roll_stability_factor
+        else:
+            # Inverted flight - push to ±180°
+            if roll < -90:
+                roll_stability_torque = (-180 - roll) * self.model.roll_stability_factor
+            else:
+                roll_stability_torque = (180 - roll) * self.model.roll_stability_factor
+
         self.rot_rate.z += roll_stability_torque * dt/1000
 
         # Yaw torque from rudder
