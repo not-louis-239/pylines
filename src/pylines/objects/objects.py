@@ -37,6 +37,8 @@ if TYPE_CHECKING:
     from pylines.game.environment import Environment
     from pylines.game.screens.game_screen import DialogMessage
 
+_global_up: pg.Vector3 = pg.Vector3(0, 1, 0)  # world up
+
 class CrashReason(Enum):
     TERRAIN = "terrain"
     OBSTACLE = "building"
@@ -279,22 +281,22 @@ class Plane(Entity):
         roll = (self.rot.z + 180) % 360 - 180  # normalise to -180 to 180
 
         # Forward vector (where nose points)
-        forward_vec = pg.Vector3(
+        local_forward: pg.Vector3 = pg.Vector3(
             sin(rad(yaw)) * cos(rad(pitch)),
             sin(rad(-pitch)),  # pitch is negated since +pitch = nose down
             -cos(rad(yaw)) * cos(rad(pitch)),
         ).normalize()
 
         # Right vector (wing span direction)
-        up = pg.Vector3(0, 1, 0)  # world up
-        right = forward_vec.cross(up).normalize()
+        local_right: pg.Vector3 = local_forward.cross(_global_up).normalize()
+        local_up: pg.Vector3 = local_right.cross(local_forward).normalize()  # local up, perpendicular to forward and right
 
         # Slowly blend velocity towards forward vector to prevent
         # sideslip. This also makes turning easier at low speeds
         speed = self.vel.length()
         if speed > C.EPSILON:
             # compute target velocity aligned with nose
-            target_vel = forward_vec * speed
+            target_vel = local_forward * speed
 
             # blending factor: stronger at lower speeds, weaker at high speeds
             align_factor = clamp(5.0 / (speed + 1e-6), (0, 1))
@@ -303,7 +305,7 @@ class Plane(Entity):
             self.vel = self.vel.lerp(target_vel, align_factor * dt/1000)
 
         # Calculate thrust and weight force vectors
-        thrust: pg.Vector3 = pg.Vector3(0, 0, 0) if self.disabled else forward_vec * self.throttle_frac*self.model.max_throttle
+        thrust: pg.Vector3 = pg.Vector3(0, 0, 0) if self.disabled else local_forward * self.throttle_frac*self.model.max_throttle
         weight: pg.Vector3 = pg.Vector3(0, -C.GRAVITY * self.model.mass, 0)
 
         # Calculate Angle of Attack (AoA)
@@ -313,7 +315,7 @@ class Plane(Entity):
         if airspeed < C.EPSILON:
             self.aoa = 0  # Default fallback
         else:
-            self.aoa = degrees(asin(forward_vec.cross(self.vel.normalize()).length()))
+            self.aoa = degrees(asin(local_forward.cross(self.vel.normalize()).length()))
             # This calculates the angle between the forward vector and
             # velocity vector, which is a more accurate representation of AoA,
             # especially during sideslip. It uses the cross product to find
@@ -338,7 +340,7 @@ class Plane(Entity):
 
             # Lift direction = airflow_dir rotated 90° around right vector
             # Approximate small-angle rotation using cross product:
-            lift_dir = airflow_dir.cross(right).normalize()
+            lift_dir = airflow_dir.cross(local_right).normalize()
 
             # Lift increase from flaps
             lift_mag *= 1 + (flaps_def**0.7) * self.model.flap_lift_bonus
