@@ -1436,8 +1436,19 @@ class GameScreen(State):
 
         tick_spacing = 5  # pixels per 5° of pitch
 
+        # Normalize for inverted flight: keep horizon "true" and flip roll markers
+        pitch_display = pitch
+        roll_display = roll
+        if pitch > 90:
+            pitch_display = 180 - pitch
+            roll_display += 180
+        elif pitch < -90:
+            pitch_display = -180 - pitch
+            roll_display += 180
+        roll_display = (roll_display + 180) % 360 - 180
+
         # Horizon position (in local AI coords)
-        horizon_y = inner_ai_rect.height // 2 - pitch * tick_spacing
+        horizon_y = inner_ai_rect.height // 2 - pitch_display * tick_spacing
 
         # Sky (above horizon)
         pg.draw.rect(
@@ -1466,7 +1477,7 @@ class GameScreen(State):
         chev_h = 10
 
         # Nose too low -> point up
-        if pitch >= C.CHEVRON_ANGLE:
+        if pitch_display >= C.CHEVRON_ANGLE:
             pg.draw.polygon(
                 self.ai_surface, cols.WHITE,
                 [
@@ -1484,7 +1495,7 @@ class GameScreen(State):
                 ]
             )
         # Nose too high -> point down
-        elif pitch <= -C.CHEVRON_ANGLE:
+        elif pitch_display <= -C.CHEVRON_ANGLE:
             pg.draw.polygon(
                 self.ai_surface, cols.WHITE,
                 [
@@ -1502,7 +1513,7 @@ class GameScreen(State):
                 ]
             )
 
-        rotated_ai = pg.transform.rotate(self.ai_surface, roll)
+        rotated_ai = pg.transform.rotate(self.ai_surface, roll_display)
         rot_rect = rotated_ai.get_rect(center=(inner_ai_rect.width//2, inner_ai_rect.height//2))
 
         masked = pg.Surface(inner_ai_rect.size, pg.SRCALPHA)
