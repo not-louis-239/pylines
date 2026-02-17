@@ -89,12 +89,10 @@
             "heading": "Special Thanks",
             "entries": [
                 {
-                    "type": "compact",
+                    "type": "compact_notes",
                     "lines": [
-                        {
-                            "name": "Community Contributors",
-                            "role": "Playtesting"
-                        }
+                        "Akira T.",
+                        "Josh L."
                     ]
                 }
             ]
