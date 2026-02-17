@@ -1935,8 +1935,7 @@ class GameScreen(State):
             'Controls', (255, 255, 255), 50, self.fonts.monospaced
         )
 
-        # Show controls
-        draw_text(self.hud_surface, (C.WN_W * 0.3, C.WN_H*0.31), 'centre', 'centre', "Main Controls", (0, 192, 255), 40, self.fonts.monospaced)
+        draw_text(self.hud_surface, (C.WN_W * 0.3, C.WN_H*0.32), 'centre', 'centre', "Read Before Flight", (0, 192, 255), 40, self.fonts.monospaced)
 
         controls: dict[str, str] = {
             "W/S": "Throttle",
@@ -1949,20 +1948,21 @@ class GameScreen(State):
         }
 
         for i, (key, desc) in enumerate(controls.items()):
-            draw_text(self.hud_surface, (C.WN_W//2 - 340, C.WN_H * (0.4 + 0.05*i)), 'right', 'centre', key, (150, 230, 255), 27, self.fonts.monospaced)
-            draw_text(self.hud_surface, (C.WN_W//2 - 300, C.WN_H * (0.4 + 0.05*i)), 'left', 'centre', desc, cols.WHITE, 27, self.fonts.monospaced)
+            draw_text(self.hud_surface, (C.WN_W//2 - 340, C.WN_H * (0.41 + 0.04*i)), 'right', 'centre', key, (150, 230, 255), 27, self.fonts.monospaced)
+            draw_text(self.hud_surface, (C.WN_W//2 - 300, C.WN_H * (0.41 + 0.04*i)), 'left', 'centre', desc, cols.WHITE, 27, self.fonts.monospaced)
 
-        draw_text(self.hud_surface, (C.WN_W * 0.71, C.WN_H*0.3), 'centre', 'centre', "Map Controls", (0, 192, 255), 30, self.fonts.monospaced)
+        draw_text(self.hud_surface, (C.WN_W//2 + 185, C.WN_H*0.31), 'centre', 'centre', "Map Controls", (0, 192, 255), 30, self.fonts.monospaced)
 
         controls: dict[str, str] = {
             "M": "Show/Hide Map",
+            "O": "Toggle Controls Quick Ref",
         }
 
         for i, (key, desc) in enumerate(controls.items()):
-            draw_text(self.hud_surface, (C.WN_W//2 + 190, C.WN_H * (0.38 + 0.05*i)), 'right', 'centre', key, (150, 230, 255), 27, self.fonts.monospaced)
-            draw_text(self.hud_surface, (C.WN_W//2 + 230, C.WN_H * (0.38 + 0.05*i)), 'left', 'centre', desc, cols.WHITE, 27, self.fonts.monospaced)
+            draw_text(self.hud_surface, (C.WN_W//2 + 140, C.WN_H * (0.38 + 0.04*i)), 'right', 'centre', key, (150, 230, 255), 27, self.fonts.monospaced)
+            draw_text(self.hud_surface, (C.WN_W//2 + 180, C.WN_H * (0.38 + 0.04*i)), 'left', 'centre', desc, cols.WHITE, 27, self.fonts.monospaced)
 
-        draw_text(self.hud_surface, (C.WN_W * 0.71, C.WN_H*0.47), 'centre', 'centre', "While Map Open:", (0, 192, 255), 30, self.fonts.monospaced)
+        draw_text(self.hud_surface, (C.WN_W//2 + 185, C.WN_H*0.50), 'centre', 'centre', "While Map Open:", (0, 192, 255), 30, self.fonts.monospaced)
 
         controls: dict[str, str] = {
             "W/S": "Zoom In/Out",
@@ -1972,8 +1972,8 @@ class GameScreen(State):
         }
 
         for i, (key, desc) in enumerate(controls.items()):
-            draw_text(self.hud_surface, (C.WN_W//2 + 190, C.WN_H * (0.55 + 0.05*i)), 'right', 'centre', key, (150, 230, 255), 27, self.fonts.monospaced)
-            draw_text(self.hud_surface, (C.WN_W//2 + 230, C.WN_H * (0.55 + 0.05*i)), 'left', 'centre', desc, cols.WHITE, 27, self.fonts.monospaced)
+            draw_text(self.hud_surface, (C.WN_W//2 + 140, C.WN_H * (0.57 + 0.04*i)), 'right', 'centre', key, (150, 230, 255), 27, self.fonts.monospaced)
+            draw_text(self.hud_surface, (C.WN_W//2 + 180, C.WN_H * (0.57 + 0.04*i)), 'left', 'centre', desc, cols.WHITE, 27, self.fonts.monospaced)
 
     def draw_help_screen(self) -> None:
         draw_transparent_rect(
