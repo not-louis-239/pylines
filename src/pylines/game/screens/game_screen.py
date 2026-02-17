@@ -206,6 +206,9 @@ class GameScreen(State):
             inner_ai_rect.width//2
         )
 
+        # Cache attitude indicator display to avoid wasteful label drawing
+        self.cached_ai_surface = self._populate_ai_surface()
+
         # Persistent surfaces avoids pg.Surface churn which wastes resources
         self.cockpit_surface = pg.Surface((C.WN_W, C.WN_H), pg.SRCALPHA)
         self.cockpit_rect = self.images.cockpit.get_bounding_rect()
@@ -256,6 +259,52 @@ class GameScreen(State):
 
         self.crash_colour_fade_surface: Surface = pg.Surface((C.WN_W, C.WN_H), pg.SRCALPHA)
         self.smoke_manager = SmokeManager(assets.images)
+
+    def _populate_ai_surface(self) -> Surface:
+        width = 170 - 4
+        height = 2000
+        surf = pg.Surface((width, height), pg.SRCALPHA)
+        surf.fill((0, 0, 0, 0))
+
+        tick_spacing = 5  # pixels per 5° of pitch
+        centre_y = height // 2
+
+        for deg in range(-180, 185, 5):  # pitch marks in degrees
+            if deg == 0:
+                line_width = 85
+            elif deg % 10 == 0:
+                line_width = 30
+            else:
+                line_width = 15
+
+            y = centre_y + deg * tick_spacing
+            if 0 <= y <= height:
+                pg.draw.line(
+                    surf,
+                    cols.WHITE,
+                    (width//2 - line_width, y),
+                    (width//2 + line_width, y),
+                    3
+                )
+
+                if deg % 10 == 0 and deg != 0:
+                    if -90 <= deg <= 90:
+                        deg_display_value = deg
+                    elif deg < -90:
+                        deg_display_value = -180 - deg
+                    else:
+                        deg_display_value = 180 - deg
+
+                    draw_text(
+                        surf, (width//2 + line_width + 5, y), 'left', 'centre',
+                        str(abs(deg_display_value)), cols.WHITE, 19, self.fonts.monospaced
+                    )
+                    draw_text(
+                        surf, (width//2 - line_width - 5, y), 'right', 'centre',
+                        str(abs(deg_display_value)), cols.WHITE, 19, self.fonts.monospaced
+                    )
+
+        return surf
 
     def _populate_cockpit(self) -> None:
         """Draw static cockpit elements, e.g. cockpit background, static
@@ -1404,34 +1453,11 @@ class GameScreen(State):
             (0, horizon_y, inner_ai_rect.width, inner_ai_rect.height - horizon_y)
         )
 
-        # Draw pitch ticks
-        for deg in range(-180, 185, 5):  # pitch marks in degrees
-            if deg == 0:
-                width = 85
-            elif deg % 10 == 0:
-                width = 30
-            else:
-                width = 15
-
-            y = horizon_y + deg * tick_spacing
-
-            if 0 <= y <= inner_ai_rect.height:
-                pg.draw.line(
-                    self.ai_surface,
-                    cols.WHITE,
-                    (inner_ai_rect.width//2 - width, y),
-                    (inner_ai_rect.width//2 + width, y),
-                    3
-                )
-                if deg % 10 == 0 and deg != 0:  # Add labels for major tick marks (10, 20, 30 etc.)
-                    draw_text(
-                        self.ai_surface, (inner_ai_rect.width//2 + width + 5, y), 'left', 'centre',
-                        str(abs(deg)), cols.WHITE, 19, self.fonts.monospaced
-                    )
-                    draw_text(
-                        self.ai_surface, (inner_ai_rect.width//2 - width - 5, y), 'right', 'centre',
-                        str(abs(deg)), cols.WHITE, 19, self.fonts.monospaced
-                    )
+        cached_center_y = self.cached_ai_surface.get_height() // 2
+        self.ai_surface.blit(
+            self.cached_ai_surface,
+            (0, horizon_y - cached_center_y),
+        )
 
         cx = inner_ai_rect.width // 2
         top_y = 20
