@@ -220,6 +220,7 @@ class Plane(Entity):
             self.crash(damage_taken=impact_severity-MAX_OK_IMPACT, reason=crash_reason)
 
     def update(self, dt: int):
+        # Building collision checks
         COLLISION_CULL_RADIUS = 125  # skip building parts too far away to potentially collide
 
         for building in self.env.buildings:
@@ -284,7 +285,12 @@ class Plane(Entity):
             -cos(rad(yaw)) * cos(rad(pitch)),
         ).normalize()
 
-        # velocity magnitude
+        # Right vector (wing span direction)
+        up = pg.Vector3(0, 1, 0)  # world up
+        right = forward_vec.cross(up).normalize()
+
+        # Slowly blend velocity towards forward vector to prevent
+        # sideslip. This also makes turning easier at low speeds
         speed = self.vel.length()
         if speed > C.EPSILON:
             # compute target velocity aligned with nose
@@ -296,23 +302,23 @@ class Plane(Entity):
             # blend
             self.vel = self.vel.lerp(target_vel, align_factor * dt/1000)
 
-        # Calculate thrust and weight
-        thrust = pg.Vector3(0, 0, 0) if self.disabled else forward_vec * self.throttle_frac*self.model.max_throttle
-        weight = pg.Vector3(0, -C.GRAVITY * self.model.mass, 0)
+        # Calculate thrust and weight force vectors
+        thrust: pg.Vector3 = pg.Vector3(0, 0, 0) if self.disabled else forward_vec * self.throttle_frac*self.model.max_throttle
+        weight: pg.Vector3 = pg.Vector3(0, -C.GRAVITY * self.model.mass, 0)
 
         # Calculate Angle of Attack (AoA)
 
         # AoA should not simply be the pitch difference between velocity and forward vectors
         airspeed = self.vel.length()
         if airspeed < C.EPSILON:
-            self.aoa = 0
+            self.aoa = 0  # Default fallback
         else:
-            vel_unit_vec = self.vel.normalize()
-            # AoA ≈ pitch difference between forward and velocity
-            # asin(y-component) gives pitch angle
-            pitch_forward = asin(forward_vec.y)        # radians
-            pitch_velocity = asin(vel_unit_vec.y)      # radians
-            self.aoa = degrees(pitch_forward - pitch_velocity)
+            self.aoa = degrees(asin(forward_vec.cross(self.vel.normalize()).length()))
+            # This calculates the angle between the forward vector and
+            # velocity vector, which is a more accurate representation of AoA,
+            # especially during sideslip. It uses the cross product to find
+            # the sine of the angle, which is more stable for small angles
+            # than using the dot product and arccosine
 
         # Calculate lift, using previously calculated airspeed
         if not self.stalled:
@@ -326,13 +332,9 @@ class Plane(Entity):
         flaps_def = 1 - self.flaps  # flap deflection
 
         if airflow.length_squared() < C.EPSILON:
-            lift = pg.Vector3(0, 0, 0)
+            lift = pg.Vector3(0, 0, 0)  # fallback
         else:
             airflow_dir = airflow.normalize()
-
-            # Right vector (wing span direction)
-            up = pg.Vector3(0, 1, 0)
-            right = forward_vec.cross(up).normalize()
 
             # Lift direction = airflow_dir rotated 90° around right vector
             # Approximate small-angle rotation using cross product:
@@ -364,7 +366,7 @@ class Plane(Entity):
             drag = -self.vel.normalize() * drag_mag
 
         if self.braking and self.on_ground:
-            self.vel *= (1 - 0.4 * dt/1000)
+            self.vel *= (1 - 0.4 * dt/1000)  # simulated extra friction from braking, 40% per second at full brake
 
         # World edge boundary
         cheb_dist = max(abs(self.pos.x), abs(self.pos.z))  # Chebyshev distance of plane from origin
@@ -382,14 +384,14 @@ class Plane(Entity):
             boundary_bias = pg.Vector3(0, 0, 0)
 
         # Combine and integrate
-        net_force = thrust + weight + lift + drag + boundary_bias  # Force vector in Newtons
+        net_force = thrust + weight + lift + drag + boundary_bias  # Force vectors in Newtons
 
         self.acc = net_force / self.model.mass
         self.vel += self.acc * dt/1000
         self.pos += self.vel * dt/1000
 
         # Clamp height
-        ground_height = self.env.ground_height(self.pos.x, self.pos.z)
+        ground_height = self.env.get_ground_height(self.pos.x, self.pos.z)
         self.pos.y = max(self.pos.y, ground_height)
 
         # Clamp velocity to prevent NaNs
@@ -409,13 +411,13 @@ class Plane(Entity):
 
         self.rot_rate.z += roll_stability_torque * dt/1000
 
-        # Yaw torque from rudder
+        # Yaw torque from rudder - this is what actually makes the rudder "work"
         yaw_torque = self.rudder * self.model.rudder_sensitivity * dt/1000
         self.rot_rate.y += yaw_torque
         YAW_FRICTION = 1.5
         self.rot_rate.y *= (1 - YAW_FRICTION * dt/1000)
 
-        # Extra roll from rudder
+        # Small amount of extra roll from rudder
         factor = clamp(1 - abs(self.rot.z)/self.model.max_bank_angle, (0, 1))
         effective_rudder_roll = self.model.rudder_roll_effect * factor
         if self.on_ground:
@@ -423,9 +425,9 @@ class Plane(Entity):
         self.rot_rate.z += self.rudder * effective_rudder_roll * dt/1000
 
         # Clamp and integrate rotation
-        self.rot_rate.x = clamp(self.rot_rate.x, (-25, 25))
+        self.rot_rate.x = clamp(self.rot_rate.x, (-45, 45))
         self.rot_rate.y = clamp(self.rot_rate.y, (-100, 100))
-        self.rot_rate.z = clamp(self.rot_rate.z, (-25, 25))
+        self.rot_rate.z = clamp(self.rot_rate.z, (-45, 45))
 
         self.rot.x += self.rot_rate.x * dt/1000
         self.rot.y += self.rot_rate.y * dt/1000
@@ -437,14 +439,14 @@ class Plane(Entity):
         elif self.rot.x > 180:
             self.rot.x -= 360
 
-        # Stalling
-        if self.stalled:
-            STALL_DROOP_RATE = 5
-            self.rot_rate.x += STALL_DROOP_RATE * dt/1000  # pitch down sharply
-
-        # Clamp/normalise rotation values
+        # Clamp + normalise other rotation values
         self.rot.y %= 360
         self.rot.z %= 360
+
+        # Stalling
+        if self.stalled:
+            STALL_DROOP_RATE = 18
+            self.rot_rate.x += STALL_DROOP_RATE * dt/1000  # pitch down sharply
 
         # Clamp position to prevent going off the map
         self.pos.x = clamp(self.pos.x, (-C.HARD_TRAVEL_LIMIT, C.HARD_TRAVEL_LIMIT))
@@ -456,7 +458,7 @@ class Plane(Entity):
         self.damage_level += dt/1000 * DAMAGE_FACTOR * dp_excess
 
         # Collision detection with ground
-        ground_height = self.env.ground_height(self.pos.x, self.pos.z)
+        ground_height = self.env.get_ground_height(self.pos.x, self.pos.z)
         if self.pos.y <= ground_height:
             # Only process landing if just touched down
             if not self.on_ground:

@@ -1363,7 +1363,7 @@ class GameScreen(State):
         # AGL readout
         agl_centre = (C.WN_W//2 + 130, int(C.WN_H*0.81))
         x, z = self.plane.pos.x, self.plane.pos.z
-        altitude_agl = self.plane.pos.y - self.env.ground_height(x, z)
+        altitude_agl = self.plane.pos.y - self.env.get_ground_height(x, z)
         draw_text(
             self.hud_surface, (agl_centre[0] + 45, agl_centre[1]), 'right', 'centre',
             f"{units.convert_units(altitude_agl, units.METRES, units.FEET):,.0f} ft", cols.WHITE, 18, self.fonts.monospaced
@@ -1394,7 +1394,7 @@ class GameScreen(State):
         # Display glidescope
         show_glidescope = (
             gps_distance_flat.length() < 5_000 and  # runway is close
-            self.plane.pos.y > self.env.ground_height(self.plane.pos.x, self.plane.pos.z)  # plane is still in the air
+            self.plane.pos.y > self.env.get_ground_height(self.plane.pos.x, self.plane.pos.z)  # plane is still in the air
         )
 
         if show_glidescope:

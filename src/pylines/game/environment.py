@@ -222,7 +222,7 @@ class Environment:
 
         return final_height
 
-    def ground_height(self, x: float, z: float):
+    def get_ground_height(self, x: float, z: float):
         """Fancier version of height_at that accounts for sea level"""
 
         return max(
