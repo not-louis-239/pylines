@@ -63,7 +63,7 @@ class CelestialObject(SceneryObject):
 
     def __init__(self, image_surface: Surface, direction: pg.Vector3, scale: float = 1.0):
         super().__init__(0, 0, 0)
-        self.direction = pg.Vector3(0, 0, -1) if direction.length() < C.EPSILON else direction.normalize()  # guard against zero length
+        self.direction = pg.Vector3(0, 0, -1) if direction.length() < C.MATH_EPSILON else direction.normalize()  # guard against zero length
         self.scale = scale
         self.texture_id = None
         self._load_texture(image_surface)

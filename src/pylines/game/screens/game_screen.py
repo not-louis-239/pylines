@@ -675,8 +675,8 @@ class GameScreen(State):
                 iz = (zs + C.HALF_WORLD_SIZE) / (2 * C.HALF_WORLD_SIZE) * hmap_h
 
                 ix_grid, iz_grid = np.meshgrid(ix, iz, indexing='xy')
-                ix_grid = np.clip(ix_grid, 0, hmap_w - (1 + C.EPSILON))
-                iz_grid = np.clip(iz_grid, 0, hmap_h - (1 + C.EPSILON))
+                ix_grid = np.clip(ix_grid, 0, hmap_w - (1 + C.MATH_EPSILON))
+                iz_grid = np.clip(iz_grid, 0, hmap_h - (1 + C.MATH_EPSILON))
 
                 x1 = ix_grid.astype(np.int32)
                 y1 = iz_grid.astype(np.int32)
@@ -1157,7 +1157,7 @@ class GameScreen(State):
 
             k = np.cross(ref_dir, sun)
             k_norm = np.linalg.norm(k)
-            if k_norm < C.EPSILON:
+            if k_norm < C.MATH_EPSILON:
                 if np.dot(ref_dir, sun) > 0:
                     rotated = self._star_dirs
                 else:
@@ -1301,14 +1301,14 @@ class GameScreen(State):
         vel_flat = pg.Vector3(self.plane.vel.x, 0, self.plane.vel.z)
         ground_track_deg = math.degrees(
             math.atan2(vel_flat.x, -vel_flat.z)
-        ) % 360 if vel_flat.length() >= C.EPSILON else 0
+        ) % 360 if vel_flat.length() >= C.MATH_EPSILON else 0
 
         selected_runway: Runway = self.env.runways[self.gps_runway_index]
         gps_distance = selected_runway.pos - self.plane.pos
         gps_distance_flat = pg.Vector3(gps_distance.x, 0, gps_distance.z)
         gps_bearing = math.degrees(
             math.atan2(gps_distance_flat.x, -gps_distance_flat.z)
-        ) % 360 if gps_distance_flat.length() >= C.EPSILON else 0
+        ) % 360 if gps_distance_flat.length() >= C.MATH_EPSILON else 0
 
         # Ground track (the actual velocity vector of the plane)
         draw_needle(self.hud_surface, centre, 90 - (ground_track_deg-yaw), 100, (255, 190, 0))
@@ -1800,9 +1800,9 @@ class GameScreen(State):
             for world_x in range(start_grid_x, end_grid_x, MINOR_INTERVAL):
                 p1 = world_to_map(world_x, viewport_top_left_z)
                 p2 = world_to_map(world_x, viewport_top_left_z + C.MAP_OVERLAY_SIZE * self.viewport_zoom)
-                pg.draw.line(self.grid_surface, GRID_MAJOR_COL if abs(world_x % MAJOR_INTERVAL) < C.EPSILON else GRID_MINOR_COL, p1, p2, 1)
+                pg.draw.line(self.grid_surface, GRID_MAJOR_COL if abs(world_x % MAJOR_INTERVAL) < C.MATH_EPSILON else GRID_MINOR_COL, p1, p2, 1)
 
-                if abs(world_x % MAJOR_INTERVAL) <= C.EPSILON:
+                if abs(world_x % MAJOR_INTERVAL) <= C.MATH_EPSILON:
                     label_val = int(world_x)
                     label_surf = self.grid_labels_x.get(label_val)
                     if label_surf is None:
@@ -1814,9 +1814,9 @@ class GameScreen(State):
             for world_z in range(start_grid_z, end_grid_z, MINOR_INTERVAL):
                 p1 = world_to_map(viewport_top_left_x, world_z)
                 p2 = world_to_map(viewport_top_left_x + C.MAP_OVERLAY_SIZE * self.viewport_zoom, world_z)
-                pg.draw.line(self.grid_surface, GRID_MAJOR_COL if abs(world_z % MAJOR_INTERVAL) < C.EPSILON else GRID_MINOR_COL, p1, p2, 1)
+                pg.draw.line(self.grid_surface, GRID_MAJOR_COL if abs(world_z % MAJOR_INTERVAL) < C.MATH_EPSILON else GRID_MINOR_COL, p1, p2, 1)
 
-                if abs(world_z % MAJOR_INTERVAL) <= C.EPSILON:
+                if abs(world_z % MAJOR_INTERVAL) <= C.MATH_EPSILON:
                     label_val = int(world_z)
                     label_surf = self.grid_labels_y.get(label_val)
                     if label_surf is None:
@@ -1879,7 +1879,7 @@ class GameScreen(State):
         vec_to_dest = dest_pos_flat - plane_pos_flat
         distance = vec_to_dest.length()
 
-        if distance <= C.EPSILON:
+        if distance <= C.MATH_EPSILON:
             # Very small distance -> already at destination
             eta_seconds = 0
         else:
@@ -1887,7 +1887,7 @@ class GameScreen(State):
             ground_speed_towards_dest = vel_flat.dot(direction)
 
             eta_seconds: float | None
-            if ground_speed_towards_dest <= C.EPSILON:
+            if ground_speed_towards_dest <= C.MATH_EPSILON:
                 eta_seconds = None
             else:
                 eta_seconds = distance / ground_speed_towards_dest

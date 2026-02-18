@@ -236,7 +236,7 @@ class CloudLayer(LargeSceneryObject):
             wz = base_z + dz
 
             to_blob = (pg.Vector3(wx - cx, 0, wz - cz))
-            if to_blob.length() < C.EPSILON:
+            if to_blob.length() < C.MATH_EPSILON:
                 continue
 
             to_blob.normalize_ip()

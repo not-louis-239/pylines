@@ -23,7 +23,7 @@ import numpy as np
 import pygame as pg
 
 from pylines.core.asset_manager import Images
-from pylines.core.constants import EPSILON, HALF_WORLD_SIZE
+from pylines.core.constants import MATH_EPSILON, HALF_WORLD_SIZE
 from pylines.core.custom_types import Coord2
 from pylines.core.utils import map_value
 from pylines.objects.building_parts import BuildingPart, match_primitive
@@ -171,8 +171,8 @@ class Environment:
         """Returns the height at world coordinates x and z, in metres."""
 
         ix, iz = self._world_to_map(x, z)
-        ix = np.clip(ix, 0, self.w - (1+EPSILON))
-        iz = np.clip(iz, 0, self.h - (1+EPSILON))
+        ix = np.clip(ix, 0, self.w - (1+MATH_EPSILON))
+        iz = np.clip(iz, 0, self.h - (1+MATH_EPSILON))
 
         x1, y1 = int(ix), int(iz)
         x2, y2 = x1 + 1, y1 + 1

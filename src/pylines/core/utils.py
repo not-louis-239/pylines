@@ -196,10 +196,9 @@ def lerp_vectors(va: pg.Vector3, vb: pg.Vector3, t: float) -> pg.Vector3:
     return va + (vb - va) * clamp(t, (0, 1))
 
 def rotate_around_axis(vec: pg.Vector3, axis: pg.Vector3, angle_rad: float) -> pg.Vector3:
-    if axis.length_squared() < C.EPSILON:
-        return vec
+    if not 1 - C.MATH_EPSILON < axis.length_squared() < 1 + C.MATH_EPSILON:
+        raise ValueError("Axis must be a unit vector (use .normalize() to normalise it first)")
 
-    axis = axis.normalize()
     cos_a = cos(angle_rad)
     sin_a = sin(angle_rad)
     return (vec * cos_a) + (axis.cross(vec) * sin_a) + (axis * axis.dot(vec) * (1 - cos_a))
