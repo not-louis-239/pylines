@@ -23,7 +23,7 @@ from datetime import datetime, timedelta
 from enum import Enum
 from math import cos, sin
 from math import radians as rad
-from typing import TYPE_CHECKING, Callable, Generator, cast
+from typing import TYPE_CHECKING, Callable, Generator, Literal, cast
 
 import numpy as np
 import pygame as pg
@@ -991,12 +991,6 @@ class GameScreen(State):
 
         self.map_show_advanced_info = self.map_state == Visibility.SHOWN and keys[pg.K_h]
 
-        # Turning authority
-        base_rot_accel = 20 * dt/1000
-        control_authority = 1 - 0.875 * self.plane.damage_level**2  # reduce authority based on damage level
-        speed_authority_factor = clamp((self.plane.vel.length()/30.87)**2, (0.01, 1))  # based on vel in m/s
-        rot_accel = control_authority * base_rot_accel * speed_authority_factor * (0.2 if self.plane.on_ground else 1)
-
         # Turning or map panning
         if self.map_state == Visibility.SHOWN:
             self.plane.rot_input_container.reset()  # zero out plane rotation inputs while map is shown
@@ -1027,7 +1021,7 @@ class GameScreen(State):
                 self.viewport_auto_panning = True
 
             # Pitch
-            direction = -1 if self.game.save_data.invert_y_axis else 1
+            direction: Literal[-1, 1] = -1 if self.game.save_data.invert_y_axis else 1
 
             pitch_input = 0  # temporary container
             if keys[pg.K_UP]:
@@ -2092,7 +2086,7 @@ class GameScreen(State):
 
         # Render controls quick reference
         if self.controls_quick_ref_up:
-            w, h = self.controls_quick_ref_surface.get_size()
+            w, _ = self.controls_quick_ref_surface.get_size()
             self.hud_surface.blit(self.controls_quick_ref_surface, (int(C.WN_W - (w + 30) * self.controls_quick_ref_up), 50))  # centred when fully active
 
         # Show dialog box
