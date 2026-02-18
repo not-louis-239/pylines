@@ -63,6 +63,7 @@ from pylines.objects.scenery.runway import Runway
 from pylines.objects.scenery.sky import Moon, Sky, Star, Sun
 from pylines.shaders.shader_manager import load_shader_script
 from pylines.game.smoke_manager import SmokeManager
+from pylines.objects.rotation_input_container import RotationInputContainer
 
 if TYPE_CHECKING:
     from pylines.core.custom_types import ScancodeWrapper, Surface
@@ -108,7 +109,7 @@ class GameScreen(State):
 
         self.dialog_box = DialogMessage()
 
-        self.plane = Plane(assets.sounds, self.dialog_box, self.game.env)
+        self.plane = Plane(assets.sounds, self.dialog_box, self.game.env, RotationInputContainer())
         self.sky = Sky()
         self.sun = Sun(assets.images.sun)
         self.moon = Moon(assets.images.moon)
@@ -998,6 +999,7 @@ class GameScreen(State):
 
         # Turning or map panning
         if self.map_state == Visibility.SHOWN:
+            self.plane.rot_input_container.reset()  # zero out plane rotation inputs while map is shown
             panning_speed = self.viewport_zoom * 150
 
             # Map shown -> pan map
@@ -1025,24 +1027,24 @@ class GameScreen(State):
                 self.viewport_auto_panning = True
 
             # Pitch
-            direction = -rot_accel if self.game.save_data.invert_y_axis else rot_accel
+            direction = -1 if self.game.save_data.invert_y_axis else 1
 
+            pitch_input = 0  # temporary container
             if keys[pg.K_UP]:
-                self.plane.rot_rate.x += direction
+                pitch_input += direction
             if keys[pg.K_DOWN]:
-                self.plane.rot_rate.x -= direction
+                pitch_input -= direction
+            assert pitch_input in (-1, 0, 1)
+            self.plane.rot_input_container.pitch_input = pitch_input
 
             # Turning
+            roll_input = 0  # temporary container
             if keys[pg.K_LEFT]:
-                self.plane.rot_rate.z -= rot_accel
+                roll_input -= 1
             if keys[pg.K_RIGHT]:
-                self.plane.rot_rate.z += rot_accel
-
-        # Input stabilisation
-        if (not (keys[pg.K_UP] or keys[pg.K_DOWN])) or self.map_state == Visibility.HIDDEN:
-            self.plane.rot_rate.x *= (1 - 0.8 * dt/1000)
-        if (not (keys[pg.K_LEFT] or keys[pg.K_RIGHT])) or self.map_state == Visibility.HIDDEN:
-            self.plane.rot_rate.z *= (1 - 0.8 * dt/1000)
+                roll_input += 1
+            assert roll_input in (-1, 0, 1)
+            self.plane.rot_input_container.roll_input = roll_input
 
         # Flaps
         if keys[pg.K_z]:  # Flaps up
@@ -1267,7 +1269,7 @@ class GameScreen(State):
             self.hud_surface.blit(self.crash_colour_fade_surface, (0, 0))
 
         # Setup
-        pitch, yaw, roll = self.plane.rot
+        pitch, yaw, roll = self.plane.get_rot()
 
         # Stall warning
         warning_x = C.WN_W//2-145
@@ -1525,8 +1527,8 @@ class GameScreen(State):
         # Static V-bar for AI must be drawn in draw_cockpit as
         # it is infront of the artificial horizon overlay
         inverted = (
-            (90 < self.plane.rot.z % 360 < 270) and (-90 < pitch < 90)
-            or ((self.plane.rot.z % 360 > 270 or self.plane.rot.z % 360 < 90) and (pitch > 90 or pitch < -90))
+            (90 < roll % 360 < 270) and (-90 < pitch < 90)
+            or ((roll % 360 > 270 or roll % 360 < 90) and (pitch > 90 or pitch < -90))
         )
 
         ai_centre = (C.WN_W//2, int(C.WN_H*0.89))
@@ -1559,6 +1561,8 @@ class GameScreen(State):
         pg.draw.circle(self.hud_surface, (warning_col), (warning_x, C.WN_H*0.965), 8)
 
     def draw_map(self):
+        pitch, yaw, roll = self.plane.get_rot()
+
         self.map_surface.fill((0, 0, 0, 255))
         NUM_TILES = math.ceil(C.HALF_WORLD_SIZE*2 / (C.METRES_PER_TILE))
 
@@ -1754,7 +1758,7 @@ class GameScreen(State):
         icon_x = cx - (self.viewport_pos.x - self.plane.pos.x) / self.viewport_zoom
         icon_z = cz - (self.viewport_pos.z - self.plane.pos.z) / self.viewport_zoom
 
-        plane_icon_rotated = pg.transform.rotate(self.images.plane_icon, -self.plane.rot.y)
+        plane_icon_rotated = pg.transform.rotate(self.images.plane_icon, -yaw)
         rotated_icon_rect = plane_icon_rotated.get_rect(center=(icon_x, icon_z))
         self.map_surface.blit(plane_icon_rotated, rotated_icon_rect)
 
@@ -2205,19 +2209,15 @@ class GameScreen(State):
         # Apply camera transformations based on plane's state
         # The order of operations is Yaw, then Pitch, then Roll.
         # OpenGL applies matrix transformations in reverse order of the calls.
-        gl.glRotatef(self.plane.rot.z, 0, 0, 1) # 3. Roll
-        gl.glRotatef(self.plane.rot.x, 1, 0, 0) # 2. Pitch
-        gl.glRotatef(self.plane.rot.y, 0, 1, 0) # 1. Yaw
+        pitch, yaw, roll = self.plane.get_rot()
+        gl.glRotatef(roll, 0, 0, 1) # 3. Roll
+        gl.glRotatef(pitch, 1, 0, 0) # 2. Pitch
+        gl.glRotatef(yaw, 0, 1, 0) # 1. Yaw
 
         camera_y = self.plane.pos.y + C.CAMERA_RADIUS
         gl.glTranslatef(-self.plane.pos.x, -camera_y, -self.plane.pos.z)
 
-        pitch, yaw, _ = self.plane.rot
-        camera_fwd = pg.Vector3(
-            sin(rad(yaw)) * cos(rad(pitch)),
-            sin(rad(-pitch)),  # pitch is negated since +pitch = nose down
-            -cos(rad(yaw)) * cos(rad(pitch)),
-        ).normalize()
+        camera_fwd = self.plane.native_fwd  # now uses native fwd vector, so no need to recalculate
 
         self.draw_stars()
 
