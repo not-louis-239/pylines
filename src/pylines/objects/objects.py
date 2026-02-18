@@ -30,23 +30,15 @@ from pylines.core.collision_checkers import (
     point_in_sphere,
 )
 from pylines.core.custom_types import Surface
-from pylines.core.utils import clamp, point_in_aabb
+from pylines.core.utils import clamp, point_in_aabb, rotate_around_axis
 from pylines.objects.building_parts import Primitive
+from pylines.objects.rotation_input_container import RotationInputContainer
 
 if TYPE_CHECKING:
     from pylines.game.environment import Environment
     from pylines.game.screens.game_screen import DialogMessage
 
 _global_up: pg.Vector3 = pg.Vector3(0, 1, 0)  # world up
-
-def rotate_around_axis(vec: pg.Vector3, axis: pg.Vector3, angle_rad: float) -> pg.Vector3:
-    if axis.length_squared() < C.EPSILON:
-        return vec
-
-    axis = axis.normalize()
-    cos_a = cos(angle_rad)
-    sin_a = sin(angle_rad)
-    return (vec * cos_a) + (axis.cross(vec) * sin_a) + (axis * axis.dot(vec) * (1 - cos_a))
 
 class CrashReason(Enum):
     TERRAIN = "terrain"
@@ -67,13 +59,14 @@ class Entity:
         pass
 
 class Plane(Entity):
-    def __init__(self, sounds: Sounds, dialog_box: DialogMessage, env: Environment):
+    def __init__(self, sounds: Sounds, dialog_box: DialogMessage, env: Environment, rot_input_container: RotationInputContainer):
         super().__init__(0, 0, 0)
         self.model: C.PlaneModel = C.PLANE_MODELS["Cessna 172"]
         self.sounds = sounds
         self.dialog_box = dialog_box
         self.env = env
         self.time_since_lethal_crash: float | None = None  # None = hasn't crashed yet, used for explosion animation
+        self.rot_input_container = rot_input_container
         self.reset()
 
     @property
@@ -112,7 +105,7 @@ class Plane(Entity):
 
     def reset(self) -> None:
         STARTING_POS = (200, -3_000)
-        STARTING_YAW = 310
+        STARTING_YAW_DEGREES = 310
 
         sx, sz = STARTING_POS
         self.pos = pg.Vector3(sx, self.env.height_at(sx, sz), sz)
@@ -124,9 +117,15 @@ class Plane(Entity):
         self.rudder: float = 0  # from -1 to 1 (deflection)
         self.braking = False
 
-        self.rot = pg.Vector3(0, STARTING_YAW, 0)  # pitch, yaw, roll
-        self.rot_rate = pg.Vector3(0, 0, 0)
         self.show_stall_warning: bool = False
+
+        # Using a native forward vector for rotation makes rotating around local axes easier
+        self.native_fwd: pg.Vector3 = pg.Vector3(
+            sin(rad(STARTING_YAW_DEGREES)),
+            0,
+            -cos(rad(STARTING_YAW_DEGREES))
+        )
+        self.native_up: pg.Vector3 = pg.Vector3(0, 1, 0)  # Can be assumed world up as plane starts horizontal
 
         self.aoa = 0  # degrees
         self.on_ground = True
@@ -135,6 +134,19 @@ class Plane(Entity):
         self.crash_reason: CrashReason | None = None
         self.time_since_lethal_crash = None
         self.damage_level = 0
+
+    @property
+    def native_right(self) -> pg.Vector3:
+        return self.native_fwd.cross(self.native_up).normalize()
+
+    def get_rot(self) -> tuple[float, float, float]:
+        """Returns a tuple where x=pitch, y=yaw, z=roll, each in degrees."""
+
+        return (
+            -degrees(asin(clamp(self.native_fwd.y, (-1, 1)))),  # pitch
+            degrees(atan2(self.native_fwd.x, -self.native_fwd.z)),  # yaw
+            degrees(atan2(self.native_right.y, self.native_up.y))  # roll
+        )
 
     def increment_crash_timer(self, dt: int) -> None:
         assert self.time_since_lethal_crash is not None, "Cannot increment if crash hasn't happened"
@@ -171,7 +183,7 @@ class Plane(Entity):
         self.sounds.crash.stop()
 
         # Check landing for quality
-        pitch, yaw, roll = self.rot
+        pitch, _, roll = self.get_rot()
         roll = (roll+180)%360 - 180  # Normalise
 
         # Safety parameters
@@ -314,7 +326,7 @@ class Plane(Entity):
         speed = self.vel.length()
         if speed > C.EPSILON:
             # compute target velocity aligned with nose
-            target_vel = local_forward * speed
+            target_vel = self.native_fwd * speed
 
             # blending factor: stronger at lower speeds, weaker at high speeds
             align_factor = clamp(5.0 / (speed + 1e-6), (0, 1))
@@ -323,7 +335,7 @@ class Plane(Entity):
             self.vel = self.vel.lerp(target_vel, align_factor * dt/1000)
 
         # Calculate thrust and weight force vectors
-        thrust: pg.Vector3 = pg.Vector3(0, 0, 0) if self.disabled else local_forward * self.throttle_frac*self.model.max_throttle
+        thrust: pg.Vector3 = pg.Vector3(0, 0, 0) if self.disabled else self.native_fwd * self.throttle_frac * self.model.max_throttle
         weight: pg.Vector3 = pg.Vector3(0, -C.GRAVITY * self.model.mass, 0)
 
         # Calculate Angle of Attack (AoA)
@@ -333,7 +345,7 @@ class Plane(Entity):
         if airspeed < C.EPSILON:
             self.aoa = 0  # Default fallback
         else:
-            self.aoa = degrees(asin(local_forward.cross(self.vel.normalize()).length()))
+            self.aoa = degrees(asin(self.native_fwd.cross(self.vel.normalize()).length()))
             # This calculates the angle between the forward vector and
             # velocity vector, which is a more accurate representation of AoA,
             # especially during sideslip. It uses the cross product to find
@@ -406,7 +418,7 @@ class Plane(Entity):
         # Combine and integrate
         net_force = thrust + weight + lift + drag + boundary_bias  # Force vectors in Newtons
 
-        self.acc = net_force / self.model.mass
+        self.acc = net_force / self.model.mass  # a = F/m
         self.vel += self.acc * dt/1000
         self.pos += self.vel * dt/1000
 
@@ -417,6 +429,9 @@ class Plane(Entity):
         # Clamp velocity to prevent NaNs
         if self.vel.length() > 1000:
             self.vel.scale_to_length(1000)
+
+        # Get rotation values
+        pitch, yaw, roll = self.get_rot()
 
         # Roll stabilisation - pushes bank towards zero over time
         if -90 <= roll <= 90:
