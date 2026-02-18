@@ -503,29 +503,8 @@ class Plane(Entity):
 
         # Stalling
         if self.stalled:
-            # Real stalls: loss of lift, nose drops, a wing can drop, and yaw can develop.
-            stall_severity = clamp(
-                (self.aoa - self.model.stall_angle) / max(self.model.stall_angle, 1),
-                (0, 1),
-            )
-            speed_factor = clamp(1 - airspeed / max(self.model.v_ne * 0.6, 1), (0.2, 1))
-            stall_impact = stall_severity * speed_factor
-
-            STALL_PITCH_RATE = 35  # deg/s equivalent
-            STALL_WING_DROP_RATE = 25
-            STALL_YAW_RATE = 10
-
-            # Nose drop
-            self.rot_rate.x += STALL_PITCH_RATE * stall_impact * dt/1000
-
-            # Wing drop: fall further into current bank; if nearly level, pick a side
-            if abs(self.rot.z) < 5:
-                drop_sign = 1 if self.rudder >= 0 else -1
-            else:
-                drop_sign = 1 if self.rot.z >= 0 else -1
-
-            self.rot_rate.z += drop_sign * STALL_WING_DROP_RATE * stall_impact * dt/1000
-            self.rot_rate.y += drop_sign * STALL_YAW_RATE * stall_impact * dt/1000
+            STALL_PITCH_RATE = 30  # degrees per second^2, nose down
+            self.rot_rate.x += STALL_PITCH_RATE * dt/1000
 
         # Clamp position to prevent going off the map
         self.pos.x = clamp(self.pos.x, (-C.HARD_TRAVEL_LIMIT, C.HARD_TRAVEL_LIMIT))
