@@ -246,10 +246,10 @@ class Plane(Entity):
     def process_input(self, dt: int):
         dt_seconds = dt / 1000
 
-        base_rot_accel = 20 * dt_seconds
+        BASE_ROT_ACCEL = 20
         control_authority = 1 - 0.875 * self.damage_level**2  # reduce authority based on damage level
         speed_authority_factor = clamp((self.vel.length()/30.87)**2, (0.01, 1))  # based on vel in m/s, higher vel = more authority, with full authority at 30.87 m/s (60 knots)
-        rot_accel = control_authority * base_rot_accel * speed_authority_factor * (0.2 if self.on_ground else 1)  # If on ground -> significantly reduces turn authority
+        rot_accel = control_authority * BASE_ROT_ACCEL * speed_authority_factor * (0.2 if self.on_ground else 1) * dt_seconds  # If on ground -> significantly reduces turn authority
 
         # Update control inputs from input container
         self.rot_rate.x += self.rot_input_container.pitch_input * rot_accel
@@ -466,6 +466,17 @@ class Plane(Entity):
 
         # Apply roll, which updates only the native up vector
         self.native_up = rotate_around_axis(self.native_up, self.native_fwd, rad(self.rot_rate.z * dt_seconds))
+
+        # Re-orthogonalise forward and up vectors to prevent drift over time from
+        # floating point imprecision, which would cause gradual distortion of
+        # the plane's local axes and weird rotation behaviour
+        self.native_fwd = self.native_fwd.normalize()
+        self.native_up = (self.native_up - self.native_fwd *
+        self.native_up.dot(self.native_fwd)).normalize()
+
+        assert 1 - C.MATH_EPSILON < self.native_fwd.length() < 1 + C.MATH_EPSILON, f"Forward vector not normalised: length={self.native_fwd.length()}"
+        assert 1 - C.MATH_EPSILON < self.native_up.length() < 1 + C.MATH_EPSILON, f"Up vector not normalised: length={self.native_up.length()}"
+        assert 1 - C.MATH_EPSILON < self.native_right.length() < 1 + C.MATH_EPSILON, f"Right vector not normalised: length={self.native_right.length()}"
 
         # Clamp position to prevent going off the map - this is the hard travel boundary
         self.pos.x = clamp(self.pos.x, (-C.HARD_TRAVEL_LIMIT, C.HARD_TRAVEL_LIMIT))
