@@ -13,12 +13,14 @@
 # limitations under the License.
 
 import math
+from math import cos, sin
 from pathlib import Path
 from typing import Literal
 
 import pygame as pg
 from pygame.surface import Surface
 
+import pylines.core.constants as C
 from .colours import WHITE
 from .custom_types import AColour, Colour, Coord2, RealNumber
 
@@ -189,6 +191,18 @@ def lerp(start: float, end: float, t: float):
     """
 
     return start + (end - start) * t
+
+def lerp_vectors(va: pg.Vector3, vb: pg.Vector3, t: float) -> pg.Vector3:
+    return va + (vb - va) * clamp(t, (0, 1))
+
+def rotate_around_axis(vec: pg.Vector3, axis: pg.Vector3, angle_rad: float) -> pg.Vector3:
+    if axis.length_squared() < C.EPSILON:
+        return vec
+
+    axis = axis.normalize()
+    cos_a = cos(angle_rad)
+    sin_a = sin(angle_rad)
+    return (vec * cos_a) + (axis.cross(vec) * sin_a) + (axis * axis.dot(vec) * (1 - cos_a))
 
 def wrap_text(text: str, width: RealNumber, font_family: pg.font.Font) -> list[str]:
     """Wrap text such that when it is displayed, each line is no longer than
