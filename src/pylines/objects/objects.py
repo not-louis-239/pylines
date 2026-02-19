@@ -174,6 +174,16 @@ class Plane(Entity):
             self.sounds.hard_landing.play()
             if not suppress_dialog: self.dialog_box.set_message("Hard landing. Damage sustained.", (255, 80, 0))
 
+    def calculate_aoa(self) -> float:
+        """Returns Angle of Attack (AoA) in degrees, calculated
+        as the angle between the plane's forward vector and its velocity vector."""
+
+        if self.vel.length() < C.MATH_EPSILON:
+            return 0  # Default fallback AoA when stationary
+        else:
+            cross = self.native_fwd.cross(self.vel.normalize())
+            return degrees(asin(clamp(cross.length(), (-1, 1))))
+
     def process_landing(self):
         if self.crashed:
             return
@@ -328,15 +338,7 @@ class Plane(Entity):
         weight: pg.Vector3 = pg.Vector3(0, -C.GRAVITY * self.model.mass, 0)
 
         # Calculate Angle of Attack (AoA)
-        if airspeed < C.MATH_EPSILON:
-            self.aoa = 0  # Default fallback
-        else:
-            self.aoa = degrees(asin(self.native_fwd.cross(self.vel.normalize()).length()))
-            # This calculates the angle between the forward vector and
-            # velocity vector, which is a more accurate representation of AoA,
-            # especially during sideslip. It uses the cross product to find
-            # the sine of the angle, which is more stable for small angles
-            # than using the dot product and arccosine
+        self.aoa = self.calculate_aoa()
 
         # Calculate lift, using previously calculated airspeed
         if not self.stalled:
@@ -457,8 +459,9 @@ class Plane(Entity):
 
         # Stalling
         if self.stalled:
-            STALL_PITCH_RATE = 30  # degrees per second^2, nose down
-            self.rot_rate.x += -STALL_PITCH_RATE * dt_seconds
+            pass  # DEBUG: temporarily disable stall behaviour to make testing easier, will re-enable once implemented
+            # STALL_PITCH_RATE = 30  # degrees per second^2, nose down
+            # self.rot_rate.x += -STALL_PITCH_RATE * dt_seconds
 
         # Apply rotation rates to native forward and up vectors
         self.native_fwd = rotate_around_axis(self.native_fwd, self.native_right, rad(self.rot_rate.x * dt_seconds))  # pitch

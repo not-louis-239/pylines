@@ -12,17 +12,48 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pygame import Surface
+from pathlib import Path
+
+from pygame.font import Font
+
+from pylines.core.custom_types import Surface
 from pylines.core.utils import draw_text
 from pylines.core.asset_manager import Fonts
 
-DEBUG_FONT_SIZE = 14
+DEBUG_FONT_SIZE = 28
 
-def draw_debug_display(surf: Surface, lines: list[str], font_instance: Fonts) -> None:
-    """Renders a list of lines to the given surface, with colour coding based on timing."""
-    DEBUG_FONT_FAMILY = font_instance.monospaced
+class DebugLog:
+    """A class to manage a debug log, allowing for adding messages, pruning old messages, and clearing the log."""
 
-    y = 10
-    for line in lines:
-        draw_text(surf, (10, y), 'left', 'centre', line, (255, 255, 255), DEBUG_FONT_SIZE, DEBUG_FONT_FAMILY)
-        y += 15  # Move down for next line
+    def __init__(self, *, font: Font | Path) -> None:
+        self.font = font
+        self.contents: list[str] = []
+
+    def write(self, message: str) -> None:
+        """Writes a message to the debug log."""
+        self.contents.append(message)
+
+    def prune(self, max_len: int = 20) -> None:
+        """Prunes the debug log to the specified maximum length."""
+        if max_len < 0 or not isinstance(max_len, int):
+            raise ValueError("max_len must be a non-negative integer (not zero either).")
+
+        if max_len == 0:
+            raise ValueError("use clear() to clear the debug log instead of setting max_len to 0.")
+
+        del self.contents[:-max_len]  # Keep only the most recent `max_len` entries
+
+    def clear(self) -> None:
+        """Clears the debug log."""
+        self.contents.clear()
+
+    def draw(self, surface: Surface, font_family: Font | Path | None = None, font_size: int = DEBUG_FONT_SIZE) -> None:
+        """Draws the debug log contents onto the given surface."""
+        y = font_size + 10  # Start drawing from the top of the surface
+
+        if font_family is None:
+            font_family = self.font  # Use the instance's font if no font family is provided
+
+        for line in self.contents:
+            draw_text(surface, (10, y), 'left', 'centre', line, (255, 255, 255), font_size, font_family)
+            y += font_size  # Move down for next line

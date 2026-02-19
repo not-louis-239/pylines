@@ -49,6 +49,7 @@ from pylines.core.utils import (
     frange,
     wrap_text,
 )
+from pylines.debug.debug_display import DebugLog
 from pylines.game.states import State, StateID
 from pylines.objects.buildings import (
     BuildingDefinition,
@@ -60,7 +61,7 @@ from pylines.objects.objects import CrashReason, Plane
 from pylines.objects.scenery.ground import Ground
 from pylines.objects.scenery.ocean import Ocean
 from pylines.objects.scenery.runway import Runway
-from pylines.objects.scenery.sky import Moon, Sky, Star, Sun
+from pylines.objects.scenery.sky import Moon, Sky, Sun
 from pylines.shaders.shader_manager import load_shader_script
 from pylines.game.smoke_manager import SmokeManager
 from pylines.objects.rotation_input_container import RotationInputContainer
@@ -104,6 +105,7 @@ class GameScreen(State):
         assert self.game.env is not None
 
         self._frame_count = 0
+        self.debug_log = DebugLog(font=self.fonts.monospaced)
 
         self.env = self.game.env
 
@@ -2127,6 +2129,21 @@ class GameScreen(State):
         if self.plane.crash_reason is not None:
             show_crash_reason(self.plane.crash_reason)
             self.crash_screen_restart_button.draw(self.hud_surface)
+
+        self.debug_log.clear()  # clear debug log for this frame
+        pitch, yaw, roll = self.plane.get_rot()
+
+        # Get pitch of plane velocity
+        v_pitch = math.degrees(math.atan2(self.plane.vel.y, math.hypot(self.plane.vel.x, self.plane.vel.z)))
+
+        self.debug_log.write(f"Pitch: {pitch:.4f}° (fwd) | {v_pitch:.4f}° (vel)")
+        self.debug_log.write(f"Yaw: {yaw:.4f}°")
+        self.debug_log.write(f"Roll: {roll:.4f}°")
+
+        self.debug_log.write(f"AoA: {self.plane.aoa:.4f}°")
+        self.debug_log.write(f"Rot Rate: {self.plane.rot_rate}")
+
+        self.debug_log.draw(self.hud_surface)
 
         # If paused, show overlay
         if self.paused:
