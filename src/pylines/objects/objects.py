@@ -18,6 +18,7 @@ from __future__ import annotations
 from enum import Enum
 from math import asin, atan2, cos, degrees, sin
 from math import radians as rad
+import random
 from typing import TYPE_CHECKING
 
 import pygame as pg
@@ -278,7 +279,16 @@ class Plane(Entity):
         BASE_ROT_ACCEL = 40
         control_authority = 1 - 0.875 * self.damage_level**2  # reduce authority based on damage level
         speed_authority_factor = clamp((self.vel.length()/30.87)**2, (0.01, 1))  # based on vel in m/s, higher vel = more authority, with full authority at 30.87 m/s (60 knots)
-        rot_accel = control_authority * BASE_ROT_ACCEL * speed_authority_factor * (0.2 if self.on_ground else 1) * dt_seconds  # If on ground -> significantly reduces turn authority
+
+        # If stalled, controls are weaker
+        if not self.stalled:
+            stall_authority_penalty = 0
+        else:
+            excess_aoa = self.aoa - self.model.stall_angle
+            stall_severity = clamp(excess_aoa / 30, (0, 1))
+            stall_authority_penalty = 0.5 * stall_severity  # up to 50% reduction in control authority at extreme stall
+
+        rot_accel = (1 - stall_authority_penalty) * control_authority * BASE_ROT_ACCEL * speed_authority_factor * (0.2 if self.on_ground else 1) * dt_seconds  # If on ground -> significantly reduces turn authority
 
         # Update control inputs from input container
         self.rot_rate.x += self.rot_input_container.pitch_input * rot_accel
@@ -363,6 +373,9 @@ class Plane(Entity):
         if not self.stalled:
             cl = self.model.cl_max * self.aoa/self.model.stall_angle
         else:
+            # Stalling results in lift loss, modelled here as a sharp drop in cl after
+            # stall angle is exceeded, with a small amount of residual lift that
+            # degrades gradually as AoA increases further beyond stall angle
             excess = self.aoa - self.model.stall_angle  # degrees
             cl = max(0.125, self.model.cl_max * (1 - 0.1*excess))
         lift_mag = 0.5 * C.AIR_DENSITY * airspeed**2 * self.model.wing_area * cl
@@ -482,8 +495,26 @@ class Plane(Entity):
 
         # Stalling
         if self.stalled:
+            # Calculate stall severity based on how much AoA exceeds stall angle
+            excess_aoa = self.aoa - self.model.stall_angle
+            stall_severity = clamp(excess_aoa / 30, (0, 1))  # from 0 to 1, with 30° AoA excess being max severity
+
+            # Nose wants to pitch downwards
             STALL_PITCH_RATE = 30  # degrees per second^2, nose down
-            self.rot_rate.x += STALL_PITCH_RATE * dt_seconds
+            self.rot_rate.x += STALL_PITCH_RATE * dt_seconds * stall_severity
+
+            # Wing drop - increase roll dramatically in its current direction
+            STALL_ROLL_RATE = 30  # degrees per second^2, max roll
+
+            if abs(roll) < C.MATH_EPSILON:
+                roll_dir = random.choice([-1, 1])  # If not already rolling, randomly choose a direction to roll
+            else:
+                roll_dir = get_sign(roll)  # Otherwise, roll in the current direction
+
+            assert roll_dir in (-1, 1), f"Invalid roll direction: {roll_dir}"
+            self.rot_rate.z += roll_dir * STALL_ROLL_RATE * dt_seconds * stall_severity
+            # This can turn into a spin if not corrected quickly,
+            # adding to the challenge of stall recovery
 
         # Input stabilisation
         if not self.rot_input_container.pitch_input:
