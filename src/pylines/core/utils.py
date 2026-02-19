@@ -192,6 +192,12 @@ def lerp(start: float, end: float, t: float):
 
     return start + (end - start) * t
 
+def get_lerp_weight(val: float, start: float, end: float, /) -> float:
+    if start == end:
+        return 0  # prevent ZeroDivisionError down the line
+
+    return clamp((val - start) / (end - start), (0, 1))
+
 def rotate_around_axis(vec: pg.Vector3, axis: pg.Vector3, angle_rad: float) -> pg.Vector3:
     """Rotate a vector around an axis by a given angle using Rodrigues' rotation formula.
     Axis must be a unit vector.

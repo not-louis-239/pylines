@@ -21,8 +21,6 @@ import math
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
-from math import cos, sin
-from math import radians as rad
 from typing import TYPE_CHECKING, Callable, Generator, Literal, cast
 
 import numpy as np
@@ -34,7 +32,7 @@ import pylines.core.constants as C
 import pylines.core.paths as paths
 import pylines.core.units as units
 from pylines.core.asset_manager import FLine
-from pylines.core.custom_types import Colour, EventList, RealNumber
+from pylines.core.custom_types import AColour, Colour, EventList, RealNumber
 from pylines.core.time_manager import (
     fetch_hour,
     sky_colour_from_hour,
@@ -48,6 +46,7 @@ from pylines.core.utils import (
     draw_transparent_rect,
     frange,
     wrap_text,
+    get_lerp_weight
 )
 from pylines.game.states import State, StateID
 from pylines.objects.buildings import (
@@ -2076,10 +2075,6 @@ class GameScreen(State):
 
         self.draw_cockpit()
 
-        # Exit controls
-        if self.time_elapsed < 5_000 or not self.plane.flyable:
-            draw_text(self.hud_surface, (15, 30), 'left', 'centre', "Press Esc to pause", cols.WHITE, 30, self.fonts.monospaced)
-
         # Render map
         if self.map_up:
             self.draw_map()
@@ -2088,6 +2083,26 @@ class GameScreen(State):
         if self.controls_quick_ref_up:
             w, _ = self.controls_quick_ref_surface.get_size()
             self.hud_surface.blit(self.controls_quick_ref_surface, (int(C.WN_W - (w + 30) * self.controls_quick_ref_up), 50))  # centred when fully active
+
+        # Show crash flash
+        # Anything after this should show as independent of the crash overlay
+        if self.plane.crashed:
+            assert self.plane.time_since_lethal_crash is not None
+
+            colour: AColour
+            if self.plane.time_since_lethal_crash < 0.75:
+                colour = cols.lerp_colours((255, 255, 255, 140), (255, 234, 166, 70), get_lerp_weight(self.plane.time_since_lethal_crash, 0, 0.75))
+            elif self.plane.time_since_lethal_crash < 1.5:
+                colour = cols.lerp_colours((255, 234, 166, 70), (0, 0, 0, 0), get_lerp_weight(self.plane.time_since_lethal_crash, 0.75, 1.5))
+            else:
+                colour = (0, 0, 0, 0)
+
+            self.crash_colour_fade_surface.fill(colour)
+            self.hud_surface.blit(self.crash_colour_fade_surface, (0, 0))
+
+        # Exit controls
+        if self.time_elapsed < 5_000 or not self.plane.flyable:
+            draw_text(self.hud_surface, (15, 30), 'left', 'centre', "Press Esc to pause", cols.WHITE, 30, self.fonts.monospaced)
 
         # Show dialog box
         if self.dialog_box.active_time:
