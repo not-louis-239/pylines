@@ -49,7 +49,6 @@ from pylines.core.utils import (
     frange,
     wrap_text,
 )
-from pylines.debug.debug_display import DebugLog
 from pylines.game.states import State, StateID
 from pylines.objects.buildings import (
     BuildingDefinition,
@@ -105,7 +104,6 @@ class GameScreen(State):
         assert self.game.env is not None
 
         self._frame_count = 0
-        self.debug_log = DebugLog(font=self.fonts.monospaced)
 
         self.env = self.game.env
 
@@ -1055,8 +1053,8 @@ class GameScreen(State):
         if keys[pg.K_d]:
             self.plane.rudder += C.RUDDER_SPEED * dt/1000 * min(1, self.plane.vel.length() / 10)
         if not (keys[pg.K_a] or keys[pg.K_d]):
-            decay = C.RUDDER_SNAPBACK * dt/1000
-            self.plane.rudder *= max(0, 1 - decay)
+            one_minus_decay = (1 - C.RUDDER_SNAPBACK) ** (dt/1000)
+            self.plane.rudder *= one_minus_decay
         self.plane.rudder = clamp(self.plane.rudder, (-1, 1))
 
         # Brakes
@@ -2129,21 +2127,6 @@ class GameScreen(State):
         if self.plane.crash_reason is not None:
             show_crash_reason(self.plane.crash_reason)
             self.crash_screen_restart_button.draw(self.hud_surface)
-
-        self.debug_log.clear()  # clear debug log for this frame
-        pitch, yaw, roll = self.plane.get_rot()
-
-        # Get pitch of plane velocity
-        v_pitch = -math.degrees(math.atan2(self.plane.vel.y, math.hypot(self.plane.vel.x, self.plane.vel.z)))
-
-        self.debug_log.write(f"Pitch: {pitch:.4f}° (fwd) | {v_pitch:.4f}° (vel)")
-        self.debug_log.write(f"Yaw: {yaw:.4f}°")
-        self.debug_log.write(f"Roll: {roll:.4f}°")
-
-        self.debug_log.write(f"AoA: {self.plane.aoa:.4f}°")
-        self.debug_log.write(f"Rot Rate: {self.plane.rot_rate}")
-
-        self.debug_log.draw(self.hud_surface)
 
         # If paused, show overlay
         if self.paused:

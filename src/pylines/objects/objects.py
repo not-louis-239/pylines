@@ -478,9 +478,14 @@ class Plane(Entity):
 
         # Stalling
         if self.stalled:
-            pass  # DEBUG: temporarily disable stall behaviour to make testing easier, will re-enable once implemented
-            # STALL_PITCH_RATE = 30  # degrees per second^2, nose down
-            # self.rot_rate.x += -STALL_PITCH_RATE * dt_seconds
+            STALL_PITCH_RATE = 30  # degrees per second^2, nose down
+            self.rot_rate.x += STALL_PITCH_RATE * dt_seconds
+
+        # Input stabilisation
+        if not self.rot_input_container.pitch_input:
+            self.rot_rate.x *= (1 - 0.8) ** dt_seconds
+        if not self.rot_input_container.roll_input:
+            self.rot_rate.z *= (1 - 0.8) ** dt_seconds
 
         # Apply rotation rates to native forward and up vectors
         self.native_fwd = rotate_around_axis(self.native_fwd, self.native_right, -rad(self.rot_rate.x * dt_seconds))  # pitch
