@@ -275,14 +275,14 @@ class Plane(Entity):
     def process_input(self, dt: int):
         dt_seconds = dt / 1000
 
-        BASE_ROT_ACCEL = 20
+        BASE_ROT_ACCEL = 40
         control_authority = 1 - 0.875 * self.damage_level**2  # reduce authority based on damage level
         speed_authority_factor = clamp((self.vel.length()/30.87)**2, (0.01, 1))  # based on vel in m/s, higher vel = more authority, with full authority at 30.87 m/s (60 knots)
         rot_accel = control_authority * BASE_ROT_ACCEL * speed_authority_factor * (0.2 if self.on_ground else 1) * dt_seconds  # If on ground -> significantly reduces turn authority
 
         # Update control inputs from input container
         self.rot_rate.x += self.rot_input_container.pitch_input * rot_accel
-        self.rot_rate.z += self.rot_input_container.roll_input * rot_accel
+        self.rot_rate.z -= self.rot_input_container.roll_input * rot_accel
 
     def update(self, dt: int):
         dt_seconds = dt / 1000
@@ -443,7 +443,11 @@ class Plane(Entity):
 
         # Get rotation values
         self.process_input(dt)
-        pitch, yaw, roll = self.get_rot()
+        _, _, roll = self.get_rot()
+
+        # Convert roll to yaw over time
+        CONVERSION_FACTOR = 1.5
+        self.rot_rate.y += roll * CONVERSION_FACTOR * dt_seconds
 
         # Roll stabilisation - pushes bank towards zero over time
         if -90 <= roll <= 90:
