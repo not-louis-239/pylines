@@ -2134,7 +2134,7 @@ class GameScreen(State):
         pitch, yaw, roll = self.plane.get_rot()
 
         # Get pitch of plane velocity
-        v_pitch = math.degrees(math.atan2(self.plane.vel.y, math.hypot(self.plane.vel.x, self.plane.vel.z)))
+        v_pitch = -math.degrees(math.atan2(self.plane.vel.y, math.hypot(self.plane.vel.x, self.plane.vel.z)))
 
         self.debug_log.write(f"Pitch: {pitch:.4f}° (fwd) | {v_pitch:.4f}° (vel)")
         self.debug_log.write(f"Yaw: {yaw:.4f}°")

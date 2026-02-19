@@ -194,7 +194,8 @@ def lerp(start: float, end: float, t: float):
 
 def rotate_around_axis(vec: pg.Vector3, axis: pg.Vector3, angle_rad: float) -> pg.Vector3:
     """Rotate a vector around an axis by a given angle using Rodrigues' rotation formula.
-    Axis must be a unit vector."""
+    Axis must be a unit vector.
+    Positive angle is clockwise when looking in the direction of the axis vector (right-hand rule)."""
 
     if not 1 - C.MATH_EPSILON < axis.length_squared() < 1 + C.MATH_EPSILON:
         raise ValueError("Axis must be a unit vector (use .normalize() to normalise it first)")

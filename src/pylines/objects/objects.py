@@ -30,7 +30,7 @@ from pylines.core.collision_checkers import (
     point_in_sphere,
 )
 from pylines.core.custom_types import Surface
-from pylines.core.utils import clamp, point_in_aabb, rotate_around_axis
+from pylines.core.utils import clamp, point_in_aabb, rotate_around_axis, get_sign
 from pylines.objects.building_parts import Primitive
 from pylines.objects.rotation_input_container import RotationInputContainer
 
@@ -176,13 +176,32 @@ class Plane(Entity):
 
     def calculate_aoa(self) -> float:
         """Returns Angle of Attack (AoA) in degrees, calculated
-        as the angle between the plane's forward vector and its velocity vector."""
+        as the signed angle between the plane's forward vector and its
+        velocity vector.
+
+        A positive result means the nose is above the velocity vector
+        (nose-up AoA); negative means the nose is below (nose-down).
+        """
 
         if self.vel.length() < C.MATH_EPSILON:
             return 0  # Default fallback AoA when stationary
-        else:
-            cross = self.native_fwd.cross(self.vel.normalize())
-            return degrees(asin(clamp(cross.length(), (-1, 1))))
+
+        vel_unit = self.vel.normalize()
+
+        # dot product for cosine, cross magnitude for sine
+        dot = clamp(self.native_fwd.dot(vel_unit), (-1, 1))
+        cross = self.native_fwd.cross(vel_unit)
+
+        # Determine sign using the aircraft's right-hand axis
+        sign = get_sign(cross.dot(self.native_right))
+        # get_sign returns 1, 0 or -1 based on the sign of
+        # the input, so AoA will be exactly 0 if velocity
+        # is perfectly aligned with forward vector, which
+        # is a nice property to have
+
+        # atan2 handles the full angle range and avoids domain issues
+        angle = atan2(cross.length(), dot)
+        return -sign * degrees(angle)
 
     def process_landing(self):
         if self.crashed:
@@ -464,8 +483,8 @@ class Plane(Entity):
             # self.rot_rate.x += -STALL_PITCH_RATE * dt_seconds
 
         # Apply rotation rates to native forward and up vectors
-        self.native_fwd = rotate_around_axis(self.native_fwd, self.native_right, rad(self.rot_rate.x * dt_seconds))  # pitch
-        self.native_fwd = rotate_around_axis(self.native_fwd, self.native_up, rad(self.rot_rate.y * dt_seconds))  # yaw
+        self.native_fwd = rotate_around_axis(self.native_fwd, self.native_right, -rad(self.rot_rate.x * dt_seconds))  # pitch
+        self.native_fwd = rotate_around_axis(self.native_fwd, self.native_up, -rad(self.rot_rate.y * dt_seconds))  # yaw
 
         # Apply roll, which updates only the native up vector
         self.native_up = rotate_around_axis(self.native_up, self.native_fwd, rad(self.rot_rate.z * dt_seconds))
