@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from enum import Enum, auto
+from enum import Enum, auto, StrEnum
 from abc import ABC
 
 class FLine:
@@ -79,8 +79,15 @@ class CreditsContainer:
     sections: list[CreditSection]
     notes: list[str]
 
+class ControlsSectionID(StrEnum):
+    # This differentiates individual sections to allow
+    # custom rendering behaviour for each controls section
+    MAIN = "Main Controls"
+    DISPLAYS = "Displays"
+    MAP = "Map Manipulation"
+    UTILITIES = "Utilities"
+
 @dataclass
 class ControlsSection:
-    header: str
     keys: dict[str, str]  # key, action
     note: str | None      # None = no note

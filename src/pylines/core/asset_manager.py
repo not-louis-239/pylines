@@ -32,7 +32,7 @@ from pygame.transform import scale, scale_by
 from pylines.core.asset_manager_helpers import (
     FLine, CreditSection, CreditEntry, CreditEntryCompact, CreditEntryNotes,
     CreditEntryCompactNotes, CreditLine, ControlsSection, CreditsContainer,
-    Notes
+    Notes, ControlsSectionID
 )
 import pylines.core.paths as paths
 from pylines.core.custom_types import Sound, Surface
@@ -290,25 +290,28 @@ class TextAssets(AssetBank):
         sections_list_raw = self._load_json("controls.json", "controls_sections")
         assert isinstance(sections_list_raw, list)
 
-        self.controls_sections: list[ControlsSection] = []
+        self.controls_sections: dict[ControlsSectionID, ControlsSection] = {}
         for section_dict_raw in sections_list_raw:
             # Use direct indexing for compulsory fields, .get for optional ones
 
             assert isinstance(section_dict_raw, dict)
 
-            assert isinstance(section_dict_raw["header"], str)
+            header = section_dict_raw['header']
+            assert isinstance(header, str)
             assert isinstance(section_dict_raw["keys"], dict)
 
             notes: str | None = section_dict_raw.get("notes")
             assert isinstance(notes, str) or notes is None  # notes must be a string or None
 
-            self.controls_sections.append(
-                ControlsSection(
-                    section_dict_raw["header"],
-                    section_dict_raw["keys"],
-                    notes
+            try:
+                self.controls_sections[ControlsSectionID(header)] = (
+                    ControlsSection(
+                        section_dict_raw["keys"],
+                        notes
+                    )
                 )
-            )
+            except ValueError:
+                raise ValueError(f"Invalid controls section ID (or missing in Enum): '{header}'")
 
     def _load(self, name: str, /, *, cmt_symbol: str = COMMENT_SYMBOL) -> list[str]:
         with open(paths.TEXT_DIR / name, "r", encoding="utf-8") as f:
