@@ -21,7 +21,6 @@ asset_manager.py
 """
 
 import json
-from enum import Enum, auto
 from pathlib import Path
 from typing import cast
 
@@ -29,81 +28,14 @@ import numpy as np
 import pygame as pg
 from PIL import Image
 from pygame.transform import scale, scale_by
-from abc import ABC
 
+from pylines.core.asset_manager_helpers import (
+    FLine, CreditSection, CreditEntry, CreditEntryCompact, CreditEntryNotes,
+    CreditEntryCompactNotes, CreditLine, ControlsSection, CreditsContainer,
+    Notes
+)
 import pylines.core.paths as paths
 from pylines.core.custom_types import Sound, Surface
-
-from dataclasses import dataclass
-
-class FLine:
-    """Formatted line for help text"""
-
-    class Style(Enum):
-        NORMAL = auto()
-        HEADING_1 = auto()
-        HEADING_2 = auto()
-        BULLET = auto()
-
-    def __init__(self, text: str, indent: int, style: Style = Style.NORMAL):
-        self.text = text
-        self.indent = indent
-        self.style = style
-
-    def __repr__(self) -> str:
-        return (
-            f"{self.__class__.__name__}("
-            f"text={self.text!r}, "
-            f"indent={self.indent}, "
-            f"style={self.style}"
-            f")"
-        )
-
-@dataclass
-class CreditLine:
-    name: str
-    role: str
-    license: str
-
-@dataclass
-class Notes:
-    upper: str
-    main: str
-    lower: str
-
-@dataclass
-class CreditEntry(ABC): pass
-
-@dataclass
-class CreditEntryCompact(CreditEntry):
-    lines: list[CreditLine]
-
-@dataclass
-class CreditEntryNotes(CreditEntry):
-    info: Notes
-
-@dataclass
-class CreditEntryCompactNotes(CreditEntry):
-    lines: list[str]
-
-@dataclass
-class CreditSection:
-    heading: str
-    entries: list[CreditEntry]
-
-@dataclass
-class CreditsContainer:
-    """Class designated to storing credits data"""
-
-    version: str
-    sections: list[CreditSection]
-    notes: list[str]
-
-@dataclass
-class ControlsSection:
-    header: str
-    keys: dict[str, str]  # key, function
-    note: str | None      # None = no note
 
 class AssetBank:
     """Base class to store assets. Objects of this type should be
