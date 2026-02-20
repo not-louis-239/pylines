@@ -470,52 +470,43 @@ class GameScreen(State):
         pg.draw.rect(surf, cols.WHITE, surf.get_rect(), 2)  # 2px-wide white border
 
         title_y = 30
-        draw_text(surf, (200, title_y), 'centre', 'centre', "Controls (Quick Ref)", cols.WHITE, 24, self.fonts.monospaced)
+        draw_text(surf, (35, title_y), 'left', 'centre', "Controls (Quick Ref)", cols.WHITE, 24, self.fonts.monospaced)
 
         def draw_section(title: str, start_y: int, items: dict[str, str]) -> int:
-            draw_text(surf, (200, start_y), 'centre', 'centre', title, (0, 192, 255), 20, self.fonts.monospaced)
+            draw_text(surf, (35, start_y), 'left', 'centre', title, (0, 192, 255), 20, self.fonts.monospaced)
             y = start_y + 35
             for key, desc in items.items():
-                draw_text(surf, (170, y), 'right', 'centre', key, (150, 230, 255), 18, self.fonts.monospaced)
-                draw_text(surf, (185, y), 'left', 'centre', desc, cols.WHITE, 18, self.fonts.monospaced)
-                y += 28
+                draw_text(surf, (35, y), 'left', 'centre', key, (150, 230, 255), 16, self.fonts.monospaced)
+                draw_text(surf, (110, y), 'left', 'centre', desc, cols.WHITE, 16, self.fonts.monospaced)
+                y += 20
             return y
 
         y = 75
         y = draw_section(
             "Main Controls",
             y,
-            {
-                "W/S": "Throttle",
-                "Z/X": "Flaps Up/Down",
-                "A/D": "Rudder",
-                "Arrows": "Pitch/Yaw",
-                "B": "Brake",
-                "G": "Cycle GPS dest.",
-                "Esc": "Pause",
-            },
+            self.game.assets.texts.controls_sections[ControlsSectionID.MAIN].keys
         )
 
         y += 10
         y = draw_section(
-            "Map Controls",
+            "Displays",
             y,
-            {
-                "M": "Show/Hide Map",
-                "O": "Toggle Quick Ref",
-            },
+            self.game.assets.texts.controls_sections[ControlsSectionID.DISPLAYS].keys,
         )
 
         y += 10
         y = draw_section(
             "While Map Open",
             y,
-            {
-                "W/S": "Zoom In/Out",
-                "Arrows": "Pan",
-                "Space": "Re-centre",
-                "H (hold)": "Show advanced info",
-            },
+            self.game.assets.texts.controls_sections[ControlsSectionID.MAP].keys,
+        )
+
+        y += 10
+        y = draw_section(
+            "Utilities",
+            y,
+            self.game.assets.texts.controls_sections[ControlsSectionID.UTILITIES].keys,
         )
 
         draw_text(surf, (200, 575), 'centre', 'centre', "Press O to close", (150, 230, 255), 18, self.fonts.monospaced)
