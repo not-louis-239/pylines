@@ -63,6 +63,7 @@ from pylines.objects.scenery.sky import Moon, Sky, Sun
 from pylines.shaders.shader_manager import load_shader_script
 from pylines.game.smoke_manager import SmokeManager
 from pylines.objects.rotation_input_container import RotationInputContainer
+from pylines.core.asset_manager_helpers import ControlsSectionID, ControlsSection
 
 if TYPE_CHECKING:
     from pylines.core.custom_types import ScancodeWrapper, Surface
@@ -1972,55 +1973,40 @@ class GameScreen(State):
     def draw_controls_screen(self) -> None:
         self.back_button.draw(self.hud_surface)
 
+        controls_sections: dict[ControlsSectionID, ControlsSection] = self.game.assets.texts.controls_sections  # Local alias
+
         draw_transparent_rect(
-            self.hud_surface, (C.WN_W * 0.1, C.WN_H * 0.15), (C.WN_W * 0.8, C.WN_H*0.65),
+            self.hud_surface, (C.WN_W * 0.1, C.WN_H * 0.1), (C.WN_W * 0.8, C.WN_H*0.70),
             border_thickness=3
         )
 
         draw_text(
-            self.hud_surface, (C.WN_W//2, C.WN_H*0.22), 'centre', 'centre',
+            self.hud_surface, (C.WN_W//2, C.WN_H*0.16), 'centre', 'centre',
             'Controls', (255, 255, 255), 50, self.fonts.monospaced
         )
 
-        draw_text(self.hud_surface, (C.WN_W * 0.3, C.WN_H*0.32), 'centre', 'centre', "Read Before Flight", (0, 192, 255), 40, self.fonts.monospaced)
+        draw_text(self.hud_surface, (C.WN_W//2 - 480, C.WN_H*0.3), 'left', 'centre', ControlsSectionID.MAIN, (0, 192, 255), 40, self.fonts.monospaced)
+        for i, (key, action) in enumerate(controls_sections[ControlsSectionID.MAIN].keys.items()):
+            draw_text(self.hud_surface, (C.WN_W//2 - 480, C.WN_H * (0.38 + 0.04*i)), 'left', 'centre', key, (150, 230, 255), 27, self.fonts.monospaced)
+            draw_text(self.hud_surface, (C.WN_W//2 - 360, C.WN_H * (0.38 + 0.04*i)), 'left', 'centre', action, cols.WHITE, 27, self.fonts.monospaced)
 
-        controls: dict[str, str] = {
-            "W/S": "Throttle",
-            "Z/X": "Flaps Up/Down",
-            "A/D": "Rudder",
-            "Arrows": "Pitch/Yaw",
-            "B": "Brake",
-            "G": "Cycle GPS dest.",
-            "Esc": "Pause"
-        }
+        draw_text(self.hud_surface, (C.WN_W//2 + 20, C.WN_H*0.26), 'left', 'centre', ControlsSectionID.DISPLAYS, (0, 192, 255), 25, self.fonts.monospaced)
+        for i, (key, action) in enumerate(controls_sections[ControlsSectionID.DISPLAYS].keys.items()):
+            draw_text(self.hud_surface, (C.WN_W//2 + 20, C.WN_H * (0.31 + 0.03*i)), 'left', 'centre', key, (150, 230, 255), 21, self.fonts.monospaced)
+            draw_text(self.hud_surface, (C.WN_W//2 + 140, C.WN_H * (0.31 + 0.03*i)), 'left', 'centre', action, cols.WHITE, 21, self.fonts.monospaced)
 
-        for i, (key, desc) in enumerate(controls.items()):
-            draw_text(self.hud_surface, (C.WN_W//2 - 340, C.WN_H * (0.41 + 0.04*i)), 'right', 'centre', key, (150, 230, 255), 27, self.fonts.monospaced)
-            draw_text(self.hud_surface, (C.WN_W//2 - 300, C.WN_H * (0.41 + 0.04*i)), 'left', 'centre', desc, cols.WHITE, 27, self.fonts.monospaced)
+        draw_text(self.hud_surface, (C.WN_W//2 + 20, C.WN_H*0.4), 'left', 'centre', ControlsSectionID.MAP, (0, 192, 255), 25, self.fonts.monospaced)
+        for i, (key, action) in enumerate(controls_sections[ControlsSectionID.MAP].keys.items()):
+            draw_text(self.hud_surface, (C.WN_W//2 + 20, C.WN_H * (0.45 + 0.03*i)), 'left', 'centre', key, (150, 230, 255), 21, self.fonts.monospaced)
+            draw_text(self.hud_surface, (C.WN_W//2 + 140, C.WN_H * (0.45 + 0.03*i)), 'left', 'centre', action, cols.WHITE, 21, self.fonts.monospaced)
+        note = controls_sections[ControlsSectionID.MAP].note
+        assert note is not None
+        draw_text(self.hud_surface, (C.WN_W//2 + 20, C.WN_H * (0.45 + 0.03 * (len(controls_sections[ControlsSectionID.MAP].keys) + 0.5))), 'left', 'centre', note, (255, 255, 255), 21, self.fonts.monospaced)
 
-        draw_text(self.hud_surface, (C.WN_W//2 + 185, C.WN_H*0.31), 'centre', 'centre', "Map Controls", (0, 192, 255), 30, self.fonts.monospaced)
-
-        controls: dict[str, str] = {
-            "M": "Show/Hide Map",
-            "O": "Toggle Controls Quick Ref",
-        }
-
-        for i, (key, desc) in enumerate(controls.items()):
-            draw_text(self.hud_surface, (C.WN_W//2 + 140, C.WN_H * (0.38 + 0.04*i)), 'right', 'centre', key, (150, 230, 255), 27, self.fonts.monospaced)
-            draw_text(self.hud_surface, (C.WN_W//2 + 180, C.WN_H * (0.38 + 0.04*i)), 'left', 'centre', desc, cols.WHITE, 27, self.fonts.monospaced)
-
-        draw_text(self.hud_surface, (C.WN_W//2 + 185, C.WN_H*0.50), 'centre', 'centre', "While Map Open:", (0, 192, 255), 30, self.fonts.monospaced)
-
-        controls: dict[str, str] = {
-            "W/S": "Zoom In/Out",
-            "Arrows": "Pan",
-            "Space": "Re-centre",
-            "H (hold)": "Show advanced info",
-        }
-
-        for i, (key, desc) in enumerate(controls.items()):
-            draw_text(self.hud_surface, (C.WN_W//2 + 140, C.WN_H * (0.57 + 0.04*i)), 'right', 'centre', key, (150, 230, 255), 27, self.fonts.monospaced)
-            draw_text(self.hud_surface, (C.WN_W//2 + 180, C.WN_H * (0.57 + 0.04*i)), 'left', 'centre', desc, cols.WHITE, 27, self.fonts.monospaced)
+        draw_text(self.hud_surface, (C.WN_W//2 + 20, C.WN_H*0.64), 'left', 'centre', ControlsSectionID.UTILITIES, (0, 192, 255), 25, self.fonts.monospaced)
+        for i, (key, action) in enumerate(controls_sections[ControlsSectionID.UTILITIES].keys.items()):
+            draw_text(self.hud_surface, (C.WN_W//2 + 20, C.WN_H * (0.69 + 0.03*i)), 'left', 'centre', key, (150, 230, 255), 21, self.fonts.monospaced)
+            draw_text(self.hud_surface, (C.WN_W//2 + 140, C.WN_H * (0.69 + 0.03*i)), 'left', 'centre', action, cols.WHITE, 21, self.fonts.monospaced)
 
     def draw_help_screen(self) -> None:
         draw_transparent_rect(

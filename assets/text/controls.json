@@ -27,7 +27,7 @@
                 "Space": "Re-Centre",
                 "H (hold)": "Show Advanced Info"
             },
-            "note": "These controls override normal flight controls when the map is open."
+            "notes": "Overrides normal controls when map is open"
         },
         {
             "header": "Utilities",

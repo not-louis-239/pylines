@@ -24,11 +24,12 @@ from OpenGL import GLU as glu
 
 import pylines.core.constants as C
 from pylines.core.asset_manager import FLine
-from pylines.core.colours import WHITE
 from pylines.core.custom_types import Colour, EventList, ScancodeWrapper, Surface
 from pylines.core.utils import draw_text, wrap_text
 from pylines.game.states import State, StateID
 from pylines.objects.buttons import Button, ImageButton
+import pylines.core.colours as cols
+from pylines.core.asset_manager_helpers import ControlsSection, ControlsSectionID
 
 if TYPE_CHECKING:
     from pylines.game.game import Game
@@ -131,8 +132,8 @@ class TitleScreen(State):
         VISUAL_STYLES: dict[FLine.Style, tuple[int, Colour, bool]] = {
             FLine.Style.HEADING_1: (36, (0, 192, 255), False),
             FLine.Style.HEADING_2: (28, (0, 192, 255), False),
-            FLine.Style.BULLET: (24, WHITE, True),
-            FLine.Style.NORMAL: (24, WHITE, False),
+            FLine.Style.BULLET: (24, cols.WHITE, True),
+            FLine.Style.NORMAL: (24, cols.WHITE, False),
         }
 
         for fline in self.game.assets.texts.help_lines:
@@ -193,45 +194,29 @@ class TitleScreen(State):
 
         draw_text(self.display_surface, (C.WN_W//2, 0.95*C.WN_H), 'centre', 'centre', "Copyright (C) 2025-2026 Louis Masarei-Boulton.", (127, 127, 127), 15, self.fonts.monospaced)
 
-        draw_text(self.display_surface, (C.WN_W * 0.3, C.WN_H*0.32), 'centre', 'centre', "Read Before Flight", (0, 192, 255), 40, self.fonts.monospaced)
+        controls_sections: dict[ControlsSectionID, ControlsSection] = self.game.assets.texts.controls_sections  # Local alias
+        draw_text(self.display_surface, (C.WN_W//2 - 480, C.WN_H*0.3), 'left', 'centre', "Read Before Flight", (0, 192, 255), 40, self.fonts.monospaced)
+        for i, (key, action) in enumerate(controls_sections[ControlsSectionID.MAIN].keys.items()):
+            draw_text(self.display_surface, (C.WN_W//2 - 480, C.WN_H * (0.38 + 0.04*i)), 'left', 'centre', key, (150, 230, 255), 27, self.fonts.monospaced)
+            draw_text(self.display_surface, (C.WN_W//2 - 360, C.WN_H * (0.38 + 0.04*i)), 'left', 'centre', action, cols.WHITE, 27, self.fonts.monospaced)
 
-        controls: dict[str, str] = {
-            "W/S": "Throttle",
-            "Z/X": "Flaps Up/Down",
-            "A/D": "Rudder",
-            "Arrows": "Pitch/Yaw",
-            "B": "Brake",
-            "G": "Cycle GPS dest.",
-            "Esc": "Pause"
-        }
+        draw_text(self.display_surface, (C.WN_W//2 + 20, C.WN_H*0.26), 'left', 'centre', ControlsSectionID.DISPLAYS, (0, 192, 255), 25, self.fonts.monospaced)
+        for i, (key, action) in enumerate(controls_sections[ControlsSectionID.DISPLAYS].keys.items()):
+            draw_text(self.display_surface, (C.WN_W//2 + 20, C.WN_H * (0.31 + 0.03*i)), 'left', 'centre', key, (150, 230, 255), 21, self.fonts.monospaced)
+            draw_text(self.display_surface, (C.WN_W//2 + 140, C.WN_H * (0.31 + 0.03*i)), 'left', 'centre', action, cols.WHITE, 21, self.fonts.monospaced)
 
-        for i, (key, desc) in enumerate(controls.items()):
-            draw_text(self.display_surface, (C.WN_W//2 - 340, C.WN_H * (0.41 + 0.04*i)), 'right', 'centre', key, (150, 230, 255), 27, self.fonts.monospaced)
-            draw_text(self.display_surface, (C.WN_W//2 - 300, C.WN_H * (0.41 + 0.04*i)), 'left', 'centre', desc, WHITE, 27, self.fonts.monospaced)
+        draw_text(self.display_surface, (C.WN_W//2 + 20, C.WN_H*0.4), 'left', 'centre', ControlsSectionID.MAP, (0, 192, 255), 25, self.fonts.monospaced)
+        for i, (key, action) in enumerate(controls_sections[ControlsSectionID.MAP].keys.items()):
+            draw_text(self.display_surface, (C.WN_W//2 + 20, C.WN_H * (0.45 + 0.03*i)), 'left', 'centre', key, (150, 230, 255), 21, self.fonts.monospaced)
+            draw_text(self.display_surface, (C.WN_W//2 + 140, C.WN_H * (0.45 + 0.03*i)), 'left', 'centre', action, cols.WHITE, 21, self.fonts.monospaced)
+        note = controls_sections[ControlsSectionID.MAP].note
+        assert note is not None
+        draw_text(self.display_surface, (C.WN_W//2 + 20, C.WN_H * (0.45 + 0.03 * (len(controls_sections[ControlsSectionID.MAP].keys) + 0.5))), 'left', 'centre', note, (255, 255, 255), 21, self.fonts.monospaced)
 
-        draw_text(self.display_surface, (C.WN_W//2 + 185, C.WN_H*0.31), 'centre', 'centre', "Map Controls", (0, 192, 255), 30, self.fonts.monospaced)
-
-        controls: dict[str, str] = {
-            "M": "Show/Hide Map",
-            "O": "Toggle Controls Quick Ref",
-        }
-
-        for i, (key, desc) in enumerate(controls.items()):
-            draw_text(self.display_surface, (C.WN_W//2 + 140, C.WN_H * (0.38 + 0.04*i)), 'right', 'centre', key, (150, 230, 255), 27, self.fonts.monospaced)
-            draw_text(self.display_surface, (C.WN_W//2 + 180, C.WN_H * (0.38 + 0.04*i)), 'left', 'centre', desc, WHITE, 27, self.fonts.monospaced)
-
-        draw_text(self.display_surface, (C.WN_W//2 + 185, C.WN_H*0.50), 'centre', 'centre', "While Map Open:", (0, 192, 255), 30, self.fonts.monospaced)
-
-        controls: dict[str, str] = {
-            "W/S": "Zoom In/Out",
-            "Arrows": "Pan",
-            "Space": "Re-centre",
-            "H (hold)": "Show advanced info",
-        }
-
-        for i, (key, desc) in enumerate(controls.items()):
-            draw_text(self.display_surface, (C.WN_W//2 + 140, C.WN_H * (0.57 + 0.04*i)), 'right', 'centre', key, (150, 230, 255), 27, self.fonts.monospaced)
-            draw_text(self.display_surface, (C.WN_W//2 + 180, C.WN_H * (0.57 + 0.04*i)), 'left', 'centre', desc, WHITE, 27, self.fonts.monospaced)
+        draw_text(self.display_surface, (C.WN_W//2 + 20, C.WN_H*0.64), 'left', 'centre', ControlsSectionID.UTILITIES, (0, 192, 255), 25, self.fonts.monospaced)
+        for i, (key, action) in enumerate(controls_sections[ControlsSectionID.UTILITIES].keys.items()):
+            draw_text(self.display_surface, (C.WN_W//2 + 20, C.WN_H * (0.69 + 0.03*i)), 'left', 'centre', key, (150, 230, 255), 21, self.fonts.monospaced)
+            draw_text(self.display_surface, (C.WN_W//2 + 140, C.WN_H * (0.69 + 0.03*i)), 'left', 'centre', action, cols.WHITE, 21, self.fonts.monospaced)
 
         self.settings_button.draw(self.display_surface)
         self.credits_button.draw(self.display_surface)
