@@ -53,6 +53,9 @@ class State:
 
     def pressed(self, keys: ScancodeWrapper, key: int) -> bool:
         """Returns True if a key is pressed now but not last frame."""
+
+        # This is an instance method instead of a function as it relies on
+        # the state's stored previously pressed keys.
         return keys[key] and not self.game.prev_keys[key]
 
     def take_input(self, keys: ScancodeWrapper, events: EventList, dt: int) -> None:

@@ -134,14 +134,16 @@ class GameScreen(State):
 
         # Pausing
         self.paused: bool = False
-        self.in_menu_confirmation = False
-        self.in_restart_confirmation = False
-        self.in_controls_screen = False
 
-        self.in_help_screen = False
-        self.help_screen_offset = 0.0
-        self.help_max_offset = 0.0
-        self.help_scroll_vel = 0.0
+        # Confirmation menus
+        self.in_menu_confirmation: bool = False
+        self.in_restart_confirmation: bool = False
+        self.in_controls_screen: bool = False
+
+        self.in_help_screen: bool = False
+        self.help_screen_offset: float = 0
+        self.help_max_offset: float = 0
+        self.help_scroll_vel: float = 0
 
         self.continue_button = Button(
             (C.WN_W//2-400, C.WN_H//2), 250, 50, (0, 96, 96), (128, 255, 255),
@@ -259,6 +261,8 @@ class GameScreen(State):
 
         self.crash_colour_fade_surface: Surface = pg.Surface((C.WN_W, C.WN_H), pg.SRCALPHA)
         self.smoke_manager = SmokeManager(assets.images)
+
+        self.show_cockpit: bool = True  # Start with cockpit visible
 
     def _populate_ai_surface(self) -> Surface:
         width = 170 - 4
@@ -936,8 +940,7 @@ class GameScreen(State):
             if self.menu_button.check_click(events):
                 self.in_menu_confirmation = True
 
-            self.update_prev_keys(keys)
-            return
+            self.update_prev_keys(keys); return
 
         if self.in_menu_confirmation:
             if self.yes_button.check_click(events):
@@ -952,6 +955,10 @@ class GameScreen(State):
 
             if self.no_button.check_click(events):
                 self.in_restart_confirmation = False
+
+        # Cockpit visibility toggling
+        if self.pressed(keys, pg.K_F1):  # F1 to toggle HUD
+            self.show_cockpit = not self.show_cockpit
 
         # Block flight controls if crashed or disabled
         if not self.plane.flyable:
@@ -1382,8 +1389,8 @@ class GameScreen(State):
 
         # Compute comparison for glidescope
         GLIDEPATH_SLOPE = math.tan(math.radians(3.0))  # glidescope is 3°
-        expected_height_agl = gps_distance_flat.length() * GLIDEPATH_SLOPE
-        expected_height_msl = expected_height_agl + selected_runway.pos.y
+        expected_height_above_runway = gps_distance_flat.length() * GLIDEPATH_SLOPE
+        expected_height_msl = expected_height_above_runway + selected_runway.pos.y
         deviation = self.plane.pos.y - expected_height_msl
 
         # Display glidescope
@@ -2073,7 +2080,10 @@ class GameScreen(State):
 
         self.hud_surface.fill((0, 0, 0, 0))  # clear with transparency
 
-        self.draw_cockpit()
+        # Show cockpit if cockpit is enabled
+        # Always show cockpit if the plane has crashed
+        if self.show_cockpit or self.plane.crashed:
+            self.draw_cockpit()
 
         # Render map
         if self.map_up:
