@@ -99,6 +99,12 @@ class CreditsContainer:
     sections: list[CreditSection]
     notes: list[str]
 
+@dataclass
+class ControlsSection:
+    header: str
+    keys: dict[str, str]  # key, function
+    note: str | None      # None = no note
+
 class AssetBank:
     """Base class to store assets. Objects of this type should be
     purely used for asset loading and should not contain any logic."""
@@ -348,6 +354,29 @@ class TextAssets(AssetBank):
             sections=sections,
             notes=credits_raw.get("notes", "")
         )
+
+        sections_list_raw = self._load_json("controls.json", "controls_sections")
+        assert isinstance(sections_list_raw, list)
+
+        self.controls_sections: list[ControlsSection] = []
+        for section_dict_raw in sections_list_raw:
+            # Use direct indexing for compulsory fields, .get for optional ones
+
+            assert isinstance(section_dict_raw, dict)
+
+            assert isinstance(section_dict_raw["header"], str)
+            assert isinstance(section_dict_raw["keys"], dict)
+
+            notes: str | None = section_dict_raw.get("notes")
+            assert isinstance(notes, str) or notes is None  # notes must be a string or None
+
+            self.controls_sections.append(
+                ControlsSection(
+                    section_dict_raw["header"],
+                    section_dict_raw["keys"],
+                    notes
+                )
+            )
 
     def _load(self, name: str, /, *, cmt_symbol: str = COMMENT_SYMBOL) -> list[str]:
         with open(paths.TEXT_DIR / name, "r", encoding="utf-8") as f:
