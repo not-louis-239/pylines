@@ -872,6 +872,10 @@ class GameScreen(State):
             self.channel_prohibited.stop()
 
     def take_input(self, keys: ScancodeWrapper, events: EventList, dt: int) -> None:
+        # Screenshot - this needs to ALWAYS WORK
+        if self.pressed(keys, pg.K_F5):
+            self.take_screenshot()
+
         # Meta controls
         if self.pressed(keys, pg.K_ESCAPE):
             if self.in_controls_screen or self.in_help_screen:
@@ -1067,6 +1071,26 @@ class GameScreen(State):
         self.plane.braking = keys[pg.K_b]  # b to brake
 
         self.update_prev_keys(keys)
+
+    def take_screenshot(self) -> None:
+        paths.SCREENSHOTS_DIR.mkdir(parents=True, exist_ok=True)
+
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        filename = f"screenshot_{timestamp}.png"
+        filepath = paths.SCREENSHOTS_DIR / filename
+
+        width, height = C.WN_W, C.WN_H
+        gl.glPixelStorei(gl.GL_PACK_ALIGNMENT, 1)
+
+        # Read RGB only to avoid alpha artifacts from the framebuffer
+        pixel_data = gl.glReadPixels(0, 0, width, height, gl.GL_RGB, gl.GL_UNSIGNED_BYTE)
+
+        assert isinstance(pixel_data, bytes)  # avoids static type checker errors
+        surface = pg.image.frombuffer(pixel_data, (width, height), "RGB")
+        surface = pg.transform.flip(surface, False, True)
+        pg.image.save(surface, str(filepath))
+
+        self.dialog_box.set_message(f"Screenshot saved: {filename}", (255, 240, 209))  # light yellow colour
 
     def draw_buildings(self, cloud_attenuation: float):
         if not self.building_vertex_count or self.buildings_vbo is None:

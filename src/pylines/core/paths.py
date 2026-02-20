@@ -24,7 +24,7 @@ ROOT_DIR: Path = Path(__file__).resolve().parents[3]  # project root
 ASSETS_DIR: Path = ROOT_DIR / "assets"
 
 CACHE_DIR: Path = ROOT_DIR / "cache"
-DATA_DIR: Path = ROOT_DIR / "save_data"
+DATA_DIR: Path = ROOT_DIR / "save_data"  # directory for save data
 
 FONTS_DIR: Path = ASSETS_DIR / "fonts"
 IMAGES_DIR: Path = ASSETS_DIR / "images"
@@ -33,5 +33,6 @@ WORLD_DIR: Path = ASSETS_DIR / "world"
 PRESETS_DIR: Path = ASSETS_DIR / "presets"
 TEXT_DIR: Path = ASSETS_DIR / "text"
 
-SHADERS_DIR: Path = ROOT_DIR / "src" / "pylines" / "shaders"
+SCREENSHOTS_DIR: Path = DATA_DIR / "screenshots"
 
+SHADERS_DIR: Path = ROOT_DIR / "src" / "pylines" / "shaders"
