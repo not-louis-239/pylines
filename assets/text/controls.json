@@ -1,0 +1,40 @@
+{
+    "controls_sections": [
+        {
+            "header": "Main Controls",
+            "keys": {
+                "W/S": "Throttle",
+                "Z/X": "Flaps Up/Down",
+                "A/D": "Rudder",
+                "Arrows": "Pitch/Roll",
+                "B": "Brake (on-ground only)",
+                "G": "Cycle GPS Waypoint",
+                "Esc": "Pause"
+            }
+        },
+        {
+            "header": "Displays",
+            "keys": {
+                "M": "Toggle Map",
+                "O": "Toggle Mini Controls Panel"
+            }
+        },
+        {
+            "header": "Map Manipulation",
+            "keys": {
+                "W/S": "Zoom In/Out",
+                "Arrows": "Pan",
+                "Space": "Re-Centre",
+                "H (hold)": "Show Advanced Info"
+            },
+            "notes": "Overrides normal controls when map is open"
+        },
+        {
+            "header": "Utilities",
+            "keys": {
+                "F1": "Show/Hide Cockpit",
+                "F5": "Take Screenshot (in-game only)"
+            }
+        }
+    ]
+}

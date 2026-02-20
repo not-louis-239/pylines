@@ -21,7 +21,6 @@ asset_manager.py
 """
 
 import json
-from enum import Enum, auto
 from pathlib import Path
 from typing import cast
 
@@ -29,75 +28,14 @@ import numpy as np
 import pygame as pg
 from PIL import Image
 from pygame.transform import scale, scale_by
-from abc import ABC
 
+from pylines.core.asset_manager_helpers import (
+    FLine, CreditSection, CreditEntry, CreditEntryCompact, CreditEntryNotes,
+    CreditEntryCompactNotes, CreditLine, ControlsSection, CreditsContainer,
+    Notes, ControlsSectionID
+)
 import pylines.core.paths as paths
 from pylines.core.custom_types import Sound, Surface
-
-from dataclasses import dataclass
-
-class FLine:
-    """Formatted line for help text"""
-
-    class Style(Enum):
-        NORMAL = auto()
-        HEADING_1 = auto()
-        HEADING_2 = auto()
-        BULLET = auto()
-
-    def __init__(self, text: str, indent: int, style: Style = Style.NORMAL):
-        self.text = text
-        self.indent = indent
-        self.style = style
-
-    def __repr__(self) -> str:
-        return (
-            f"{self.__class__.__name__}("
-            f"text={self.text!r}, "
-            f"indent={self.indent}, "
-            f"style={self.style}"
-            f")"
-        )
-
-@dataclass
-class CreditLine:
-    name: str
-    role: str
-    license: str
-
-@dataclass
-class Notes:
-    upper: str
-    main: str
-    lower: str
-
-@dataclass
-class CreditEntry(ABC): pass
-
-@dataclass
-class CreditEntryCompact(CreditEntry):
-    lines: list[CreditLine]
-
-@dataclass
-class CreditEntryNotes(CreditEntry):
-    info: Notes
-
-@dataclass
-class CreditEntryCompactNotes(CreditEntry):
-    lines: list[str]
-
-@dataclass
-class CreditSection:
-    heading: str
-    entries: list[CreditEntry]
-
-@dataclass
-class CreditsContainer:
-    """Class designated to storing credits data"""
-
-    version: str
-    sections: list[CreditSection]
-    notes: list[str]
 
 class AssetBank:
     """Base class to store assets. Objects of this type should be
@@ -348,6 +286,32 @@ class TextAssets(AssetBank):
             sections=sections,
             notes=credits_raw.get("notes", "")
         )
+
+        sections_list_raw = self._load_json("controls.json", "controls_sections")
+        assert isinstance(sections_list_raw, list)
+
+        self.controls_sections: dict[ControlsSectionID, ControlsSection] = {}
+        for section_dict_raw in sections_list_raw:
+            # Use direct indexing for compulsory fields, .get for optional ones
+
+            assert isinstance(section_dict_raw, dict)
+
+            header = section_dict_raw['header']
+            assert isinstance(header, str)
+            assert isinstance(section_dict_raw["keys"], dict)
+
+            notes: str | None = section_dict_raw.get("notes")
+            assert isinstance(notes, str) or notes is None  # notes must be a string or None
+
+            try:
+                self.controls_sections[ControlsSectionID(header)] = (
+                    ControlsSection(
+                        section_dict_raw["keys"],
+                        notes
+                    )
+                )
+            except ValueError:
+                raise ValueError(f"Invalid controls section ID (or missing in Enum): '{header}'")
 
     def _load(self, name: str, /, *, cmt_symbol: str = COMMENT_SYMBOL) -> list[str]:
         with open(paths.TEXT_DIR / name, "r", encoding="utf-8") as f:
