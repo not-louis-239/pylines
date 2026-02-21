@@ -117,7 +117,7 @@ class GameScreen(State):
         self.show_overspeed_warning: bool = False
         self.time_elapsed: int = 0  # milliseconds
 
-        self.auto_screenshots_enabled: bool = True
+        self.auto_screenshots_enabled: bool = False
         self.auto_screenshot_interval_ms: int = 30_000
         self._auto_screenshot_elapsed_ms: int = 0
         self._auto_screenshot_pending: bool = False
