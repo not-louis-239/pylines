@@ -22,7 +22,7 @@ asset_manager.py
 
 import json
 from pathlib import Path
-from typing import cast
+from typing import cast, Iterator
 
 import numpy as np
 import pygame as pg
@@ -100,6 +100,12 @@ class Images(AssetBank):
         self.cloud_blob = self._load("cloud_blob.png")
         self.smoke_blob = self._load("smoke_blob.png")
 
+        self.menu_images: list[Surface] = []
+
+        images: Iterator[Path] = DIRECTORIES.assets.images.menu_images.glob("*.png")
+        for image in images:
+            self.menu_images.append(self._load(str(image)))
+
         self.augment()
 
     def augment(self):
@@ -110,8 +116,8 @@ class Images(AssetBank):
         self.gps_dest_marker = scale(self.gps_dest_marker, (24, 24))
         self.help_icon = scale(self.help_icon, (50, 50))
 
-    def _load(self, name: str):
-        return pg.image.load(DIRECTORIES.assets.images / name).convert_alpha()
+    def _load(self, name: str) -> Surface:
+        return pg.image.load(DIRECTORIES.assets.images.as_path() / name).convert_alpha()
 
 class Sounds(AssetBank):
     def __init__(self) -> None:

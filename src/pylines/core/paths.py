@@ -29,11 +29,16 @@ class AssetDirs(DirsContainer):
     def __init__(self, root: Path):
         super().__init__(root)
         self.fonts = root / "fonts"
-        self.images = root / "images"
+        self.images = ImageDirs(root / "images")
         self.sounds = root / "sounds"
         self.world = root / "world"
         self.presets = root / "presets"
         self.text = root / "text"
+
+class ImageDirs(DirsContainer):
+    def __init__(self, root: Path) -> None:
+        super().__init__(root)
+        self.menu_images = root / "menu_images"
 
 class DataDirs(DirsContainer):
     def __init__(self, root: Path):

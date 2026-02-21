@@ -25,11 +25,12 @@ from OpenGL import GLU as glu
 import pylines.core.constants as C
 from pylines.core.asset_manager import FLine
 from pylines.core.custom_types import Colour, EventList, ScancodeWrapper, Surface
-from pylines.core.utils import draw_text, wrap_text
+from pylines.core.utils import draw_text, wrap_text, draw_transparent_rect
 from pylines.game.states import State, StateID
 from pylines.objects.buttons import Button, ImageButton
 import pylines.core.colours as cols
 from pylines.core.asset_manager_helpers import ControlsSection, ControlsSectionID
+from pylines.game.managers.menu_images_manager import MenuImageManager
 
 if TYPE_CHECKING:
     from pylines.game.game import Game
@@ -60,8 +61,13 @@ class TitleScreen(State):
             "Return", self.fonts.monospaced, 30
         )
 
+        self.menu_image_manager = MenuImageManager(self.game.assets.images.menu_images)
+
     def reset(self) -> None:
         self.sounds.stall_warning.stop()
+
+    def update(self, dt: int) -> None:
+        self.menu_image_manager.update(dt)
 
     def take_input(self, keys: ScancodeWrapper, events: EventList, dt: int) -> None:
         if self.pressed(keys, pg.K_SPACE) and not self.in_help_screen:
@@ -186,13 +192,18 @@ class TitleScreen(State):
             pg.draw.rect(self.display_surface, (185, 185, 185), thumb)
 
     def draw_title_screen(self):
-        rect = self.images.logo.get_rect(center=(C.WN_W//2, C.WN_H*0.15))
+        rect = self.images.logo.get_rect(center=(C.WN_W//2, C.WN_H*0.11))
         self.display_surface.blit(self.images.logo, rect)
 
-        text = "Press Space for briefing" if self.game.save_data.show_briefing else "Press Space to fly"
-        draw_text(self.display_surface, (C.WN_W//2, C.WN_H*0.8), 'centre', 'centre', text, (255, 255, 255), 30, self.fonts.monospaced)
+        draw_transparent_rect(
+            self.display_surface, (C.WN_W // 2 - C.WN_W * 0.4, C.WN_H // 2 - C.WN_H * 0.28), (C.WN_W * 0.8, C.WN_H * 0.54),
+            (0, 0, 0, 125), 3
+        )
 
-        draw_text(self.display_surface, (C.WN_W//2, 0.95*C.WN_H), 'centre', 'centre', "Copyright (C) 2025-2026 Louis Masarei-Boulton.", (127, 127, 127), 15, self.fonts.monospaced)
+        text = "Press Space for briefing" if self.game.save_data.show_briefing else "Press Space to fly"
+        draw_text(self.display_surface, (C.WN_W//2, C.WN_H*0.85), 'centre', 'centre', text, (255, 255, 255), 30, self.fonts.monospaced)
+
+        draw_text(self.display_surface, (C.WN_W//2, 0.97*C.WN_H), 'centre', 'centre', "Copyright (C) 2025-2026 Louis Masarei-Boulton.", (127, 127, 127), 15, self.fonts.monospaced)
 
         controls_sections: dict[ControlsSectionID, ControlsSection] = self.game.assets.texts.controls_sections  # Local alias
         draw_text(self.display_surface, (C.WN_W//2 - 480, C.WN_H*0.3), 'left', 'centre', "Read Before Flight", (0, 192, 255), 40, self.fonts.monospaced)
@@ -223,8 +234,10 @@ class TitleScreen(State):
         self.help_button.draw(self.display_surface)
 
     def draw(self, wn: Surface):
-        # Fill the display surface
+        # Clear the display surface first
         self.display_surface.fill((0, 0, 0))
+
+        self.menu_image_manager.draw_current(self.display_surface)
 
         if self.in_help_screen:
             self.draw_help_screen()

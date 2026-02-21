@@ -61,7 +61,7 @@ from pylines.objects.scenery.ocean import Ocean
 from pylines.objects.scenery.runway import Runway
 from pylines.objects.scenery.sky import Moon, Sky, Sun
 from pylines.shaders.shader_manager import load_shader_script
-from pylines.game.smoke_manager import SmokeManager
+from pylines.game.managers.smoke_manager import SmokeManager
 from pylines.objects.rotation_input_container import RotationInputContainer
 from pylines.core.asset_manager_helpers import ControlsSectionID, ControlsSection
 
