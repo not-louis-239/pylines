@@ -20,6 +20,7 @@ import pygame as pg
 
 from pylines.core.paths import DIRECTORIES
 from pylines.core.asset_manager import Assets
+from pylines.core.asset_manager_helpers import MusicID
 from pylines.core.constants import SFXChannelID
 from pylines.core.data_manager import ConfigObject, load_data, save_data
 from pylines.game.environment import Environment
@@ -42,7 +43,7 @@ class Game:
         self.assets = Assets()
 
         self.save_data: ConfigObject
-        self.save_data, *_ = load_data(DIRECTORIES.data.as_path() / "save_data.json")
+        self.save_data, *_ = load_data(DIRECTORIES.data / "save_data.json")
 
         config_presets_raw = self.assets.config_presets
         self.config_presets = LiveConfigPresets(config_presets_raw, self.assets.images)
@@ -81,7 +82,7 @@ class Game:
             self.music_channel.fadeout(1500)
         # Play music if entering a menu state from a non-menu state or if transitioning between menu states and music is not playing                                                                                                                          │
         elif is_entering_menu and (not was_in_menu or not self.music_channel.get_busy()):
-            self.music_channel.play(self.assets.sounds.menu_music, loops=-1)
+            self.music_channel.play(self.assets.sounds.jukebox_tracks[MusicID.OPEN_TWILIGHT], loops=-1)
 
         self.states[state_name].enter_state()
 

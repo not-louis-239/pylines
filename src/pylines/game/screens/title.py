@@ -131,7 +131,7 @@ class TitleScreen(State):
         scrollbar_x = left + width + 20
 
         draw_transparent_rect(
-            self.display_surface, (left - 50, top - 50), (width + 135, bottom - top + 100), (0, 0, 0, 150), 2
+            self.display_surface, (left - 50, top - 50), (width + 135, bottom - top + 100), (0, 0, 0, 85), 2
         )
 
         self.return_button.draw(self.display_surface)
@@ -198,7 +198,7 @@ class TitleScreen(State):
 
         draw_transparent_rect(
             self.display_surface, (C.WN_W // 2 - C.WN_W * 0.4, C.WN_H // 2 - C.WN_H * 0.28), (C.WN_W * 0.8, C.WN_H * 0.54),
-            (0, 0, 0, 125), 3
+            (0, 0, 0, 85), 3
         )
 
         text = "Press Space for briefing" if self.game.save_data.show_briefing else "Press Space to fly"

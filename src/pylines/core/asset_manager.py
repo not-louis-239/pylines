@@ -27,12 +27,12 @@ from typing import cast, Iterator
 import numpy as np
 import pygame as pg
 from PIL import Image
-from pygame.transform import scale, scale_by
+from pygame.transform import scale, scale_by, smoothscale_by
 
 from pylines.core.asset_manager_helpers import (
     FLine, CreditSection, CreditEntry, CreditEntryCompact, CreditEntryNotes,
     CreditEntryCompactNotes, CreditLine, ControlsSection, CreditsContainer,
-    Notes, ControlsSectionID
+    Notes, ControlsSectionID, MusicID
 )
 from pylines.core.paths import DIRECTORIES
 from pylines.core.custom_types import Sound, Surface
@@ -104,7 +104,7 @@ class Images(AssetBank):
 
         images: Iterator[Path] = DIRECTORIES.assets.images.menu_images.glob("*.png")
         for image in images:
-            self.menu_images.append(scale_by(self._load(str(image)), 1.5))  # Allows Ken Burns-style effects
+            self.menu_images.append(smoothscale_by(self._load(str(image)), 1.5))  # Allows Ken Burns-style effects
 
         self.augment()
 
@@ -117,7 +117,7 @@ class Images(AssetBank):
         self.help_icon = scale(self.help_icon, (50, 50))
 
     def _load(self, name: str) -> Surface:
-        return pg.image.load(DIRECTORIES.assets.images.as_path() / name).convert_alpha()
+        return pg.image.load(DIRECTORIES.assets.images / name).convert_alpha()
 
 class Sounds(AssetBank):
     def __init__(self) -> None:
@@ -141,15 +141,21 @@ class Sounds(AssetBank):
         self.prohibited_zone_warning: Sound = self._load("prohibited_zone_warning.ogg")
 
         # Menu music
-        self.menu_music: Sound = self._load("menu_music.ogg")
+        self.jukebox_tracks: dict[MusicID, Sound] = {
+            MusicID.OPEN_TWILIGHT: self._load(DIRECTORIES.assets.sounds.jukebox_tracks / "open_twilight.ogg"),
+            MusicID.NIGHTGLIDE: self._load(DIRECTORIES.assets.sounds.jukebox_tracks / "nightglide.ogg")
+        }
 
         self.augment()
 
     def augment(self):
         pass
 
-    def _load(self, name: str) -> pg.mixer.Sound:
-        return pg.mixer.Sound(DIRECTORIES.assets.sounds / name)
+    def _load(self, name: str | Path) -> pg.mixer.Sound:
+        if isinstance(name, Path):
+            return pg.mixer.Sound(str(name))
+
+        return pg.mixer.Sound(str(DIRECTORIES.assets.sounds / name))
 
 class WorldData(AssetBank):
     """Data container for raw, fixed world data."""

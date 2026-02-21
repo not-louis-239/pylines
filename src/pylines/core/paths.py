@@ -22,15 +22,20 @@ class DirsContainer:
     def __init__(self, root: Path) -> None:
         self.root = root
 
-    def as_path(self) -> Path:
-        return self.root
+    def __fspath__(self) -> str:
+        return str(self.root)
+
+    def __truediv__(self, other: str):
+        """Allows DirsContainer objects to behave like Path objects
+        when combined with strings."""
+        return self.root / other
 
 class AssetDirs(DirsContainer):
     def __init__(self, root: Path):
         super().__init__(root)
         self.fonts = root / "fonts"
         self.images = ImageDirs(root / "images")
-        self.sounds = root / "sounds"
+        self.sounds = SoundDirs(root / "sounds")
         self.world = root / "world"
         self.presets = root / "presets"
         self.text = root / "text"
@@ -39,6 +44,11 @@ class ImageDirs(DirsContainer):
     def __init__(self, root: Path) -> None:
         super().__init__(root)
         self.menu_images = root / "menu_images"
+
+class SoundDirs(DirsContainer):
+    def __init__(self, root: Path) -> None:
+        super().__init__(root)
+        self.jukebox_tracks = root / "jukebox_tracks"
 
 class DataDirs(DirsContainer):
     def __init__(self, root: Path):

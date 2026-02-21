@@ -63,7 +63,7 @@ from pylines.objects.scenery.sky import Moon, Sky, Sun
 from pylines.shaders.shader_manager import load_shader_script
 from pylines.game.managers.smoke_manager import SmokeManager
 from pylines.objects.rotation_input_container import RotationInputContainer
-from pylines.core.asset_manager_helpers import ControlsSectionID, ControlsSection
+from pylines.core.asset_manager_helpers import ControlsSectionID, ControlsSection, MusicID
 
 if TYPE_CHECKING:
     from pylines.core.custom_types import ScancodeWrapper, Surface
@@ -757,7 +757,7 @@ class GameScreen(State):
 
         self.channel_scrape.stop()
 
-        self.sounds.menu_music.fadeout(1_500)
+        self.sounds.jukebox_tracks[MusicID.OPEN_TWILIGHT].fadeout(1_500)
         self.dialog_box.reset()
         self.time_elapsed = 0
 

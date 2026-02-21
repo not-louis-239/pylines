@@ -72,7 +72,7 @@ class ConfigObject(JSONConvertible):
         filtered = {k: v for k, v in data.items() if k in field_names}
         return cls(**filtered)
 
-def save_data(obj: JSONConvertible, path: Path = DIRECTORIES.data.as_path() / "save_data.json") -> str | None:
+def save_data(obj: JSONConvertible, path: Path = DIRECTORIES.data / "save_data.json") -> str | None:
     """
     Return:
         None  -> success
