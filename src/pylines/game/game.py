@@ -30,6 +30,7 @@ from pylines.game.screens.settings import SettingsScreen
 from pylines.game.screens.credits import CreditsScreen
 from pylines.game.screens.title import TitleScreen
 from pylines.game.states import State, StateID
+from pylines.game.managers.menu_images_manager import MenuImageManager
 
 if TYPE_CHECKING:
     from pylines.core.custom_types import EventList, ScancodeWrapper, Surface
@@ -60,6 +61,7 @@ class Game:
         self.music_channel = pg.mixer.Channel(SFXChannelID.MUSIC)
 
         self.state: StateID = StateID.LOADING
+        self.menu_image_manager = MenuImageManager(self.assets.images.menu_images)  # This is in Game to make it accessible from multiple states
         self.enter_state(StateID.LOADING)
 
     def enter_state(self, state_name: StateID):

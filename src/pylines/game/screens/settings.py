@@ -45,6 +45,8 @@ class SettingsScreen(State):
         assert self.game.config_presets is not None
 
         self.display_surface = pg.Surface((C.WN_W, C.WN_H), pg.SRCALPHA)
+        self.darken_overlay_surface = pg.Surface((C.WN_W, C.WN_H), pg.SRCALPHA)
+
         self.texture_id = gl.glGenTextures(1)
         self.back_button = Button(
             (170, C.WN_H-90), 300, 80, (25, 75, 75), (200, 255, 255),
@@ -81,6 +83,9 @@ class SettingsScreen(State):
     def reset(self) -> None:
         pass
 
+    def update(self, dt: int) -> None:
+        self.game.menu_image_manager.update(dt)
+
     def take_input(self, keys: ScancodeWrapper, events: EventList, dt: int) -> None:
         if self.back_button.check_click(events):
             self.game.enter_state(StateID.TITLE)
@@ -109,6 +114,10 @@ class SettingsScreen(State):
     def draw(self, wn: Surface):
         # Fill the display surface
         self.display_surface.fill((0, 0, 0))
+        self.game.menu_image_manager.draw_current(self.display_surface)
+
+        self.darken_overlay_surface.fill((0, 0, 0, 90))
+        self.display_surface.blit(self.darken_overlay_surface, (0, 0))
 
         # Draw text
         draw_text(self.display_surface, (C.WN_W//2, C.WN_H*0.1), 'centre', 'centre', "Settings", (0, 192, 255), 40, self.fonts.monospaced)

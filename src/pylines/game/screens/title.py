@@ -30,7 +30,6 @@ from pylines.game.states import State, StateID
 from pylines.objects.buttons import Button, ImageButton
 import pylines.core.colours as cols
 from pylines.core.asset_manager_helpers import ControlsSection, ControlsSectionID
-from pylines.game.managers.menu_images_manager import MenuImageManager
 
 if TYPE_CHECKING:
     from pylines.game.game import Game
@@ -61,13 +60,11 @@ class TitleScreen(State):
             "Return", self.fonts.monospaced, 30
         )
 
-        self.menu_image_manager = MenuImageManager(self.game.assets.images.menu_images)
-
     def reset(self) -> None:
         self.sounds.stall_warning.stop()
 
     def update(self, dt: int) -> None:
-        self.menu_image_manager.update(dt)
+        self.game.menu_image_manager.update(dt)
 
     def take_input(self, keys: ScancodeWrapper, events: EventList, dt: int) -> None:
         if self.pressed(keys, pg.K_SPACE) and not self.in_help_screen:
@@ -124,14 +121,18 @@ class TitleScreen(State):
             "Help", (0, 192, 255), 36, self.fonts.monospaced
         )
 
-        left = 80
-        top = rect.bottom + 80
-        bottom = C.WN_H - 120
-        width = C.WN_W - 320
+        left = 100
+        top = rect.bottom + 120
+        bottom = C.WN_H - 160
+        width = C.WN_W - 235
         logical_y = top
         indent_px = 24
         scrollbar_w = 12
         scrollbar_x = left + width + 20
+
+        draw_transparent_rect(
+            self.display_surface, (left - 50, top - 50), (width + 135, bottom - top + 100), (0, 0, 0, 150), 2
+        )
 
         self.return_button.draw(self.display_surface)
 
@@ -237,7 +238,7 @@ class TitleScreen(State):
         # Clear the display surface first
         self.display_surface.fill((0, 0, 0))
 
-        self.menu_image_manager.draw_current(self.display_surface)
+        self.game.menu_image_manager.draw_current(self.display_surface)
 
         if self.in_help_screen:
             self.draw_help_screen()
