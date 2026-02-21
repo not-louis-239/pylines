@@ -22,6 +22,9 @@ class DirsContainer:
     def __init__(self, root: Path) -> None:
         self.root = root
 
+    def as_path(self) -> Path:
+        return self.root
+
 class AssetDirs(DirsContainer):
     def __init__(self, root: Path):
         super().__init__(root)
@@ -48,6 +51,6 @@ class Dirs(DirsContainer):
         self.assets = AssetDirs(root / "assets")
         self.data = DataDirs(root / "save_data")
         self.cache = root / "cache"
-        self.src = root / "src" / "pylines"
+        self.src = SrcDirs(root / "src" / "pylines")
 
 DIRECTORIES = Dirs(ROOT_DIR)

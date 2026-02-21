@@ -23,7 +23,7 @@ from enum import Enum, auto
 from pathlib import Path
 from typing import Any, Mapping, Self, TypeAlias
 
-import pylines.core.paths as paths
+from pylines.core.paths import DIRECTORIES
 from pylines.core.constants import __version__
 
 JSONValue: TypeAlias = (
@@ -72,7 +72,7 @@ class ConfigObject(JSONConvertible):
         filtered = {k: v for k, v in data.items() if k in field_names}
         return cls(**filtered)
 
-def save_data(obj: JSONConvertible, path: Path = paths.DATA_DIR / "save_data.json") -> str | None:
+def save_data(obj: JSONConvertible, path: Path = DIRECTORIES.data.as_path() / "save_data.json") -> str | None:
     """
     Return:
         None  -> success

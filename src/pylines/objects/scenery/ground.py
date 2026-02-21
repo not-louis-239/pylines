@@ -19,7 +19,7 @@ import OpenGL.GL as gl
 import pygame as pg
 
 import pylines.core.constants as C
-import pylines.core.paths as paths
+from pylines.core.paths import DIRECTORIES
 from pylines.core.constants import (
     MOON_BRIGHTNESS,
     SHADE_BRIGHTNESS_MULT,
@@ -47,8 +47,8 @@ class Ground(LargeSceneryObject):
 
         # Load and compile the shader program
         self.shader = load_shader_script(
-            str(paths.SHADERS_DIR / "terrain.vert"),
-            str(paths.SHADERS_DIR / "terrain.frag")
+            str(DIRECTORIES.src.shaders / "terrain.vert"),
+            str(DIRECTORIES.src.shaders / "terrain.frag")
         )
 
         self.position_loc = gl.glGetAttribLocation(self.shader, "position")

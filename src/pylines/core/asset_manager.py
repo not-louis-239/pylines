@@ -34,7 +34,7 @@ from pylines.core.asset_manager_helpers import (
     CreditEntryCompactNotes, CreditLine, ControlsSection, CreditsContainer,
     Notes, ControlsSectionID
 )
-import pylines.core.paths as paths
+from pylines.core.paths import DIRECTORIES
 from pylines.core.custom_types import Sound, Surface
 
 class AssetBank:
@@ -60,7 +60,7 @@ class Fonts(AssetBank):
         self.augment()
 
     def _load(self, name: str) -> Path:
-        return paths.FONTS_DIR / name
+        return DIRECTORIES.assets.fonts / name
 
 class Images(AssetBank):
     def __init__(self):
@@ -111,7 +111,7 @@ class Images(AssetBank):
         self.help_icon = scale(self.help_icon, (50, 50))
 
     def _load(self, name: str):
-        return pg.image.load(paths.IMAGES_DIR / name).convert_alpha()
+        return pg.image.load(DIRECTORIES.assets.images / name).convert_alpha()
 
 class Sounds(AssetBank):
     def __init__(self) -> None:
@@ -143,23 +143,23 @@ class Sounds(AssetBank):
         pass
 
     def _load(self, name: str) -> pg.mixer.Sound:
-        return pg.mixer.Sound(paths.SOUNDS_DIR / name)
+        return pg.mixer.Sound(DIRECTORIES.assets.sounds / name)
 
 class WorldData(AssetBank):
     """Data container for raw, fixed world data."""
 
     def __init__(self) -> None:
         # Heightmap metadata
-        with open(paths.WORLD_DIR / "height.json") as f:
+        with open(DIRECTORIES.assets.world / "height.json") as f:
             meta = json.load(f)
             self.MIN_H = meta["heights"]["min"]
             self.MAX_H = meta["heights"]["max"]
             self.SEA_LEVEL = meta["heights"]["sea_lvl"]
 
         # Heightmap raw data and noise
-        heightmap_path = paths.WORLD_DIR / "heightmap.png"
-        cached_heightmap_path = paths.CACHE_DIR / "heightmap.npy"
-        paths.CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        heightmap_path = DIRECTORIES.assets.world / "heightmap.png"
+        cached_heightmap_path = DIRECTORIES.cache / "heightmap.npy"
+        DIRECTORIES.cache.mkdir(parents=True, exist_ok=True)
 
         if cached_heightmap_path.exists():
             # Load the cached numpy array to save time on startup
@@ -170,7 +170,7 @@ class WorldData(AssetBank):
             self.height_array = np.array(img, dtype=np.float32)
             np.save(cached_heightmap_path, self.height_array)
 
-        self.noise = pg.image.load(paths.WORLD_DIR / "noise.png").convert_alpha()
+        self.noise = pg.image.load(DIRECTORIES.assets.world / "noise.png").convert_alpha()
 
         self.runway_data: list = cast(list, self._load_json("runways.json", "runways"))
         self.building_defs: dict = cast(dict, self._load_json("building_defs.json", "building_defs"))
@@ -179,10 +179,10 @@ class WorldData(AssetBank):
         self.starfield_data: dict = cast(dict, self._load_json("starfield_data.json", "starfield"))
 
     def _load(self, name: str) -> Path:
-        return paths.WORLD_DIR / name
+        return DIRECTORIES.assets.world / name
 
     def _load_json(self, name: str, key: str) -> dict | list:
-        with open(paths.WORLD_DIR / name, "r", encoding="utf-8") as f:
+        with open(DIRECTORIES.assets.world / name, "r", encoding="utf-8") as f:
             return json.load(f)[key]
 
 class ConfigPresets(AssetBank):
@@ -192,11 +192,11 @@ class ConfigPresets(AssetBank):
 
     def __init__(self) -> None:
         # Cloud data
-        with open(paths.PRESETS_DIR / "cloud_configs.json") as f:
+        with open(DIRECTORIES.assets.presets / "cloud_configs.json") as f:
             self.cloud_configs: list = json.load(f)["cloud_configs"]
 
     def _load(self, name: str) -> Path:
-        return paths.PRESETS_DIR / name
+        return DIRECTORIES.assets.presets / name
 
 class TextAssets(AssetBank):
     """Data container for text-based assets"""
@@ -314,14 +314,14 @@ class TextAssets(AssetBank):
                 raise ValueError(f"Invalid controls section ID (or missing in Enum): '{header}'")
 
     def _load(self, name: str, /, *, cmt_symbol: str = COMMENT_SYMBOL) -> list[str]:
-        with open(paths.TEXT_DIR / name, "r", encoding="utf-8") as f:
+        with open(DIRECTORIES.assets.text / name, "r", encoding="utf-8") as f:
             return [
                 line.rstrip("\n")
                 for line in f if not line.lstrip().startswith(cmt_symbol)
             ]
 
     def _load_json(self, name: str, key: str | None = None) -> dict | list:
-        with open(paths.TEXT_DIR / name, "r", encoding="utf-8") as f:
+        with open(DIRECTORIES.assets.text / name, "r", encoding="utf-8") as f:
             raw = json.load(f)
 
         if key is None:
