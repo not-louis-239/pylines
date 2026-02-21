@@ -117,6 +117,11 @@ class GameScreen(State):
         self.show_overspeed_warning: bool = False
         self.time_elapsed: int = 0  # milliseconds
 
+        self.auto_screenshots_enabled: bool = True
+        self.auto_screenshot_interval_ms: int = 30_000
+        self._auto_screenshot_elapsed_ms: int = 0
+        self._auto_screenshot_pending: bool = False
+
         self.channel_engine_ambient = pg.mixer.Channel(C.SFXChannelID.ENGINE_AMBIENT)
         self.channel_engine_active = pg.mixer.Channel(C.SFXChannelID.ENGINE_ACTIVE)
         self.channel_wind = pg.mixer.Channel(C.SFXChannelID.WIND)
@@ -785,6 +790,12 @@ class GameScreen(State):
 
             return
 
+        if self.auto_screenshots_enabled:
+            self._auto_screenshot_elapsed_ms += dt
+            if self._auto_screenshot_elapsed_ms >= self.auto_screenshot_interval_ms:
+                self._auto_screenshot_pending = True
+                self._auto_screenshot_elapsed_ms %= self.auto_screenshot_interval_ms
+
         # Map update
         if self.map_state == Visibility.HIDDEN:
             self.map_up -= (dt/1000) / C.MAP_TOGGLE_ANIMATION_DURATION
@@ -1064,7 +1075,7 @@ class GameScreen(State):
 
         self.update_prev_keys(keys)
 
-    def take_screenshot(self) -> None:
+    def take_screenshot(self, *, notify: bool = True) -> None:
         paths.SCREENSHOTS_DIR.mkdir(parents=True, exist_ok=True)
 
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -1082,7 +1093,8 @@ class GameScreen(State):
         surface = pg.transform.flip(surface, False, True)
         pg.image.save(surface, str(filepath))
 
-        self.dialog_box.set_message(f"Screenshot saved: {filename}", (255, 240, 209))  # light yellow colour
+        if notify:
+            self.dialog_box.set_message(f"Screenshot saved: {filename}", (255, 240, 209))  # light yellow colour
 
     def draw_buildings(self, cloud_attenuation: float):
         if not self.building_vertex_count or self.buildings_vbo is None:
@@ -2259,4 +2271,9 @@ class GameScreen(State):
             cloud_layer.draw(self.plane.pos, camera_fwd)
 
         self.draw_buildings(cloud_attenuation)
+
+        if self.auto_screenshots_enabled and self._auto_screenshot_pending:
+            self._auto_screenshot_pending = False
+            self.take_screenshot(notify=True)
+
         self.draw_hud()
