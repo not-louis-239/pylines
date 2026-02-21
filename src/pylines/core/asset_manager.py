@@ -104,7 +104,7 @@ class Images(AssetBank):
 
         images: Iterator[Path] = DIRECTORIES.assets.images.menu_images.glob("*.png")
         for image in images:
-            self.menu_images.append(self._load(str(image)))
+            self.menu_images.append(scale_by(self._load(str(image)), 1.5))  # Allows Ken Burns-style effects
 
         self.augment()
 
