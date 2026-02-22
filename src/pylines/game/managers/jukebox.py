@@ -13,10 +13,11 @@
 # limitations under the License.
 
 from pylines.core.custom_types import Sound
+from pylines.core.asset_manager_helpers import MusicID
 
 class Jukebox:
     """Dedicated class for managing music."""
 
-    def __init__(self, tracks: list[Sound]) -> None:
+    def __init__(self, tracks: dict[MusicID, Sound]) -> None:
         self.tracks = tracks
         self.current_idx = 0

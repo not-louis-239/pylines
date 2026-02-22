@@ -143,7 +143,8 @@ class Sounds(AssetBank):
         # Menu music
         self.jukebox_tracks: dict[MusicID, Sound] = {
             MusicID.OPEN_TWILIGHT: self._load(DIRECTORIES.assets.sounds.jukebox_tracks / "open_twilight.ogg"),
-            MusicID.NIGHTGLIDE: self._load(DIRECTORIES.assets.sounds.jukebox_tracks / "nightglide.ogg")
+            MusicID.NIGHTGLIDE: self._load(DIRECTORIES.assets.sounds.jukebox_tracks / "nightglide.ogg"),
+            MusicID.SKYLIGHT: self._load(DIRECTORIES.assets.sounds.jukebox_tracks / "skylight.ogg")
         }
 
         self.augment()

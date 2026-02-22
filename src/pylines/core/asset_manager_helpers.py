@@ -95,3 +95,4 @@ class ControlsSection:
 class MusicID(StrEnum):
     OPEN_TWILIGHT = "Open Twilight"
     NIGHTGLIDE = "Nightglide"
+    SKYLIGHT = "Skylight"

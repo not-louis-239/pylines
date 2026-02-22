@@ -64,6 +64,7 @@ from pylines.shaders.shader_manager import load_shader_script
 from pylines.game.managers.smoke_manager import SmokeManager
 from pylines.objects.rotation_input_container import RotationInputContainer
 from pylines.core.asset_manager_helpers import ControlsSectionID, ControlsSection, MusicID
+from pylines.game.managers.jukebox import Jukebox
 
 if TYPE_CHECKING:
     from pylines.core.custom_types import ScancodeWrapper, Surface
@@ -122,6 +123,7 @@ class GameScreen(State):
         self._auto_screenshot_elapsed_ms: int = 0
         self._auto_screenshot_pending: bool = False
 
+        self.channel_music = self.game.music_channel
         self.channel_engine_ambient = pg.mixer.Channel(C.SFXChannelID.ENGINE_AMBIENT)
         self.channel_engine_active = pg.mixer.Channel(C.SFXChannelID.ENGINE_ACTIVE)
         self.channel_wind = pg.mixer.Channel(C.SFXChannelID.WIND)
@@ -140,6 +142,9 @@ class GameScreen(State):
 
         # Pausing
         self.paused: bool = False
+
+        self.jukebox_menu_up: RealNumber = 0
+        self.jukebox_menu_state: Visibility = Visibility.HIDDEN
 
         # Confirmation menus
         self.in_menu_confirmation: bool = False
@@ -267,6 +272,8 @@ class GameScreen(State):
 
         self.crash_colour_fade_surface: Surface = pg.Surface((C.WN_W, C.WN_H), pg.SRCALPHA)
         self.smoke_manager = SmokeManager(assets.images)
+
+        self.jukebox = Jukebox(self.game.assets.sounds.jukebox_tracks)
 
         self.show_cockpit: bool = True  # Start with cockpit visible
 
@@ -796,6 +803,13 @@ class GameScreen(State):
                 self._auto_screenshot_pending = True
                 self._auto_screenshot_elapsed_ms %= self.auto_screenshot_interval_ms
 
+        # Jukebox menu update
+        if self.map_state == Visibility.HIDDEN:
+            self.map_up -= (dt/1000) / C.MAP_TOGGLE_ANIMATION_DURATION
+        else:
+            self.map_up += (dt/1000) / C.MAP_TOGGLE_ANIMATION_DURATION
+        self.map_up = clamp(self.map_up, (0, 1))
+
         # Map update
         if self.map_state == Visibility.HIDDEN:
             self.map_up -= (dt/1000) / C.MAP_TOGGLE_ANIMATION_DURATION
@@ -962,6 +976,10 @@ class GameScreen(State):
 
             if self.no_button.check_click(events):
                 self.in_restart_confirmation = False
+
+        # Toggle jukebox menu
+        if self.pressed(keys, pg.K_j):
+            self.jukebox_menu_open = not self.jukebox_menu_open
 
         # Cockpit visibility toggling
         if self.pressed(keys, pg.K_F1):  # F1 to toggle HUD
