@@ -278,6 +278,27 @@ class GameScreen(State):
 
         self.show_cockpit: bool = True  # Start with cockpit visible
 
+    def reset(self) -> None:
+        self.in_menu_confirmation = False
+        self.in_restart_confirmation = False
+        self.paused = False
+
+        self.plane.reset()
+        self.gps_runway_index = 1
+
+        self.channel_wind.stop()
+        self.channel_engine_active.stop()
+        self.channel_engine_ambient.stop()
+
+        self.channel_stall.stop()
+        self.channel_overspeed.stop()
+
+        self.channel_scrape.stop()
+
+        self.sounds.jukebox_tracks[MusicID.OPEN_TWILIGHT].fadeout(1_500)
+        self.dialog_box.reset()
+        self.time_elapsed = 0
+
     def _populate_ai_surface(self) -> Surface:
         width = 170 - 4
         height = 2000
@@ -747,352 +768,6 @@ class GameScreen(State):
 
         self.building_legend_surface = self._populate_building_legend()
         self.height_legend_surface = self._populate_height_legend()
-
-    def reset(self) -> None:
-        self.in_menu_confirmation = False
-        self.in_restart_confirmation = False
-        self.paused = False
-
-        self.plane.reset()
-        self.gps_runway_index = 1
-
-        self.channel_wind.stop()
-        self.channel_engine_active.stop()
-        self.channel_engine_ambient.stop()
-
-        self.channel_stall.stop()
-        self.channel_overspeed.stop()
-
-        self.channel_scrape.stop()
-
-        self.sounds.jukebox_tracks[MusicID.OPEN_TWILIGHT].fadeout(1_500)
-        self.dialog_box.reset()
-        self.time_elapsed = 0
-
-    def update(self, dt: int):
-        self._frame_count += 1
-        self.time_elapsed += dt
-
-        self.sun.update()
-        self.moon.update()
-
-        if self.paused:
-            return
-
-        self.dialog_box.update(dt)
-
-        if self.plane.crashed:
-            self.smoke_manager.update(dt)
-            self.plane.increment_crash_timer(dt)
-
-            self.dialog_box.reset()
-
-            self.channel_stall.stop()
-            self.channel_overspeed.stop()
-
-            self.channel_wind.stop()
-            self.channel_engine_active.stop()
-            self.channel_engine_ambient.stop()
-
-            self.channel_scrape.stop()
-
-            return
-
-        if self.auto_screenshots_enabled:
-            self._auto_screenshot_elapsed_ms += dt
-            if self._auto_screenshot_elapsed_ms >= self.auto_screenshot_interval_ms:
-                self._auto_screenshot_pending = True
-                self._auto_screenshot_elapsed_ms %= self.auto_screenshot_interval_ms
-
-        # Jukebox menu update
-        if self.map_state == Visibility.HIDDEN:
-            self.map_up -= (dt/1000) / C.MAP_TOGGLE_ANIMATION_DURATION
-        else:
-            self.map_up += (dt/1000) / C.MAP_TOGGLE_ANIMATION_DURATION
-        self.map_up = clamp(self.map_up, (0, 1))
-
-        # Map update
-        if self.map_state == Visibility.HIDDEN:
-            self.map_up -= (dt/1000) / C.MAP_TOGGLE_ANIMATION_DURATION
-        else:
-            self.map_up += (dt/1000) / C.MAP_TOGGLE_ANIMATION_DURATION
-        self.map_up = clamp(self.map_up, (0, 1))
-
-        # Controls ref update
-        if self.controls_quick_ref_state == Visibility.HIDDEN:
-            self.controls_quick_ref_up -= (dt/1000) / C.CONTROLS_REF_TOGGLE_ANIMATION_DURATION
-        else:
-            self.controls_quick_ref_up += (dt/1000) / C.CONTROLS_REF_TOGGLE_ANIMATION_DURATION
-        self.controls_quick_ref_up = clamp(self.controls_quick_ref_up, (0, 1))
-
-        self.plane.update(dt)
-
-        # Stall warning
-        self.show_stall_warning = self.plane.stalled
-        if self.show_stall_warning:
-            if not self.channel_stall.get_busy():
-                self.channel_stall.play(self.sounds.stall_warning, loops=-1)
-        else:
-            self.channel_stall.stop()
-
-        # Overspeed warning
-        self.show_overspeed_warning = self.plane.vel.length() > self.plane.model.v_ne  # Both in m/s
-        if self.show_overspeed_warning:
-            if not self.channel_overspeed.get_busy():
-                self.channel_overspeed.play(self.sounds.overspeed, loops=-1)
-        else:
-            self.channel_overspeed.stop()
-
-        # Update engine and wind sounds
-        if not self.channel_wind.get_busy():
-            self.channel_wind.play(self.sounds.wind, loops=-1)
-        if not self.channel_engine_ambient.get_busy():
-            self.channel_engine_ambient.play(self.sounds.engine_loop_ambient, loops=-1)
-        if not self.channel_engine_active.get_busy():
-            self.channel_engine_active.play(self.sounds.engine_loop_active, loops=-1)
-
-        wind_sound_strength = (self.plane.vel.length() - 61.73) / 25.72  # start wind at 120 kn, full at 170
-        self.channel_wind.set_volume(clamp(wind_sound_strength, (0, 1)))
-
-        throttle_sound_strength = self.plane.throttle_frac ** 1.8
-        self.channel_engine_active.set_volume(throttle_sound_strength)
-
-        # Terrain scrape sound
-        if (not self.plane.over_runway) and self.plane.on_ground:
-            if not self.channel_scrape.get_busy():
-                self.channel_scrape.play(self.sounds.terrain_scrape, -1)
-        else:
-            self.channel_scrape.stop()
-
-        # Prohibited zone warning
-        def plane_in_prohibited_zone() -> bool:
-            for zone in self.env.prohibited_zones:
-                px, _, pz = self.plane.pos
-                zone_centre_x, zone_centre_z = zone.pos
-                zone_w, zone_h = zone.dims
-
-                zone_min_x = zone_centre_x - zone_w / 2
-                zone_max_x = zone_centre_x + zone_w / 2
-                zone_min_z = zone_centre_z - zone_h / 2
-                zone_max_z = zone_centre_z + zone_h / 2
-
-                if zone_min_x < px < zone_max_x and zone_min_z < pz < zone_max_z:
-                    return True
-
-            return False
-
-        self.show_prohibited_zone_warning = plane_in_prohibited_zone()
-        if self.show_prohibited_zone_warning:
-            if not self.channel_prohibited.get_busy():
-                self.channel_prohibited.play(self.sounds.prohibited_zone_warning, loops=-1)
-            self.dialog_box.set_message("Immediately exit this zone - penalties may apply", (255, 127, 0), 100)
-        else:
-            self.channel_prohibited.stop()
-
-    def take_input(self, keys: ScancodeWrapper, events: EventList, dt: int) -> None:
-        # Screenshot - this needs to ALWAYS WORK
-        if self.pressed(keys, pg.K_F5):
-            self.take_screenshot()
-
-        # Meta controls
-        if self.pressed(keys, pg.K_ESCAPE):
-            if self.in_controls_screen or self.in_help_screen:
-                self.in_controls_screen = False
-                self.in_help_screen = False
-                self.help_screen_offset = 0
-                self.help_scroll_vel = 0
-            else:
-                self.paused = not self.paused
-
-            self.channel_wind.stop()
-            self.channel_engine_active.stop()
-            self.channel_engine_ambient.stop()
-
-            self.channel_scrape.stop()
-
-        if self.paused and not (self.in_menu_confirmation or self.in_restart_confirmation):
-            if self.controls_button.check_click(events) and not self.in_controls_screen and not self.in_help_screen:
-                self.in_controls_screen = True
-                self.in_help_screen = False
-            elif self.help_button.check_click(events) and not self.in_controls_screen and not self.in_help_screen:
-                self.in_help_screen = True
-                self.in_controls_screen = False
-            elif self.back_button.check_click(events) and (self.in_controls_screen or self.in_help_screen):
-                self.in_controls_screen = False
-                self.in_help_screen = False
-                self.help_screen_offset = 0.0
-                self.help_scroll_vel = 0.0
-
-            if self.in_help_screen:
-                scroll_accel = 0.004 * dt
-                wheel_impulse = 25
-
-                for event in events:
-                    if event.type == pg.MOUSEWHEEL:
-                        self.help_scroll_vel -= event.y * wheel_impulse
-
-                if keys[pg.K_UP]:
-                    self.help_scroll_vel -= scroll_accel
-                if keys[pg.K_DOWN]:
-                    self.help_scroll_vel += scroll_accel
-                if self.pressed(keys, pg.K_PAGEUP):
-                    self.help_scroll_vel -= 220
-                if self.pressed(keys, pg.K_PAGEDOWN):
-                    self.help_scroll_vel += 220
-
-                self.help_screen_offset += self.help_scroll_vel
-
-                self.help_scroll_vel *= 0.85
-                if abs(self.help_scroll_vel) < 0.02:
-                    self.help_scroll_vel = 0.0
-
-                if self.help_screen_offset < 0:
-                    self.help_screen_offset = 0
-                    self.help_scroll_vel = 0.0
-                elif self.help_screen_offset > self.help_max_offset:
-                    self.help_screen_offset = self.help_max_offset
-                    self.help_scroll_vel = 0.0
-
-            if self.continue_button.check_click(events):
-                self.paused = False
-
-            if self.restart_button.check_click(events):
-                self.in_restart_confirmation = True
-
-            if self.menu_button.check_click(events):
-                self.in_menu_confirmation = True
-
-            self.update_prev_keys(keys); return
-
-        if self.in_menu_confirmation:
-            if self.yes_button.check_click(events):
-                self.game.enter_state(StateID.TITLE)
-
-            if self.no_button.check_click(events):
-                self.in_menu_confirmation = False
-
-        if self.in_restart_confirmation:
-            if self.yes_button.check_click(events):
-                self.reset()
-
-            if self.no_button.check_click(events):
-                self.in_restart_confirmation = False
-
-        # Toggle jukebox menu
-        if self.pressed(keys, pg.K_j):
-            self.jukebox_menu_open = not self.jukebox_menu_open
-
-        # Cockpit visibility toggling
-        if self.pressed(keys, pg.K_F1):  # F1 to toggle HUD
-            self.show_cockpit = not self.show_cockpit
-
-        # Block flight controls if crashed or disabled
-        if not self.plane.flyable:
-            if self.crash_screen_restart_button.check_click(events):
-                self.in_restart_confirmation = True
-
-            self.update_prev_keys(keys)
-            return
-
-        # Show/hide map
-        if self.pressed(keys, pg.K_m):
-            self.map_state = Visibility.toggle(self.map_state)
-
-        # Show/hide quick ref for controls
-        if self.pressed(keys, pg.K_o):
-            self.controls_quick_ref_state = Visibility.toggle(self.controls_quick_ref_state)
-
-        # Cycle GPS waypoint
-        if self.pressed(keys, pg.K_g):
-            self.gps_runway_index = (self.gps_runway_index + 1) % len(self.env.runways)
-
-        if self.map_state == Visibility.SHOWN:
-            # While map is shown: control zoom
-            if keys[pg.K_w]:
-                self.viewport_zoom /= 2.5 ** (dt/1000)
-            if keys[pg.K_s]:
-                self.viewport_zoom *= 2.5 ** (dt/1000)
-            self.viewport_zoom = clamp(self.viewport_zoom, (C.MAP_ZOOM_MIN, C.MAP_ZOOM_MAX))
-        else:
-            # Throttle controls
-            if keys[pg.K_w]:
-                self.plane.throttle_frac += C.THROTTLE_SPEED * dt/1000
-            if keys[pg.K_s]:
-                self.plane.throttle_frac -= C.THROTTLE_SPEED * dt/1000
-            self.plane.throttle_frac = clamp(self.plane.throttle_frac, (0, 1))
-
-        self.map_show_advanced_info = self.map_state == Visibility.SHOWN and keys[pg.K_h]
-
-        # Turning or map panning
-        if self.map_state == Visibility.SHOWN:
-            self.plane.rot_input_container.reset()  # zero out plane rotation inputs while map is shown
-            panning_speed = self.viewport_zoom * 150
-
-            # Map shown -> pan map
-            if keys[pg.K_UP]:
-                self.viewport_pos.z -= panning_speed * dt/1000
-                self.viewport_auto_panning = False
-            if keys[pg.K_DOWN]:
-                self.viewport_pos.z += panning_speed * dt/1000
-                self.viewport_auto_panning = False
-            if keys[pg.K_LEFT]:
-                self.viewport_pos.x -= panning_speed * dt/1000
-                self.viewport_auto_panning = False
-            if keys[pg.K_RIGHT]:
-                self.viewport_pos.x += panning_speed * dt/1000
-                self.viewport_auto_panning = False
-
-            # Reset map viewport pos
-            if self.pressed(keys, pg.K_SPACE):
-                self.viewport_pos = self.plane.pos.copy()
-                self.viewport_auto_panning = True
-        else:
-            # Reset map viewport pos once map goes fully down
-            if not self.map_up:
-                self.viewport_pos = self.plane.pos.copy()
-                self.viewport_auto_panning = True
-
-            # Pitch
-            direction: Literal[-1, 1] = -1 if self.game.save_data.invert_y_axis else 1
-
-            pitch_input = 0  # temporary container
-            if keys[pg.K_UP]:
-                pitch_input += direction
-            if keys[pg.K_DOWN]:
-                pitch_input -= direction
-            assert pitch_input in (-1, 0, 1)
-            self.plane.rot_input_container.pitch_input = pitch_input
-
-            # Turning
-            roll_input = 0  # temporary container
-            if keys[pg.K_LEFT]:
-                roll_input -= 1
-            if keys[pg.K_RIGHT]:
-                roll_input += 1
-            assert roll_input in (-1, 0, 1)
-            self.plane.rot_input_container.roll_input = roll_input
-
-        # Flaps
-        if keys[pg.K_z]:  # Flaps up
-            self.plane.flaps += C.FLAPS_SPEED * dt/1000
-        if keys[pg.K_x]:  # Flaps down
-            self.plane.flaps -= C.FLAPS_SPEED * dt/1000
-        self.plane.flaps = clamp(self.plane.flaps, (0, 1))
-
-        # Rudder
-        if keys[pg.K_a]:
-            self.plane.rudder -= C.RUDDER_SPEED * dt/1000 * min(1, self.plane.vel.length() / 10)
-        if keys[pg.K_d]:
-            self.plane.rudder += C.RUDDER_SPEED * dt/1000 * min(1, self.plane.vel.length() / 10)
-        if not (keys[pg.K_a] or keys[pg.K_d]):
-            one_minus_decay = (1 - C.RUDDER_SNAPBACK) ** (dt/1000)
-            self.plane.rudder *= one_minus_decay
-        self.plane.rudder = clamp(self.plane.rudder, (-1, 1))
-
-        # Brakes
-        self.plane.braking = keys[pg.K_b]  # b to brake
-
-        self.update_prev_keys(keys)
 
     def take_screenshot(self, *, notify: bool = True) -> None:
         DIRECTORIES.data.screenshots.mkdir(parents=True, exist_ok=True)
@@ -2243,6 +1918,331 @@ class GameScreen(State):
         gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
         gl.glEnable(gl.GL_DEPTH_TEST)
         gl.glDisable(gl.GL_TEXTURE_2D)
+
+    def update(self, dt: int):
+        self._frame_count += 1
+        self.time_elapsed += dt
+
+        self.sun.update()
+        self.moon.update()
+
+        if self.paused:
+            return
+
+        self.dialog_box.update(dt)
+
+        if self.plane.crashed:
+            self.smoke_manager.update(dt)
+            self.plane.increment_crash_timer(dt)
+
+            self.dialog_box.reset()
+
+            self.channel_stall.stop()
+            self.channel_overspeed.stop()
+
+            self.channel_wind.stop()
+            self.channel_engine_active.stop()
+            self.channel_engine_ambient.stop()
+
+            self.channel_scrape.stop()
+
+            return
+
+        if self.auto_screenshots_enabled:
+            self._auto_screenshot_elapsed_ms += dt
+            if self._auto_screenshot_elapsed_ms >= self.auto_screenshot_interval_ms:
+                self._auto_screenshot_pending = True
+                self._auto_screenshot_elapsed_ms %= self.auto_screenshot_interval_ms
+
+        # Jukebox menu update
+        if self.jukebox_menu_state == Visibility.HIDDEN:
+            self.jukebox_menu_up -= (dt/1000) / C.JUKEBOX_MENU_TOGGLE_ANIMATION_DURATION
+        else:
+            self.jukebox_menu_up += (dt/1000) / C.JUKEBOX_MENU_TOGGLE_ANIMATION_DURATION
+        self.jukebox_menu_up = clamp(self.jukebox_menu_up, (0, 1))
+
+        # Map update
+        if self.map_state == Visibility.HIDDEN:
+            self.map_up -= (dt/1000) / C.MAP_TOGGLE_ANIMATION_DURATION
+        else:
+            self.map_up += (dt/1000) / C.MAP_TOGGLE_ANIMATION_DURATION
+        self.map_up = clamp(self.map_up, (0, 1))
+
+        # Controls ref update
+        if self.controls_quick_ref_state == Visibility.HIDDEN:
+            self.controls_quick_ref_up -= (dt/1000) / C.CONTROLS_REF_TOGGLE_ANIMATION_DURATION
+        else:
+            self.controls_quick_ref_up += (dt/1000) / C.CONTROLS_REF_TOGGLE_ANIMATION_DURATION
+        self.controls_quick_ref_up = clamp(self.controls_quick_ref_up, (0, 1))
+
+        self.plane.update(dt)
+
+        # Stall warning
+        self.show_stall_warning = self.plane.stalled
+        if self.show_stall_warning:
+            if not self.channel_stall.get_busy():
+                self.channel_stall.play(self.sounds.stall_warning, loops=-1)
+        else:
+            self.channel_stall.stop()
+
+        # Overspeed warning
+        self.show_overspeed_warning = self.plane.vel.length() > self.plane.model.v_ne  # Both in m/s
+        if self.show_overspeed_warning:
+            if not self.channel_overspeed.get_busy():
+                self.channel_overspeed.play(self.sounds.overspeed, loops=-1)
+        else:
+            self.channel_overspeed.stop()
+
+        # Update engine and wind sounds
+        if not self.channel_wind.get_busy():
+            self.channel_wind.play(self.sounds.wind, loops=-1)
+        if not self.channel_engine_ambient.get_busy():
+            self.channel_engine_ambient.play(self.sounds.engine_loop_ambient, loops=-1)
+        if not self.channel_engine_active.get_busy():
+            self.channel_engine_active.play(self.sounds.engine_loop_active, loops=-1)
+
+        wind_sound_strength = (self.plane.vel.length() - 61.73) / 25.72  # start wind at 120 kn, full at 170
+        self.channel_wind.set_volume(clamp(wind_sound_strength, (0, 1)))
+
+        throttle_sound_strength = self.plane.throttle_frac ** 1.8
+        self.channel_engine_active.set_volume(throttle_sound_strength)
+
+        # Terrain scrape sound
+        if (not self.plane.over_runway) and self.plane.on_ground:
+            if not self.channel_scrape.get_busy():
+                self.channel_scrape.play(self.sounds.terrain_scrape, -1)
+        else:
+            self.channel_scrape.stop()
+
+        # Prohibited zone warning
+        def plane_in_prohibited_zone() -> bool:
+            for zone in self.env.prohibited_zones:
+                px, _, pz = self.plane.pos
+                zone_centre_x, zone_centre_z = zone.pos
+                zone_w, zone_h = zone.dims
+
+                zone_min_x = zone_centre_x - zone_w / 2
+                zone_max_x = zone_centre_x + zone_w / 2
+                zone_min_z = zone_centre_z - zone_h / 2
+                zone_max_z = zone_centre_z + zone_h / 2
+
+                if zone_min_x < px < zone_max_x and zone_min_z < pz < zone_max_z:
+                    return True
+
+            return False
+
+        self.show_prohibited_zone_warning = plane_in_prohibited_zone()
+        if self.show_prohibited_zone_warning:
+            if not self.channel_prohibited.get_busy():
+                self.channel_prohibited.play(self.sounds.prohibited_zone_warning, loops=-1)
+            self.dialog_box.set_message("Immediately exit this zone - penalties may apply", (255, 127, 0), 100)
+        else:
+            self.channel_prohibited.stop()
+
+    def take_input(self, keys: ScancodeWrapper, events: EventList, dt: int) -> None:
+        # Screenshot - this needs to ALWAYS WORK
+        if self.pressed(keys, pg.K_F5):
+            self.take_screenshot()
+
+        # Meta controls
+        if self.pressed(keys, pg.K_ESCAPE):
+            if self.in_controls_screen or self.in_help_screen:
+                self.in_controls_screen = False
+                self.in_help_screen = False
+                self.help_screen_offset = 0
+                self.help_scroll_vel = 0
+            else:
+                self.paused = not self.paused
+
+            self.channel_wind.stop()
+            self.channel_engine_active.stop()
+            self.channel_engine_ambient.stop()
+
+            self.channel_scrape.stop()
+
+        if self.paused and not (self.in_menu_confirmation or self.in_restart_confirmation):
+            if self.controls_button.check_click(events) and not self.in_controls_screen and not self.in_help_screen:
+                self.in_controls_screen = True
+                self.in_help_screen = False
+            elif self.help_button.check_click(events) and not self.in_controls_screen and not self.in_help_screen:
+                self.in_help_screen = True
+                self.in_controls_screen = False
+            elif self.back_button.check_click(events) and (self.in_controls_screen or self.in_help_screen):
+                self.in_controls_screen = False
+                self.in_help_screen = False
+                self.help_screen_offset = 0.0
+                self.help_scroll_vel = 0.0
+
+            if self.in_help_screen:
+                scroll_accel = 0.004 * dt
+                wheel_impulse = 25
+
+                for event in events:
+                    if event.type == pg.MOUSEWHEEL:
+                        self.help_scroll_vel -= event.y * wheel_impulse
+
+                if keys[pg.K_UP]:
+                    self.help_scroll_vel -= scroll_accel
+                if keys[pg.K_DOWN]:
+                    self.help_scroll_vel += scroll_accel
+                if self.pressed(keys, pg.K_PAGEUP):
+                    self.help_scroll_vel -= 220
+                if self.pressed(keys, pg.K_PAGEDOWN):
+                    self.help_scroll_vel += 220
+
+                self.help_screen_offset += self.help_scroll_vel
+
+                self.help_scroll_vel *= 0.85
+                if abs(self.help_scroll_vel) < 0.02:
+                    self.help_scroll_vel = 0.0
+
+                if self.help_screen_offset < 0:
+                    self.help_screen_offset = 0
+                    self.help_scroll_vel = 0.0
+                elif self.help_screen_offset > self.help_max_offset:
+                    self.help_screen_offset = self.help_max_offset
+                    self.help_scroll_vel = 0.0
+
+            if self.continue_button.check_click(events):
+                self.paused = False
+
+            if self.restart_button.check_click(events):
+                self.in_restart_confirmation = True
+
+            if self.menu_button.check_click(events):
+                self.in_menu_confirmation = True
+
+            self.update_prev_keys(keys); return
+
+        if self.in_menu_confirmation:
+            if self.yes_button.check_click(events):
+                self.game.enter_state(StateID.TITLE)
+
+            if self.no_button.check_click(events):
+                self.in_menu_confirmation = False
+
+        if self.in_restart_confirmation:
+            if self.yes_button.check_click(events):
+                self.reset()
+
+            if self.no_button.check_click(events):
+                self.in_restart_confirmation = False
+
+        # Toggle jukebox menu
+        if self.pressed(keys, pg.K_j):
+            self.jukebox_menu_open = not self.jukebox_menu_open
+
+        # Cockpit visibility toggling
+        if self.pressed(keys, pg.K_F1):  # F1 to toggle HUD
+            self.show_cockpit = not self.show_cockpit
+
+        # Block flight controls if crashed or disabled
+        if not self.plane.flyable:
+            if self.crash_screen_restart_button.check_click(events):
+                self.in_restart_confirmation = True
+
+            self.update_prev_keys(keys)
+            return
+
+        # Show/hide map
+        if self.pressed(keys, pg.K_m):
+            self.map_state = Visibility.toggle(self.map_state)
+
+        # Show/hide quick ref for controls
+        if self.pressed(keys, pg.K_o):
+            self.controls_quick_ref_state = Visibility.toggle(self.controls_quick_ref_state)
+
+        # Cycle GPS waypoint
+        if self.pressed(keys, pg.K_g):
+            self.gps_runway_index = (self.gps_runway_index + 1) % len(self.env.runways)
+
+        if self.map_state == Visibility.SHOWN:
+            # While map is shown: control zoom
+            if keys[pg.K_w]:
+                self.viewport_zoom /= 2.5 ** (dt/1000)
+            if keys[pg.K_s]:
+                self.viewport_zoom *= 2.5 ** (dt/1000)
+            self.viewport_zoom = clamp(self.viewport_zoom, (C.MAP_ZOOM_MIN, C.MAP_ZOOM_MAX))
+        else:
+            # Throttle controls
+            if keys[pg.K_w]:
+                self.plane.throttle_frac += C.THROTTLE_SPEED * dt/1000
+            if keys[pg.K_s]:
+                self.plane.throttle_frac -= C.THROTTLE_SPEED * dt/1000
+            self.plane.throttle_frac = clamp(self.plane.throttle_frac, (0, 1))
+
+        self.map_show_advanced_info = self.map_state == Visibility.SHOWN and keys[pg.K_h]
+
+        # Turning or map panning
+        if self.map_state == Visibility.SHOWN:
+            self.plane.rot_input_container.reset()  # zero out plane rotation inputs while map is shown
+            panning_speed = self.viewport_zoom * 150
+
+            # Map shown -> pan map
+            if keys[pg.K_UP]:
+                self.viewport_pos.z -= panning_speed * dt/1000
+                self.viewport_auto_panning = False
+            if keys[pg.K_DOWN]:
+                self.viewport_pos.z += panning_speed * dt/1000
+                self.viewport_auto_panning = False
+            if keys[pg.K_LEFT]:
+                self.viewport_pos.x -= panning_speed * dt/1000
+                self.viewport_auto_panning = False
+            if keys[pg.K_RIGHT]:
+                self.viewport_pos.x += panning_speed * dt/1000
+                self.viewport_auto_panning = False
+
+            # Reset map viewport pos
+            if self.pressed(keys, pg.K_SPACE):
+                self.viewport_pos = self.plane.pos.copy()
+                self.viewport_auto_panning = True
+        else:
+            # Reset map viewport pos once map goes fully down
+            if not self.map_up:
+                self.viewport_pos = self.plane.pos.copy()
+                self.viewport_auto_panning = True
+
+            # Pitch
+            direction: Literal[-1, 1] = -1 if self.game.save_data.invert_y_axis else 1
+
+            pitch_input = 0  # temporary container
+            if keys[pg.K_UP]:
+                pitch_input += direction
+            if keys[pg.K_DOWN]:
+                pitch_input -= direction
+            assert pitch_input in (-1, 0, 1)
+            self.plane.rot_input_container.pitch_input = pitch_input
+
+            # Turning
+            roll_input = 0  # temporary container
+            if keys[pg.K_LEFT]:
+                roll_input -= 1
+            if keys[pg.K_RIGHT]:
+                roll_input += 1
+            assert roll_input in (-1, 0, 1)
+            self.plane.rot_input_container.roll_input = roll_input
+
+        # Flaps
+        if keys[pg.K_z]:  # Flaps up
+            self.plane.flaps += C.FLAPS_SPEED * dt/1000
+        if keys[pg.K_x]:  # Flaps down
+            self.plane.flaps -= C.FLAPS_SPEED * dt/1000
+        self.plane.flaps = clamp(self.plane.flaps, (0, 1))
+
+        # Rudder
+        if keys[pg.K_a]:
+            self.plane.rudder -= C.RUDDER_SPEED * dt/1000 * min(1, self.plane.vel.length() / 10)
+        if keys[pg.K_d]:
+            self.plane.rudder += C.RUDDER_SPEED * dt/1000 * min(1, self.plane.vel.length() / 10)
+        if not (keys[pg.K_a] or keys[pg.K_d]):
+            one_minus_decay = (1 - C.RUDDER_SNAPBACK) ** (dt/1000)
+            self.plane.rudder *= one_minus_decay
+        self.plane.rudder = clamp(self.plane.rudder, (-1, 1))
+
+        # Brakes
+        self.plane.braking = keys[pg.K_b]  # b to brake
+
+        self.update_prev_keys(keys)
 
     def draw(self, wn: Surface):
         assert self.game.config_presets is not None
