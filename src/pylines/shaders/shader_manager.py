@@ -12,12 +12,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast
+from pathlib import Path
+
+from typing import cast, Literal
 
 import OpenGL.GL as gl
 
+class ShaderError(RuntimeError):
+    def __init__(
+            self, message: str,
+            shader_type: Literal['vertex', 'fragment', 'program', None] = None,
+            path: Path | None = None, log: str | None = None
+        ) -> None:
+        super().__init__(message)
+        self.shader_type = shader_type  # "vertex", "fragment", or "program"
+        self.path = path                # path to the shader file
+        self.log = log                  # compiler/linker output
 
-def load_shader_script(vert_path: str, frag_path: str) -> int:
+    def __str__(self) -> str:
+        return (
+            f"{self.args[0]}\n"
+            f"Shader Type: {self.shader_type}\n"
+            f"Path: {self.path}\n"
+            f"Log: \n{self.log}"
+        )
+
+def load_shader_script(vert_path: Path, frag_path: Path) -> int:
     with open(vert_path, "r", encoding="utf-8") as f:
         vert_source = f.read()
 
@@ -32,11 +52,23 @@ def load_shader_script(vert_path: str, frag_path: str) -> int:
 
     gl.glCompileShader(vert_shader)
     if not gl.glGetShaderiv(vert_shader, gl.GL_COMPILE_STATUS):
-        raise RuntimeError(f"Error in vert shader file '{vert_path}':\n" + gl.glGetShaderInfoLog(vert_shader).decode())
+        log = gl.glGetShaderInfoLog(vert_shader).decode()
+        raise ShaderError(
+            f"Error compiling vertex shader '{vert_path}'",
+            shader_type="vertex",
+            path=vert_path,
+            log=log
+        )
 
     gl.glCompileShader(frag_shader)
     if not gl.glGetShaderiv(frag_shader, gl.GL_COMPILE_STATUS):
-        raise RuntimeError(f"Error in frag shader file '{frag_path}':\n" + gl.glGetShaderInfoLog(frag_shader).decode())
+        log = gl.glGetShaderInfoLog(frag_shader).decode()
+        raise ShaderError(
+            f"Error compiling fragment shader '{frag_path}'",
+            shader_type="fragment",
+            path=frag_path,
+            log=log
+        )
 
     program = cast(int, gl.glCreateProgram())
 
@@ -45,12 +77,11 @@ def load_shader_script(vert_path: str, frag_path: str) -> int:
     gl.glLinkProgram(program)
 
     if not gl.glGetProgramiv(program, gl.GL_LINK_STATUS):
-        info = gl.glGetProgramInfoLog(program).decode()
-        raise RuntimeError(
-            "Shader program link failed\n"
-            f"Vertex shader: {vert_path}\n"
-            f"Fragment shader: {frag_path}\n"
-            f"Linker output:\n{info}"
+        log = gl.glGetProgramInfoLog(program).decode()
+        raise ShaderError(
+            "Shader program link failed",
+            shader_type="program",
+            log=log
         )
 
     gl.glDeleteShader(vert_shader)

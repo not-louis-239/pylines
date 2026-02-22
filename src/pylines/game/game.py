@@ -18,8 +18,9 @@ from typing import TYPE_CHECKING
 
 import pygame as pg
 
-import pylines.core.paths as paths
+from pylines.core.paths import DIRECTORIES
 from pylines.core.asset_manager import Assets
+from pylines.core.asset_manager_helpers import MusicID
 from pylines.core.constants import SFXChannelID
 from pylines.core.data_manager import ConfigObject, load_data, save_data
 from pylines.game.environment import Environment
@@ -30,6 +31,7 @@ from pylines.game.screens.settings import SettingsScreen
 from pylines.game.screens.credits import CreditsScreen
 from pylines.game.screens.title import TitleScreen
 from pylines.game.states import State, StateID
+from pylines.game.managers.menu_images_manager import MenuImageManager
 
 if TYPE_CHECKING:
     from pylines.core.custom_types import EventList, ScancodeWrapper, Surface
@@ -41,7 +43,7 @@ class Game:
         self.assets = Assets()
 
         self.save_data: ConfigObject
-        self.save_data, *_ = load_data(paths.DATA_DIR / "save_data.json")
+        self.save_data, *_ = load_data(DIRECTORIES.data / "save_data.json")
 
         config_presets_raw = self.assets.config_presets
         self.config_presets = LiveConfigPresets(config_presets_raw, self.assets.images)
@@ -60,6 +62,7 @@ class Game:
         self.music_channel = pg.mixer.Channel(SFXChannelID.MUSIC)
 
         self.state: StateID = StateID.LOADING
+        self.menu_image_manager = MenuImageManager(self.assets.images.menu_images)  # This is in Game to make it accessible from multiple states
         self.enter_state(StateID.LOADING)
 
     def enter_state(self, state_name: StateID):
@@ -79,7 +82,7 @@ class Game:
             self.music_channel.fadeout(1500)
         # Play music if entering a menu state from a non-menu state or if transitioning between menu states and music is not playing                                                                                                                          │
         elif is_entering_menu and (not was_in_menu or not self.music_channel.get_busy()):
-            self.music_channel.play(self.assets.sounds.menu_music, loops=-1)
+            self.music_channel.play(self.assets.sounds.jukebox_tracks[MusicID.OPEN_TWILIGHT], loops=-1)
 
         self.states[state_name].enter_state()
 

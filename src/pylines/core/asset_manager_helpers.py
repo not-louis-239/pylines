@@ -91,3 +91,7 @@ class ControlsSectionID(StrEnum):
 class ControlsSection:
     keys: dict[str, str]  # key, action
     note: str | None      # None = no note
+
+class MusicID(StrEnum):
+    OPEN_TWILIGHT = "Open Twilight"
+    NIGHTGLIDE = "Nightglide"

@@ -29,7 +29,7 @@ from OpenGL import GL as gl
 
 import pylines.core.colours as cols
 import pylines.core.constants as C
-import pylines.core.paths as paths
+from pylines.core.paths import DIRECTORIES
 import pylines.core.units as units
 from pylines.core.asset_manager import FLine
 from pylines.core.custom_types import AColour, Colour, EventList, RealNumber
@@ -61,9 +61,9 @@ from pylines.objects.scenery.ocean import Ocean
 from pylines.objects.scenery.runway import Runway
 from pylines.objects.scenery.sky import Moon, Sky, Sun
 from pylines.shaders.shader_manager import load_shader_script
-from pylines.game.smoke_manager import SmokeManager
+from pylines.game.managers.smoke_manager import SmokeManager
 from pylines.objects.rotation_input_container import RotationInputContainer
-from pylines.core.asset_manager_helpers import ControlsSectionID, ControlsSection
+from pylines.core.asset_manager_helpers import ControlsSectionID, ControlsSection, MusicID
 
 if TYPE_CHECKING:
     from pylines.core.custom_types import ScancodeWrapper, Surface
@@ -116,6 +116,11 @@ class GameScreen(State):
         self.show_stall_warning: bool = False
         self.show_overspeed_warning: bool = False
         self.time_elapsed: int = 0  # milliseconds
+
+        self.auto_screenshots_enabled: bool = False
+        self.auto_screenshot_interval_ms: int = 30_000
+        self._auto_screenshot_elapsed_ms: int = 0
+        self._auto_screenshot_pending: bool = False
 
         self.channel_engine_ambient = pg.mixer.Channel(C.SFXChannelID.ENGINE_AMBIENT)
         self.channel_engine_active = pg.mixer.Channel(C.SFXChannelID.ENGINE_ACTIVE)
@@ -566,8 +571,8 @@ class GameScreen(State):
             gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
 
             self.building_shader = load_shader_script(
-                str(paths.SHADERS_DIR / "building.vert"),
-                str(paths.SHADERS_DIR / "building.frag")
+                DIRECTORIES.src.shaders / "building.vert",
+                DIRECTORIES.src.shaders / "building.frag"
             )
             self.building_pos_loc = gl.glGetAttribLocation(self.building_shader, "position")
             self.building_color_loc = gl.glGetAttribLocation(self.building_shader, "color")
@@ -637,7 +642,7 @@ class GameScreen(State):
         self.map_tiles: list[list[pg.Surface]] = []
 
         # Make cache directory if it doesn't exist
-        cache_dir = paths.CACHE_DIR / "map_tiles"
+        cache_dir = DIRECTORIES.cache / "map_tiles"
         cache_dir.mkdir(parents=True, exist_ok=True)
 
         # Loop over tiles
@@ -752,7 +757,7 @@ class GameScreen(State):
 
         self.channel_scrape.stop()
 
-        self.sounds.menu_music.fadeout(1_500)
+        self.sounds.jukebox_tracks[MusicID.OPEN_TWILIGHT].fadeout(1_500)
         self.dialog_box.reset()
         self.time_elapsed = 0
 
@@ -784,6 +789,12 @@ class GameScreen(State):
             self.channel_scrape.stop()
 
             return
+
+        if self.auto_screenshots_enabled:
+            self._auto_screenshot_elapsed_ms += dt
+            if self._auto_screenshot_elapsed_ms >= self.auto_screenshot_interval_ms:
+                self._auto_screenshot_pending = True
+                self._auto_screenshot_elapsed_ms %= self.auto_screenshot_interval_ms
 
         # Map update
         if self.map_state == Visibility.HIDDEN:
@@ -1064,12 +1075,12 @@ class GameScreen(State):
 
         self.update_prev_keys(keys)
 
-    def take_screenshot(self) -> None:
-        paths.SCREENSHOTS_DIR.mkdir(parents=True, exist_ok=True)
+    def take_screenshot(self, *, notify: bool = True) -> None:
+        DIRECTORIES.data.screenshots.mkdir(parents=True, exist_ok=True)
 
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         filename = f"screenshot_{timestamp}.png"
-        filepath = paths.SCREENSHOTS_DIR / filename
+        filepath = DIRECTORIES.data.screenshots / filename
 
         width, height = C.WN_W, C.WN_H
         gl.glPixelStorei(gl.GL_PACK_ALIGNMENT, 1)
@@ -1082,7 +1093,8 @@ class GameScreen(State):
         surface = pg.transform.flip(surface, False, True)
         pg.image.save(surface, str(filepath))
 
-        self.dialog_box.set_message(f"Screenshot saved: {filename}", (255, 240, 209))  # light yellow colour
+        if notify:
+            self.dialog_box.set_message(f"Screenshot saved: {filename}", (255, 240, 209))  # light yellow colour
 
     def draw_buildings(self, cloud_attenuation: float):
         if not self.building_vertex_count or self.buildings_vbo is None:
@@ -2259,4 +2271,9 @@ class GameScreen(State):
             cloud_layer.draw(self.plane.pos, camera_fwd)
 
         self.draw_buildings(cloud_attenuation)
+
+        if self.auto_screenshots_enabled and self._auto_screenshot_pending:
+            self._auto_screenshot_pending = False
+            self.take_screenshot(notify=True)
+
         self.draw_hud()

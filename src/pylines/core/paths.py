@@ -12,27 +12,60 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""This module acts as storage for path constants.
-It should only be imported using 'import ... as paths'
-so that variables don't go loose and pollute a
-module's namespace."""
+"""paths.py - this module acts as storage for path constants."""
 
 from pathlib import Path
 
 ROOT_DIR: Path = Path(__file__).resolve().parents[3]  # project root
 
-ASSETS_DIR: Path = ROOT_DIR / "assets"
+class DirsContainer:
+    def __init__(self, root: Path) -> None:
+        self.root = root
 
-CACHE_DIR: Path = ROOT_DIR / "cache"
-DATA_DIR: Path = ROOT_DIR / "save_data"  # directory for save data
+    def __fspath__(self) -> str:
+        return str(self.root)
 
-FONTS_DIR: Path = ASSETS_DIR / "fonts"
-IMAGES_DIR: Path = ASSETS_DIR / "images"
-SOUNDS_DIR: Path = ASSETS_DIR / "sounds"
-WORLD_DIR: Path = ASSETS_DIR / "world"
-PRESETS_DIR: Path = ASSETS_DIR / "presets"
-TEXT_DIR: Path = ASSETS_DIR / "text"
+    def __truediv__(self, other: str):
+        """Allows DirsContainer objects to behave like Path objects
+        when combined with strings."""
+        return self.root / other
 
-SCREENSHOTS_DIR: Path = DATA_DIR / "screenshots"
+class AssetDirs(DirsContainer):
+    def __init__(self, root: Path):
+        super().__init__(root)
+        self.fonts = root / "fonts"
+        self.images = ImageDirs(root / "images")
+        self.sounds = SoundDirs(root / "sounds")
+        self.world = root / "world"
+        self.presets = root / "presets"
+        self.text = root / "text"
 
-SHADERS_DIR: Path = ROOT_DIR / "src" / "pylines" / "shaders"
+class ImageDirs(DirsContainer):
+    def __init__(self, root: Path) -> None:
+        super().__init__(root)
+        self.menu_images = root / "menu_images"
+
+class SoundDirs(DirsContainer):
+    def __init__(self, root: Path) -> None:
+        super().__init__(root)
+        self.jukebox_tracks = root / "jukebox_tracks"
+
+class DataDirs(DirsContainer):
+    def __init__(self, root: Path):
+        super().__init__(root)
+        self.screenshots = root / "screenshots"
+
+class SrcDirs(DirsContainer):
+    def __init__(self, root: Path) -> None:
+        super().__init__(root)
+        self.shaders = root / "shaders"
+
+class Dirs(DirsContainer):
+    def __init__(self, root: Path):
+        super().__init__(root)
+        self.assets = AssetDirs(root / "assets")
+        self.data = DataDirs(root / "save_data")
+        self.cache = root / "cache"
+        self.src = SrcDirs(root / "src" / "pylines")
+
+DIRECTORIES = Dirs(ROOT_DIR)
