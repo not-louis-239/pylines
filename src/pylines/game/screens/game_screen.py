@@ -104,19 +104,20 @@ class GameScreen(State):
         super().__init__(game)
         assert self.game.env is not None
 
-        self._frame_count = 0
-
         self.env = self.game.env
 
-        self.dialog_box = DialogMessage()
-
-        self.plane = Plane(assets.sounds, self.dialog_box, self.game.env, RotationInputContainer())
-        self.sky = Sky()
-        self.sun = Sun(assets.images.sun)
-        self.moon = Moon(assets.images.moon)
         self.show_stall_warning: bool = False
         self.show_overspeed_warning: bool = False
         self.time_elapsed: int = 0  # milliseconds
+
+        self._frame_count = 0
+
+        self.dialog_box = DialogMessage()
+
+        self.sky = Sky()
+        self.sun = Sun(assets.images.sun)
+        self.moon = Moon(assets.images.moon)
+        self.plane = Plane(assets.sounds, self.dialog_box, self.game.env, RotationInputContainer())
 
         self.auto_screenshots_enabled: bool = False
         self.auto_screenshot_interval_ms: int = 30_000
@@ -134,17 +135,14 @@ class GameScreen(State):
 
         self.channel_scrape = pg.mixer.Channel(C.SFXChannelID.SCRAPE)
 
-        # Font for text rendering
-        self.font = pg.font.Font(assets.fonts.monospaced, 36)
-
         # GPS destination
         self.gps_runway_index: int = 1  # start at second GPS destination
 
         # Pausing
         self.paused: bool = False
 
-        self.jukebox_menu_up: RealNumber = 0
-        self.jukebox_menu_state: Visibility = Visibility.HIDDEN
+        # Font for text rendering
+        self.font = pg.font.Font(assets.fonts.monospaced, 36)
 
         # Confirmation menus
         self.in_menu_confirmation: bool = False
@@ -155,6 +153,12 @@ class GameScreen(State):
         self.help_screen_offset: float = 0
         self.help_max_offset: float = 0
         self.help_scroll_vel: float = 0
+
+        # Menu states
+        self.jukebox_menu_up: RealNumber = 0
+        self.jukebox_menu_state: Visibility = Visibility.HIDDEN
+        self.controls_quick_ref_up: RealNumber = 0  # represents how active it is
+        self.controls_quick_ref_state: Visibility = Visibility.HIDDEN
 
         self.continue_button = Button(
             (C.WN_W//2-400, C.WN_H//2), 250, 50, (0, 96, 96), (128, 255, 255),
@@ -222,6 +226,9 @@ class GameScreen(State):
         # Cache attitude indicator display to avoid wasteful label drawing
         self.cached_ai_surface = self._populate_ai_surface()
 
+        inner_ai_rect = pg.Rect(0, 0, ai_size[0]-4, ai_size[1]-4)
+        self.ai_surface = pg.Surface(inner_ai_rect.size, pg.SRCALPHA)
+
         # Persistent surfaces avoids pg.Surface churn which wastes resources
         self.cockpit_surface = pg.Surface((C.WN_W, C.WN_H), pg.SRCALPHA)
         self.cockpit_rect = self.images.cockpit.get_bounding_rect()
@@ -240,9 +247,6 @@ class GameScreen(State):
 
         self.zone_overlay = pg.Surface((C.MAP_OVERLAY_SIZE, C.MAP_OVERLAY_SIZE), pg.SRCALPHA)
         self.zone_overlay.fill((0, 0, 0, 0))
-
-        inner_ai_rect = pg.Rect(0, 0, ai_size[0]-4, ai_size[1]-4)
-        self.ai_surface = pg.Surface(inner_ai_rect.size, pg.SRCALPHA)
 
         # Cache rotated compasses to save resources when drawing
         self.rotated_compasses: list[pg.Surface] = [
@@ -266,9 +270,6 @@ class GameScreen(State):
         self._star_color_vbo: int | None = None
         self._star_count: int = 0
         self._star_cache_key: tuple[float, float] | None = None
-
-        self.controls_quick_ref_up: float = 0  # represents how active it is
-        self.controls_quick_ref_state: Visibility = Visibility.HIDDEN
 
         self.crash_colour_fade_surface: Surface = pg.Surface((C.WN_W, C.WN_H), pg.SRCALPHA)
         self.smoke_manager = SmokeManager(assets.images)
