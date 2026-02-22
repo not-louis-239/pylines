@@ -86,6 +86,7 @@ class ControlsSectionID(StrEnum):
     DISPLAYS = "Displays"
     MAP = "Map Manipulation"
     UTILITIES = "Utilities"
+    JUKEBOX = "Jukebox"
 
 @dataclass
 class ControlsSection:

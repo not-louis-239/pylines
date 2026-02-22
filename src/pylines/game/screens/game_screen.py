@@ -32,6 +32,7 @@ import pylines.core.constants as C
 from pylines.core.paths import DIRECTORIES
 import pylines.core.units as units
 from pylines.core.asset_manager import FLine
+from pylines.core.asset_manager_helpers import ControlsSectionID
 from pylines.core.custom_types import AColour, Colour, EventList, RealNumber
 from pylines.core.time_manager import (
     fetch_hour,
@@ -1929,6 +1930,23 @@ class GameScreen(State):
         # Clear jukebox menu surface
         self.jukebox_menu_surface.fill((0, 0, 0, 0))
         draw_transparent_rect(self.jukebox_menu_surface, (0, 0), (540, 600), (0, 0, 0, 150), 2)
+
+        draw_text(
+            self.jukebox_menu_surface, (270, 48), 'centre', 'centre',
+            "Jukebox", cols.WHITE, 35, self.fonts.monospaced
+        )
+
+        for i, (key, desc) in enumerate(self.game.assets.texts.controls_sections[ControlsSectionID.JUKEBOX].keys.items()):
+            draw_text(
+                self.jukebox_menu_surface, (16, 95 + 25 * i), 'left', 'centre',
+                key, cols.BLUE, 18, self.fonts.monospaced
+            )
+            draw_text(
+                self.jukebox_menu_surface, (96, 95 + 25 * i), 'left', 'centre',
+                desc, cols.WHITE, 18, self.fonts.monospaced
+            )
+
+        ...
 
         self.hud_surface.blit(self.jukebox_menu_surface, (C.WN_W/2 - 270, C.WN_H - (C.WN_H / 2 + 300) * self.jukebox_menu_up))
 
