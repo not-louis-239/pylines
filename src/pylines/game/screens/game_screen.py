@@ -155,8 +155,10 @@ class GameScreen(State):
         self.help_scroll_vel: float = 0
 
         # Menu states
+        self.jukebox_menu_surface: Surface = pg.Surface((540, 600), flags=pg.SRCALPHA)
         self.jukebox_menu_up: RealNumber = 0
         self.jukebox_menu_state: Visibility = Visibility.HIDDEN
+
         self.controls_quick_ref_up: RealNumber = 0  # represents how active it is
         self.controls_quick_ref_state: Visibility = Visibility.HIDDEN
 
@@ -1796,6 +1798,10 @@ class GameScreen(State):
         if self.map_up:
             self.draw_map()
 
+        # Render jukebox
+        if self.jukebox_menu_up:
+            self.draw_jukebox_menu()
+
         # Render controls quick reference
         if self.controls_quick_ref_up:
             w, _ = self.controls_quick_ref_surface.get_size()
@@ -1918,6 +1924,13 @@ class GameScreen(State):
         gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
         gl.glEnable(gl.GL_DEPTH_TEST)
         gl.glDisable(gl.GL_TEXTURE_2D)
+
+    def draw_jukebox_menu(self) -> None:
+        # Clear jukebox menu surface
+        self.jukebox_menu_surface.fill((0, 0, 0, 0))
+        draw_transparent_rect(self.jukebox_menu_surface, (0, 0), (540, 600), (0, 0, 0, 150), 2)
+
+        self.hud_surface.blit(self.jukebox_menu_surface, (C.WN_W/2 - 270, C.WN_H - (C.WN_H / 2 + 300) * self.jukebox_menu_up))
 
     def update(self, dt: int):
         self._frame_count += 1
@@ -2130,7 +2143,7 @@ class GameScreen(State):
 
         # Toggle jukebox menu
         if self.pressed(keys, pg.K_j):
-            self.jukebox_menu_open = not self.jukebox_menu_open
+            self.jukebox_menu_state = Visibility.toggle(self.jukebox_menu_state)
 
         # Cockpit visibility toggling
         if self.pressed(keys, pg.K_F1):  # F1 to toggle HUD
