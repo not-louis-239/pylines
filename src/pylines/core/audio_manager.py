@@ -35,6 +35,7 @@ class SFXChannelID(IntEnum):
 
     # Other
     TERRAIN_SCRAPE = 7
+    LANDING_SFX = 8
 
 class AudioManager:
     def __init__(self, game) -> None:
@@ -46,7 +47,7 @@ class AudioManager:
             for channel_id in SFXChannelID:
                 self.channels[channel_id] = pg.mixer.Channel(channel_id)
         except IndexError:
-            # Raise an error to indicate insufficient channels intentionally
+            # Raise an error to indicate insufficient channels
             current_limit = pg.mixer.get_num_channels()
             num_required = len(SFXChannelID)
             raise RuntimeError(
@@ -68,7 +69,13 @@ class AudioManager:
         elif is_entering_menu and (not was_in_menu or not self.channels[SFXChannelID.MUSIC].get_busy()):
             self.channels[SFXChannelID.MUSIC].play(self.game.assets.sounds.jukebox_tracks[MusicID.OPEN_TWILIGHT], loops=-1)
 
-    def stop_all(self) -> None:
-        """Stops all registered channels."""
-        for channel in self.channels.values():
-            channel.stop()
+    def stop_all(self, *, exclude: list[SFXChannelID] | None = None) -> None:
+        """Stops all registered channels, except those in `exclude`.
+        Stops all channels if no excluded channels are given."""
+
+        exclude = exclude or []
+
+        for channel_id, channel in self.channels.items():
+            # Stop only channels not in `exclude`
+            if channel_id not in exclude:
+                channel.stop()

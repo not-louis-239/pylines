@@ -16,27 +16,23 @@
 
 from __future__ import annotations
 
-import ctypes
 from dataclasses import dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING, Generator, Literal, cast
 
-import numpy as np
 import pygame as pg
 from OpenGL import GL as gl
 
-import pylines.core.audio_manager
+from pylines.core.audio_manager import SFXChannelID
 import pylines.core.colours as cols
 import pylines.core.constants as C
 from pylines.core.paths import DIRECTORIES
 from pylines.core.asset_manager import FLine
 from pylines.core.asset_manager_helpers import ControlsSectionID
-from pylines.core.custom_types import Colour, EventList, RealNumber
+from pylines.core.custom_types import Colour, EventList
 from pylines.core.time_manager import (
     fetch_hour,
     sky_colour_from_hour,
-    sun_direction_from_hour,
-    sunlight_strength_from_hour,
 )
 from pylines.core.utils import (
     clamp,
@@ -51,7 +47,6 @@ from pylines.objects.scenery.ground import Ground
 from pylines.objects.scenery.ocean import Ocean
 from pylines.game.managers.cockpit_renderer import CockpitRenderer
 from pylines.objects.scenery.sky import Moon, Sky, Sun
-from pylines.shaders.shader_manager import load_shader_script
 from pylines.game.managers.smoke_manager import SmokeManager
 from pylines.objects.rotation_input_container import RotationInputContainer
 from pylines.core.asset_manager_helpers import ControlsSectionID, ControlsSection, MusicID
@@ -100,23 +95,12 @@ class GameScreen(State):
         self.sky = Sky()
         self.sun = Sun(assets.images.sun)
         self.moon = Moon(assets.images.moon)
-        self.plane = Plane(assets.sounds, self.dialog_box, self.game.env, RotationInputContainer())
+        self.plane = Plane(self.game.audio_manager, assets.sounds, self.dialog_box, self.game.env, RotationInputContainer())
 
         self.auto_screenshots_enabled: bool = False
         self.auto_screenshot_interval_ms: int = 30_000
         self._auto_screenshot_elapsed_ms: int = 0
         self._auto_screenshot_pending: bool = False
-
-        self.channel_music = self.game.music_channel
-        self.channel_engine_ambient = pg.mixer.Channel(pylines.core.audio_manager.SFXChannelID.ENGINE_AMBIENT)
-        self.channel_engine_active = pg.mixer.Channel(pylines.core.audio_manager.SFXChannelID.ENGINE_ACTIVE)
-        self.channel_wind = pg.mixer.Channel(pylines.core.audio_manager.SFXChannelID.WIND)
-
-        self.channel_stall = pg.mixer.Channel(pylines.core.audio_manager.SFXChannelID.WARN_STALL)
-        self.channel_overspeed = pg.mixer.Channel(pylines.core.audio_manager.SFXChannelID.WARN_OVERSPEED)
-        self.channel_prohibited = pg.mixer.Channel(pylines.core.audio_manager.SFXChannelID.WARN_PROHIBITED)
-
-        self.channel_scrape = pg.mixer.Channel(pylines.core.audio_manager.SFXChannelID.TERRAIN_SCRAPE)
 
         # GPS destination
         self.gps_runway_index: int = 1  # start at second GPS destination
@@ -206,14 +190,14 @@ class GameScreen(State):
         self.plane.reset()
         self.gps_runway_index = 1
 
-        self.channel_wind.stop()
-        self.channel_engine_active.stop()
-        self.channel_engine_ambient.stop()
+        self.game.audio_manager.channels[SFXChannelID.WIND].stop()
+        self.game.audio_manager.channels[SFXChannelID.ENGINE_ACTIVE].stop()
+        self.game.audio_manager.channels[SFXChannelID.ENGINE_AMBIENT].stop()
 
-        self.channel_stall.stop()
-        self.channel_overspeed.stop()
+        self.game.audio_manager.channels[SFXChannelID.WARN_STALL].stop()
+        self.game.audio_manager.channels[SFXChannelID.WARN_OVERSPEED].stop()
 
-        self.channel_scrape.stop()
+        self.game.audio_manager.channels[SFXChannelID.TERRAIN_SCRAPE].stop()
 
         self.sounds.jukebox_tracks[MusicID.OPEN_TWILIGHT].fadeout(1_500)
         self.dialog_box.reset()
@@ -565,14 +549,7 @@ class GameScreen(State):
 
             self.dialog_box.reset()
 
-            self.channel_stall.stop()
-            self.channel_overspeed.stop()
-
-            self.channel_wind.stop()
-            self.channel_engine_active.stop()
-            self.channel_engine_ambient.stop()
-
-            self.channel_scrape.stop()
+            self.game.audio_manager.stop_all(exclude=[SFXChannelID.LANDING_SFX])
 
             return
 
@@ -608,48 +585,48 @@ class GameScreen(State):
         # Stall warning
         self.warn_stall = self.plane.stalled
         if self.warn_stall:
-            if not self.channel_stall.get_busy():
-                self.channel_stall.play(self.sounds.stall_warning, loops=-1)
+            if not self.game.audio_manager.channels[SFXChannelID.WARN_STALL].get_busy():
+                self.game.audio_manager.channels[SFXChannelID.WARN_STALL].play(self.sounds.stall_warning, loops=-1)
         else:
-            self.channel_stall.stop()
+            self.game.audio_manager.channels[SFXChannelID.WARN_STALL].stop()
 
         # Overspeed warning
         self.warn_overspeed = self.plane.vel.length() > self.plane.model.v_ne  # Both in m/s
         if self.warn_overspeed:
-            if not self.channel_overspeed.get_busy():
-                self.channel_overspeed.play(self.sounds.overspeed, loops=-1)
+            if not self.game.audio_manager.channels[SFXChannelID.WARN_OVERSPEED].get_busy():
+                self.game.audio_manager.channels[SFXChannelID.WARN_OVERSPEED].play(self.sounds.overspeed, loops=-1)
         else:
-            self.channel_overspeed.stop()
+            self.game.audio_manager.channels[SFXChannelID.WARN_OVERSPEED].stop()
 
         # Update engine and wind sounds
-        if not self.channel_wind.get_busy():
-            self.channel_wind.play(self.sounds.wind, loops=-1)
-        if not self.channel_engine_ambient.get_busy():
-            self.channel_engine_ambient.play(self.sounds.engine_loop_ambient, loops=-1)
-        if not self.channel_engine_active.get_busy():
-            self.channel_engine_active.play(self.sounds.engine_loop_active, loops=-1)
+        if not self.game.audio_manager.channels[SFXChannelID.WIND].get_busy():
+            self.game.audio_manager.channels[SFXChannelID.WIND].play(self.sounds.wind, loops=-1)
+        if not self.game.audio_manager.channels[SFXChannelID.ENGINE_AMBIENT].get_busy():
+            self.game.audio_manager.channels[SFXChannelID.ENGINE_AMBIENT].play(self.sounds.engine_loop_ambient, loops=-1)
+        if not self.game.audio_manager.channels[SFXChannelID.ENGINE_ACTIVE].get_busy():
+            self.game.audio_manager.channels[SFXChannelID.ENGINE_ACTIVE].play(self.sounds.engine_loop_active, loops=-1)
 
         wind_sound_strength = (self.plane.vel.length() - 61.73) / 25.72  # start wind at 120 kn, full at 170
-        self.channel_wind.set_volume(clamp(wind_sound_strength, (0, 1)))
+        self.game.audio_manager.channels[SFXChannelID.WIND].set_volume(clamp(wind_sound_strength, (0, 1)))
 
         throttle_sound_strength = self.plane.throttle_frac ** 1.8
-        self.channel_engine_active.set_volume(throttle_sound_strength)
+        self.game.audio_manager.channels[SFXChannelID.ENGINE_ACTIVE].set_volume(throttle_sound_strength)
 
         # Terrain scrape sound
         if (not self.plane.over_runway) and self.plane.on_ground:
-            if not self.channel_scrape.get_busy():
-                self.channel_scrape.play(self.sounds.terrain_scrape, -1)
+            if not self.game.audio_manager.channels[SFXChannelID.TERRAIN_SCRAPE].get_busy():
+                self.game.audio_manager.channels[SFXChannelID.TERRAIN_SCRAPE].play(self.sounds.terrain_scrape, -1)
         else:
-            self.channel_scrape.stop()
+            self.game.audio_manager.channels[SFXChannelID.TERRAIN_SCRAPE].stop()
 
         # Prohibited zone warning
         self.show_prohibited_zone_warning = self.plane.over_prohibited_zone()
         if self.show_prohibited_zone_warning:
-            if not self.channel_prohibited.get_busy():
-                self.channel_prohibited.play(self.sounds.prohibited_zone_warning, loops=-1)
+            if not self.game.audio_manager.channels[SFXChannelID.WARN_PROHIBITED].get_busy():
+                self.game.audio_manager.channels[SFXChannelID.WARN_PROHIBITED].play(self.sounds.prohibited_zone_warning, loops=-1)
             self.dialog_box.set_message("Immediately exit this zone - penalties may apply", (255, 127, 0), 100)
         else:
-            self.channel_prohibited.stop()
+            self.game.audio_manager.channels[SFXChannelID.WARN_PROHIBITED].stop()
 
     def take_input(self, keys: ScancodeWrapper, events: EventList, dt: int) -> None:
         # Screenshot - this needs to ALWAYS WORK
@@ -666,11 +643,7 @@ class GameScreen(State):
             else:
                 self.paused = not self.paused
 
-            self.channel_wind.stop()
-            self.channel_engine_active.stop()
-            self.channel_engine_ambient.stop()
-
-            self.channel_scrape.stop()
+            self.game.audio_manager.stop_all()
 
         if self.paused and not (self.in_menu_confirmation or self.in_restart_confirmation):
             if self.controls_button.check_click(events) and not self.in_controls_screen and not self.in_help_screen:
