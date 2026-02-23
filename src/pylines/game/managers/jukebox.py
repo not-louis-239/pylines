@@ -59,5 +59,5 @@ class Jukebox(PopupMenu):
 
         ...
 
-        blit_y = C.WN_H - (C.WN_H / 2 + 300) * self.state.animation_openness
+        blit_y = C.WN_H - (C.WN_H / 2 + 300) * self.state.animation_open
         surface.blit(self.surface, (C.WN_W/2 - 270, blit_y))

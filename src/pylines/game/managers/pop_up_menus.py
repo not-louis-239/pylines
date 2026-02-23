@@ -36,18 +36,10 @@ if TYPE_CHECKING:
 if TYPE_CHECKING:
     from pylines.game.game import Game
 
-class Visibility(Enum):
-    HIDDEN = 0
-    SHOWN = 1
-
-    @staticmethod
-    def toggle(current: Visibility) -> Visibility:
-        return Visibility.HIDDEN if current == Visibility.SHOWN else Visibility.SHOWN
-
 @dataclass
 class PopupMenuState:
-    visibility: Visibility = Visibility.HIDDEN
-    animation_openness: float = 0  # 0 = down, 1 = up
+    visible: bool = False
+    animation_open: float = 0  # 0 = down, 1 = up
 
 class PopupMenu(ABC):
     def __init__(self, game: Game) -> None:
@@ -57,3 +49,6 @@ class PopupMenu(ABC):
     @abstractmethod
     def draw(self, surface: Surface) -> None:
         raise NotImplementedError
+
+    def toggle_visibility(self) -> None:
+        self.state.visible = not self.state.visible

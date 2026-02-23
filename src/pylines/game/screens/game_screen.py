@@ -17,7 +17,6 @@
 from __future__ import annotations
 
 import ctypes
-import math
 from dataclasses import dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING, Generator, Literal, cast
@@ -29,7 +28,6 @@ from OpenGL import GL as gl
 import pylines.core.colours as cols
 import pylines.core.constants as C
 from pylines.core.paths import DIRECTORIES
-import pylines.core.units as units
 from pylines.core.asset_manager import FLine
 from pylines.core.asset_manager_helpers import ControlsSectionID
 from pylines.core.custom_types import Colour, EventList, RealNumber
@@ -46,9 +44,6 @@ from pylines.core.utils import (
     wrap_text
 )
 from pylines.game.states import State, StateID
-from pylines.objects.buildings import (
-    draw_building_icon,
-)
 from pylines.objects.buttons import Button, ImageButton
 from pylines.objects.objects import CrashReason, Plane
 from pylines.objects.scenery.ground import Ground
@@ -61,8 +56,8 @@ from pylines.objects.rotation_input_container import RotationInputContainer
 from pylines.core.asset_manager_helpers import ControlsSectionID, ControlsSection, MusicID
 from pylines.game.managers.jukebox import Jukebox
 from pylines.game.managers.star_renderer import StarRenderer, StarRenderingData
-from pylines.game.managers.pop_up_menus import Visibility
 from pylines.game.managers.map_menu import MapMenu
+from pylines.game.managers.controls_reference import ControlsReference
 
 if TYPE_CHECKING:
     from pylines.core.custom_types import ScancodeWrapper, Surface
@@ -140,10 +135,6 @@ class GameScreen(State):
         self.help_max_offset: float = 0
         self.help_scroll_vel: float = 0
 
-        # Menu states
-        self.controls_quick_ref_up: RealNumber = 0  # represents how active it is
-        self.controls_quick_ref_state: Visibility = Visibility.HIDDEN
-
         self.continue_button = Button(
             (C.WN_W//2-400, C.WN_H//2), 250, 50, (0, 96, 96), (128, 255, 255),
             "Continue", self.fonts.monospaced, 30
@@ -199,10 +190,8 @@ class GameScreen(State):
         # Cache rotated compasses to save resources when drawing
         self.cockpit_renderer = CockpitRenderer(self.game, self.plane)
         self.star_renderer = StarRenderer(StarRenderingData(), self.game.env, self.plane)
+        self.controls_quick_ref = ControlsReference(self.game)
         self.show_cockpit: bool = True  # Start with cockpit visible
-
-        # Build quick ref for controls
-        self.controls_quick_ref_surface = self._populate_controls_quick_ref()
 
         self.smoke_manager = SmokeManager(assets.images)
         self.jukebox = Jukebox(self.game, self.game.assets.sounds.jukebox_tracks)
@@ -227,59 +216,6 @@ class GameScreen(State):
         self.sounds.jukebox_tracks[MusicID.OPEN_TWILIGHT].fadeout(1_500)
         self.dialog_box.reset()
         self.time_elapsed = 0
-
-    def _populate_controls_quick_ref(self) -> Surface:
-        """Draw everything to a cached surface for the controls mini-reference
-        to avoid wasting resources drawing it each frame while active."""
-
-        surf = pg.Surface((400, 600), flags=pg.SRCALPHA)
-
-        surf.fill((0, 0, 0, 180))
-        pg.draw.rect(surf, cols.WHITE, surf.get_rect(), 2)  # 2px-wide white border
-
-        title_y = 30
-        draw_text(surf, (35, title_y), 'left', 'centre', "Controls (Quick Ref)", cols.WHITE, 24, self.fonts.monospaced)
-
-        def draw_section(title: str, start_y: int, items: dict[str, str]) -> int:
-            draw_text(surf, (35, start_y), 'left', 'centre', title, (0, 192, 255), 20, self.fonts.monospaced)
-            y = start_y + 35
-            for key, desc in items.items():
-                draw_text(surf, (35, y), 'left', 'centre', key, (150, 230, 255), 16, self.fonts.monospaced)
-                draw_text(surf, (110, y), 'left', 'centre', desc, cols.WHITE, 16, self.fonts.monospaced)
-                y += 20
-            return y
-
-        y = 75
-        y = draw_section(
-            "Main Controls",
-            y,
-            self.game.assets.texts.controls_sections[ControlsSectionID.MAIN].keys
-        )
-
-        y += 10
-        y = draw_section(
-            "Displays",
-            y,
-            self.game.assets.texts.controls_sections[ControlsSectionID.DISPLAYS].keys,
-        )
-
-        y += 10
-        y = draw_section(
-            "While Map Open",
-            y,
-            self.game.assets.texts.controls_sections[ControlsSectionID.MAP].keys,
-        )
-
-        y += 10
-        y = draw_section(
-            "Utilities",
-            y,
-            self.game.assets.texts.controls_sections[ControlsSectionID.UTILITIES].keys,
-        )
-
-        draw_text(surf, (200, 575), 'centre', 'centre', "Press O to close", (150, 230, 255), 18, self.fonts.monospaced)
-
-        return surf
 
     def _build(self) -> Generator[tuple[float, str], None, None]:
         yield from self._init_ground(0.3, 0.45)
@@ -573,17 +509,16 @@ class GameScreen(State):
             self.cockpit_renderer.draw(self.hud_surface, self.warn_stall, self.warn_overspeed)
 
         # Render map
-        if self.map_menu.state.animation_openness:
+        if self.map_menu.state.animation_open:
             self.map_menu.draw(self.hud_surface, self.map_show_advanced_info)
 
         # Render jukebox
-        if self.jukebox_menu_up:
+        if self.jukebox.state.animation_open:
             self.jukebox.draw(self.hud_surface)
 
-        # Render controls quick reference
-        if self.controls_quick_ref_up:
-            w, _ = self.controls_quick_ref_surface.get_size()
-            self.hud_surface.blit(self.controls_quick_ref_surface, (int(C.WN_W - (w + 30) * self.controls_quick_ref_up), 50))  # centred when fully active
+        # Render controls quick reference if it's visible
+        if self.controls_quick_ref.state.animation_open:
+            self.controls_quick_ref.draw(self.hud_surface)
 
         self.cockpit_renderer.draw_crash_flash(self.hud_surface)
 
@@ -592,7 +527,7 @@ class GameScreen(State):
             draw_text(self.hud_surface, (15, 30), 'left', 'centre', "Press Esc to pause", cols.WHITE, 30, self.fonts.monospaced)
 
         # Show dialog box
-        if self.dialog_box.active_time:
+        if self.dialog_box.active_time > 0:
             text_size = 30
 
             text_length = len(self.dialog_box.msg)
@@ -689,8 +624,6 @@ class GameScreen(State):
         gl.glEnable(gl.GL_DEPTH_TEST)
         gl.glDisable(gl.GL_TEXTURE_2D)
 
-
-
     def update(self, dt: int):
         assert self.game.env is not None
         assert self.game.env.prohibited_zones is not None
@@ -729,25 +662,25 @@ class GameScreen(State):
                 self._auto_screenshot_elapsed_ms %= self.auto_screenshot_interval_ms
 
         # Jukebox menu update
-        if self.jukebox_menu_state == Visibility.HIDDEN:
-            self.jukebox_menu_up -= (dt/1000) / C.JUKEBOX_MENU_TOGGLE_ANIMATION_DURATION
+        if not self.jukebox.state.visible:
+            self.jukebox.state.animation_open -= (dt/1000) / C.JUKEBOX_MENU_TOGGLE_ANIMATION_DURATION
         else:
-            self.jukebox_menu_up += (dt/1000) / C.JUKEBOX_MENU_TOGGLE_ANIMATION_DURATION
-        self.jukebox_menu_up = clamp(self.jukebox_menu_up, (0, 1))
+            self.jukebox.state.animation_open += (dt/1000) / C.JUKEBOX_MENU_TOGGLE_ANIMATION_DURATION
+        self.jukebox.state.animation_open = clamp(self.jukebox.state.animation_open, (0, 1))
 
         # Map update
-        if self.map_menu.state.visibility == Visibility.HIDDEN:
-            self.map_menu.state.animation_openness -= (dt/1000) / C.MAP_TOGGLE_ANIMATION_DURATION
+        if not self.map_menu.state.visible:
+            self.map_menu.state.animation_open -= (dt/1000) / C.MAP_TOGGLE_ANIMATION_DURATION
         else:
-            self.map_menu.state.animation_openness += (dt/1000) / C.MAP_TOGGLE_ANIMATION_DURATION
-        self.map_menu.state.animation_openness = clamp(self.map_menu.state.animation_openness, (0, 1))
+            self.map_menu.state.animation_open += (dt/1000) / C.MAP_TOGGLE_ANIMATION_DURATION
+        self.map_menu.state.animation_open = clamp(self.map_menu.state.animation_open, (0, 1))
 
         # Controls ref update
-        if self.controls_quick_ref_state == Visibility.HIDDEN:
-            self.controls_quick_ref_up -= (dt/1000) / C.CONTROLS_REF_TOGGLE_ANIMATION_DURATION
+        if not self.controls_quick_ref.state.visible:
+            self.controls_quick_ref.state.animation_open -= (dt/1000) / C.CONTROLS_REF_TOGGLE_ANIMATION_DURATION
         else:
-            self.controls_quick_ref_up += (dt/1000) / C.CONTROLS_REF_TOGGLE_ANIMATION_DURATION
-        self.controls_quick_ref_up = clamp(self.controls_quick_ref_up, (0, 1))
+            self.controls_quick_ref.state.animation_open += (dt/1000) / C.CONTROLS_REF_TOGGLE_ANIMATION_DURATION
+        self.controls_quick_ref.state.animation_open = clamp(self.controls_quick_ref.state.animation_open, (0, 1))
 
         self.plane.update(dt)
 
@@ -888,7 +821,7 @@ class GameScreen(State):
 
         # Toggle jukebox menu
         if self.pressed(keys, pg.K_j):
-            self.jukebox_menu_state = Visibility.toggle(self.jukebox_menu_state)
+            self.jukebox.toggle_visibility()
 
         # Cockpit visibility toggling
         if self.pressed(keys, pg.K_F1):  # F1 to toggle HUD
@@ -904,17 +837,17 @@ class GameScreen(State):
 
         # Show/hide map
         if self.pressed(keys, pg.K_m):
-            self.map_menu.state.visibility = Visibility.toggle(self.map_menu.state.visibility)
+            self.map_menu.toggle_visibility()
 
         # Show/hide quick ref for controls
         if self.pressed(keys, pg.K_o):
-            self.controls_quick_ref_state = Visibility.toggle(self.controls_quick_ref_state)
+            self.controls_quick_ref.toggle_visibility()
 
         # Cycle GPS waypoint
         if self.pressed(keys, pg.K_g):
             self.plane.cycle_gps_waypoint()
 
-        if self.map_menu.state.visibility == Visibility.SHOWN:
+        if self.map_menu.state.visible:
             # While map is shown: control zoom
             if keys[pg.K_w]:
                 self.map_menu.viewport_zoom /= 2.5 ** (dt/1000)
@@ -929,10 +862,11 @@ class GameScreen(State):
                 self.plane.throttle_frac -= C.THROTTLE_SPEED * dt/1000
             self.plane.throttle_frac = clamp(self.plane.throttle_frac, (0, 1))
 
-        self.map_show_advanced_info = self.map_menu.state.visibility == Visibility.SHOWN and keys[pg.K_h]
+        # Show advanced info iff map is visible and advanced info key is held down
+        self.map_show_advanced_info = self.map_menu.state.visible and keys[pg.K_h]
 
         # Turning or map panning
-        if self.map_menu.state.visibility == Visibility.SHOWN:
+        if self.map_menu.state.visible:
             self.plane.rot_input_container.reset()  # zero out plane rotation inputs while map is shown
             panning_speed = self.map_menu.viewport_zoom * 150
 
@@ -956,7 +890,7 @@ class GameScreen(State):
                 self.map_menu.viewport_auto_panning = True
         else:
             # Reset map viewport pos once map goes fully down
-            if not self.map_menu.state.animation_openness:
+            if not self.map_menu.state.animation_open:
                 self.map_menu.viewport_pos = self.plane.pos.copy()
                 self.map_menu.viewport_auto_panning = True
 

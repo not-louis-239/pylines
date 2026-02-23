@@ -283,7 +283,7 @@ class MapMenu(PopupMenu):
         px, _, pz = self.viewport_pos
 
         # Render base map
-        map_centre = C.WN_W//2, int(285 + C.WN_H * (1 - self.state.animation_openness))
+        map_centre = C.WN_W//2, int(285 + C.WN_H * (1 - self.state.animation_open))
 
         # Map border
         outer_map_rect = pg.Rect(0, 0, C.MAP_OVERLAY_SIZE+10, C.MAP_OVERLAY_SIZE+10)
