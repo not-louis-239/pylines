@@ -49,15 +49,15 @@ class Jukebox(PopupMenu):
 
         for i, (key, desc) in enumerate(self.game.assets.texts.controls_sections[ControlsSectionID.JUKEBOX].keys.items()):
             draw_text(
-                self.surface, (16, 95 + 25 * i), 'left', 'centre',
-                key, cols.BLUE, 18, self.game.assets.fonts.monospaced
+                self.surface, (16, 105 + 25 * i), 'left', 'centre',
+                key, cols.BLUE, 20, self.game.assets.fonts.monospaced
             )
             draw_text(
-                self.surface, (96, 95 + 25 * i), 'left', 'centre',
-                desc, cols.WHITE, 18, self.game.assets.fonts.monospaced
+                self.surface, (96, 105 + 25 * i), 'left', 'centre',
+                desc, cols.WHITE, 20, self.game.assets.fonts.monospaced
             )
 
         ...
 
-        blit_y = C.WN_H - (C.WN_H / 2 + 300) * self.state.animation_open
+        blit_y = C.WN_H - (C.WN_H * 0.93) * self.state.animation_open
         surface.blit(self.surface, (C.WN_W/2 - 270, blit_y))
