@@ -53,7 +53,7 @@ class Entity:
     def __init__(self, x: float, y: float, z: float) -> None:
         self.pos: pg.Vector3 = pg.Vector3(x, y, z)
 
-    def update(self, dt):
+    def update(self, dt: int):
         pass
 
     def draw(self, wn: Surface):
