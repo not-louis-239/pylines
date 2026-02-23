@@ -15,7 +15,6 @@
 """Program constants"""
 
 from dataclasses import dataclass
-from enum import IntEnum
 
 __version__ = "0.13.5"
 
@@ -43,23 +42,6 @@ class PlaneModel:
     v_ne: float  # Velocity Never Exceed, in m/s
     # Name
     name: str = "UnnamedModel"  # Name is currently owned by the list of PLANE_MODELS
-
-class SFXChannelID(IntEnum):
-    # Music
-    MUSIC = 0
-
-    # Engine
-    ENGINE_AMBIENT = 1
-    ENGINE_ACTIVE = 2
-    WIND = 3
-
-    # Warnings
-    STALL = 4
-    OVERSPEED = 5
-    PROHIBITED = 6
-
-    # Other
-    SCRAPE = 7
 
 # Plane models - these should eventually be moved to a separate file called `plane_models.py`
 PLANE_MODELS: dict[str, PlaneModel] = {

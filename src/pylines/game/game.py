@@ -21,7 +21,7 @@ import pygame as pg
 from pylines.core.paths import DIRECTORIES
 from pylines.core.asset_manager import Assets
 from pylines.core.asset_manager_helpers import MusicID
-from pylines.core.constants import SFXChannelID
+from pylines.core.audio_manager import SFXChannelID
 from pylines.core.data_manager import ConfigObject, load_data, save_data
 from pylines.game.environment import Environment
 from pylines.game.live_config_presets import LiveConfigPresets
@@ -33,15 +33,20 @@ from pylines.game.screens.title import TitleScreen
 from pylines.game.states import State, StateID
 from pylines.game.managers.menu_images_manager import MenuImageManager
 from pylines.game.managers.smoke_manager import SmokeManager
+from pylines.core.audio_manager import AudioManager
 
 if TYPE_CHECKING:
     from pylines.core.custom_types import EventList, ScancodeWrapper, Surface
 
 class Game:
     def __init__(self) -> None:
-        # Lazy-load structure
+        # Lazy-load structure / lightweight constructor
 
         self.assets = Assets()
+        self.audio_manager = AudioManager(self)
+
+        self.menu_image_manager = MenuImageManager(self.assets.images.menu_images)  # This is in Game to make it accessible from multiple states
+        self.smoke_manager = SmokeManager(self.assets.images)
 
         self.save_data: ConfigObject
         self.save_data, *_ = load_data(DIRECTORIES.data / "save_data.json")
@@ -60,11 +65,7 @@ class Game:
             StateID.CREDITS: CreditsScreen(self)
         }
 
-        self.music_channel = pg.mixer.Channel(SFXChannelID.MUSIC)
-
         self.state: StateID = StateID.LOADING
-        self.menu_image_manager = MenuImageManager(self.assets.images.menu_images)  # This is in Game to make it accessible from multiple states
-        self.smoke_manager = SmokeManager(self.assets.images)
         self.enter_state(StateID.LOADING)
 
     def enter_state(self, state_name: StateID):
@@ -72,20 +73,7 @@ class Game:
         assert self.states is not None
 
         prev_state, self.state = self.state, state_name
-
-        # TODO: Move menu music out handling out of Game
-        #       and into a separate MusicManager class
-
-        menu_states = (StateID.TITLE, StateID.SETTINGS, StateID.BRIEFING, StateID.CREDITS)
-        was_in_menu = prev_state in menu_states
-        is_entering_menu = state_name in menu_states
-        # Fade out music if leaving a menu state for a non-menu state
-        if was_in_menu and not is_entering_menu:
-            self.music_channel.fadeout(1500)
-        # Play music if entering a menu state from a non-menu state or if transitioning between menu states and music is not playing                                                                                                                          │
-        elif is_entering_menu and (not was_in_menu or not self.music_channel.get_busy()):
-            self.music_channel.play(self.assets.sounds.jukebox_tracks[MusicID.OPEN_TWILIGHT], loops=-1)
-
+        self.audio_manager.on_state_change(prev_state, self.state)
         self.states[state_name].enter_state()
 
     def update(self, dt) -> None:

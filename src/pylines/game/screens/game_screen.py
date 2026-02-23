@@ -25,6 +25,7 @@ import numpy as np
 import pygame as pg
 from OpenGL import GL as gl
 
+import pylines.core.audio_manager
 import pylines.core.colours as cols
 import pylines.core.constants as C
 from pylines.core.paths import DIRECTORIES
@@ -107,15 +108,15 @@ class GameScreen(State):
         self._auto_screenshot_pending: bool = False
 
         self.channel_music = self.game.music_channel
-        self.channel_engine_ambient = pg.mixer.Channel(C.SFXChannelID.ENGINE_AMBIENT)
-        self.channel_engine_active = pg.mixer.Channel(C.SFXChannelID.ENGINE_ACTIVE)
-        self.channel_wind = pg.mixer.Channel(C.SFXChannelID.WIND)
+        self.channel_engine_ambient = pg.mixer.Channel(pylines.core.audio_manager.SFXChannelID.ENGINE_AMBIENT)
+        self.channel_engine_active = pg.mixer.Channel(pylines.core.audio_manager.SFXChannelID.ENGINE_ACTIVE)
+        self.channel_wind = pg.mixer.Channel(pylines.core.audio_manager.SFXChannelID.WIND)
 
-        self.channel_stall = pg.mixer.Channel(C.SFXChannelID.STALL)
-        self.channel_overspeed = pg.mixer.Channel(C.SFXChannelID.OVERSPEED)
-        self.channel_prohibited = pg.mixer.Channel(C.SFXChannelID.PROHIBITED)
+        self.channel_stall = pg.mixer.Channel(pylines.core.audio_manager.SFXChannelID.WARN_STALL)
+        self.channel_overspeed = pg.mixer.Channel(pylines.core.audio_manager.SFXChannelID.WARN_OVERSPEED)
+        self.channel_prohibited = pg.mixer.Channel(pylines.core.audio_manager.SFXChannelID.WARN_PROHIBITED)
 
-        self.channel_scrape = pg.mixer.Channel(C.SFXChannelID.SCRAPE)
+        self.channel_scrape = pg.mixer.Channel(pylines.core.audio_manager.SFXChannelID.TERRAIN_SCRAPE)
 
         # GPS destination
         self.gps_runway_index: int = 1  # start at second GPS destination
