@@ -35,6 +35,7 @@ GEMINI.md
 .pylintrc
 *.env
 pyproject.toml
+pyrightconfig.json
 
 # OS / system files
 .DS_Store

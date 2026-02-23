@@ -62,6 +62,7 @@ class Entity:
 class Plane(Entity):
     def __init__(self, sounds: Sounds, dialog_box: DialogMessage, env: Environment, rot_input_container: RotationInputContainer):
         super().__init__(0, 0, 0)
+        self.gps_runway_index: int = 1  # start at second runway
         self.model: C.PlaneModel = C.PLANE_MODELS["Cessna 172"]
         self.sounds = sounds
         self.dialog_box = dialog_box
@@ -69,6 +70,9 @@ class Plane(Entity):
         self.time_since_lethal_crash: float | None = None  # None = hasn't crashed yet, used for explosion animation
         self.rot_input_container = rot_input_container
         self.reset()
+
+    def cycle_gps_waypoint(self) -> None:
+        self.gps_runway_index = (self.gps_runway_index + 1) % len(self.env.runways)
 
     @property
     def crashed(self) -> bool:
@@ -88,7 +92,6 @@ class Plane(Entity):
     def stalled(self) -> bool:
         return self.aoa > self.model.stall_angle
 
-    @property
     def over_runway(self) -> bool:
         x, _, z = self.pos
 
@@ -100,6 +103,25 @@ class Plane(Entity):
 
             inside, _ = point_in_aabb(x, z, rx, rz, rw, rl, runway.heading)
             if inside:
+                return True
+
+        return False
+
+    def over_prohibited_zone(self) -> bool:
+        # This only works for rectangular zones that aren't rotated
+        # but that's good enough for now since there are no rotated zones.
+
+        for zone in self.env.prohibited_zones:
+            px, _, pz = self.pos
+            zone_centre_x, zone_centre_z = zone.pos
+            zone_w, zone_h = zone.dims
+
+            zone_min_x = zone_centre_x - zone_w / 2
+            zone_max_x = zone_centre_x + zone_w / 2
+            zone_min_z = zone_centre_z - zone_h / 2
+            zone_max_z = zone_centre_z + zone_h / 2
+
+            if zone_min_x < px < zone_max_x and zone_min_z < pz < zone_max_z:
                 return True
 
         return False

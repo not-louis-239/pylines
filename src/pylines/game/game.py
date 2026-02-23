@@ -32,6 +32,7 @@ from pylines.game.screens.credits import CreditsScreen
 from pylines.game.screens.title import TitleScreen
 from pylines.game.states import State, StateID
 from pylines.game.managers.menu_images_manager import MenuImageManager
+from pylines.game.managers.smoke_manager import SmokeManager
 
 if TYPE_CHECKING:
     from pylines.core.custom_types import EventList, ScancodeWrapper, Surface
@@ -63,6 +64,7 @@ class Game:
 
         self.state: StateID = StateID.LOADING
         self.menu_image_manager = MenuImageManager(self.assets.images.menu_images)  # This is in Game to make it accessible from multiple states
+        self.smoke_manager = SmokeManager(self.assets.images)
         self.enter_state(StateID.LOADING)
 
     def enter_state(self, state_name: StateID):

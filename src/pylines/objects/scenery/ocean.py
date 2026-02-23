@@ -43,8 +43,8 @@ class Ocean(LargeSceneryObject):
         self.texture_repeat_count = 25.0
 
         self.shader = load_shader_script(
-            str(DIRECTORIES.src.shaders / "ocean.vert"),
-            str(DIRECTORIES.src.shaders / "ocean.frag")
+            DIRECTORIES.src.shaders / "ocean.vert",
+            DIRECTORIES.src.shaders / "ocean.frag"
         )
         self.position_loc = gl.glGetAttribLocation(self.shader, "position")
         self.tex_coord_loc = gl.glGetAttribLocation(self.shader, "tex_coord")

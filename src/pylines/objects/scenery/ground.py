@@ -47,8 +47,8 @@ class Ground(LargeSceneryObject):
 
         # Load and compile the shader program
         self.shader = load_shader_script(
-            str(DIRECTORIES.src.shaders / "terrain.vert"),
-            str(DIRECTORIES.src.shaders / "terrain.frag")
+            DIRECTORIES.src.shaders / "terrain.vert",
+            DIRECTORIES.src.shaders / "terrain.frag"
         )
 
         self.position_loc = gl.glGetAttribLocation(self.shader, "position")
