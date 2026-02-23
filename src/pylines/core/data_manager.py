@@ -23,8 +23,8 @@ from enum import Enum, auto
 from pathlib import Path
 from typing import Any, Mapping, Self, TypeAlias
 
-from pylines.core.paths import DIRECTORIES
 from pylines.core.constants import __version__
+from pylines.core.paths import DIRECTORIES
 
 JSONValue: TypeAlias = (
     str | int | float | bool | None |

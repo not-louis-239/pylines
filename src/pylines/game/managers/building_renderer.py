@@ -22,7 +22,11 @@ import OpenGL.GL as gl
 
 import pylines.core.constants as C
 from pylines.core.paths import DIRECTORIES
-from pylines.core.time_manager import sun_direction_from_hour, sunlight_strength_from_hour, fetch_hour
+from pylines.core.time_manager import (
+    fetch_hour,
+    sun_direction_from_hour,
+    sunlight_strength_from_hour,
+)
 from pylines.shaders.shader_manager import load_shader_script
 
 if TYPE_CHECKING:

@@ -12,17 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, cast
-
-import pygame as pg
-
-from pylines.core.custom_types import Surface
-import pylines.core.colours as cols
-from pylines.game.managers.pop_up_menus import PopupMenu
-import pylines.core.constants as C
-from pylines.core.utils import draw_text
-import pylines.core.units as units
-
 import math
 from typing import TYPE_CHECKING, Callable, cast
 
@@ -31,11 +20,11 @@ import pygame as pg
 
 import pylines.core.colours as cols
 import pylines.core.constants as C
+import pylines.core.units as units
+from pylines.core.custom_types import Colour, Surface
 from pylines.core.paths import DIRECTORIES
-from pylines.core.custom_types import Colour, RealNumber
-from pylines.core.utils import (
-    draw_text
-)
+from pylines.core.utils import draw_text
+from pylines.game.managers.pop_up_menus import PopupMenu
 from pylines.objects.buildings import (
     BuildingDefinition,
     BuildingMapIconType,

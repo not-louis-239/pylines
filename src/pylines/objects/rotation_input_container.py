@@ -15,8 +15,8 @@
 """Rotation input container for storing user input related to rotation.
 This makes it easier to maintain as it separates input from physics."""
 
-from typing import Literal
 from dataclasses import dataclass
+from typing import Literal
 
 RotationInputValue = Literal[-1, 0, 1]
 

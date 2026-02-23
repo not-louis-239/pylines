@@ -14,23 +14,14 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from enum import Enum
-
-from pylines.core.custom_types import Surface
-import pylines.core.constants as C
-
-
-from dataclasses import dataclass
-from enum import Enum
 from typing import TYPE_CHECKING
 
-import pylines.core.constants as C
+from pylines.core.custom_types import Surface
 
 if TYPE_CHECKING:
-    from pylines.core.custom_types import ScancodeWrapper, Surface
+    from pylines.core.custom_types import Surface
     from pylines.game.game import Game
 
 if TYPE_CHECKING:

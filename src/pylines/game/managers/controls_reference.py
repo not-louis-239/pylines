@@ -18,11 +18,11 @@ from typing import TYPE_CHECKING
 
 import pygame as pg
 
-from pylines.core.custom_types import Surface
-from pylines.core.utils import draw_text
-from pylines.core.asset_manager_helpers import ControlsSectionID
 import pylines.core.colours as cols
 import pylines.core.constants as C
+from pylines.core.asset_manager_helpers import ControlsSectionID
+from pylines.core.custom_types import Surface
+from pylines.core.utils import draw_text
 
 from .pop_up_menus import PopupMenu
 

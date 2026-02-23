@@ -22,8 +22,8 @@ import OpenGL.GL as gl
 import pygame as pg
 
 import pylines.core.constants as C
-from pylines.core.paths import DIRECTORIES
 from pylines.core.custom_types import Surface
+from pylines.core.paths import DIRECTORIES
 from pylines.core.time_manager import fetch_hour, sunlight_strength_from_hour
 from pylines.core.utils import lerp
 from pylines.shaders.shader_manager import load_shader_script

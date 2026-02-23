@@ -14,15 +14,6 @@
 
 from __future__ import annotations
 
-import pygame as pg
-
-from typing import TYPE_CHECKING
-
-from pylines.core.custom_types import Surface, AColour
-import pylines.core.constants as C
-import pylines.core.colours as cols
-from pylines.core.utils import draw_text, get_lerp_weight
-
 import math
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, cast
@@ -32,16 +23,10 @@ import pygame as pg
 import pylines.core.colours as cols
 import pylines.core.constants as C
 import pylines.core.units as units
-from pylines.core.custom_types import Colour
-from pylines.core.utils import (
-    clamp,
-    draw_needle,
-    draw_text,
-    frange
-)
+from pylines.core.custom_types import AColour, Colour, Surface
+from pylines.core.utils import clamp, draw_needle, draw_text, frange, get_lerp_weight
 from pylines.objects.objects import Plane
 from pylines.objects.scenery.runway import Runway
-
 
 if TYPE_CHECKING:
     from pylines.game.game import Game

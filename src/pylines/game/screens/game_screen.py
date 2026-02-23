@@ -23,38 +23,36 @@ from typing import TYPE_CHECKING, Generator, Literal, cast
 import pygame as pg
 from OpenGL import GL as gl
 
-from pylines.core.audio_manager import SFXChannelID
 import pylines.core.colours as cols
 import pylines.core.constants as C
-from pylines.core.paths import DIRECTORIES
 from pylines.core.asset_manager import FLine
-from pylines.core.asset_manager_helpers import ControlsSectionID
+from pylines.core.asset_manager_helpers import (
+    ControlsSection,
+    ControlsSectionID,
+    MusicID,
+)
+from pylines.core.audio_manager import SFXChannelID
 from pylines.core.custom_types import Colour, EventList
+from pylines.core.paths import DIRECTORIES
 from pylines.core.time_manager import (
     fetch_hour,
     sky_colour_from_hour,
 )
-from pylines.core.utils import (
-    clamp,
-    draw_text,
-    draw_transparent_rect,
-    wrap_text
-)
+from pylines.core.utils import clamp, draw_text, draw_transparent_rect, wrap_text
+from pylines.game.managers.building_renderer import BuildingRenderer
+from pylines.game.managers.cockpit_renderer import CockpitRenderer
+from pylines.game.managers.controls_reference import ControlsReference
+from pylines.game.managers.jukebox import Jukebox
+from pylines.game.managers.map_menu import MapMenu
+from pylines.game.managers.smoke_manager import SmokeManager
+from pylines.game.managers.star_renderer import StarRenderer, StarRenderingData
 from pylines.game.states import State, StateID
 from pylines.objects.buttons import Button, ImageButton
 from pylines.objects.objects import CrashReason, Plane
+from pylines.objects.rotation_input_container import RotationInputContainer
 from pylines.objects.scenery.ground import Ground
 from pylines.objects.scenery.ocean import Ocean
-from pylines.game.managers.cockpit_renderer import CockpitRenderer
 from pylines.objects.scenery.sky import Moon, Sky, Sun
-from pylines.game.managers.smoke_manager import SmokeManager
-from pylines.objects.rotation_input_container import RotationInputContainer
-from pylines.core.asset_manager_helpers import ControlsSectionID, ControlsSection, MusicID
-from pylines.game.managers.jukebox import Jukebox
-from pylines.game.managers.star_renderer import StarRenderer, StarRenderingData
-from pylines.game.managers.map_menu import MapMenu
-from pylines.game.managers.controls_reference import ControlsReference
-from pylines.game.managers.building_renderer import BuildingRenderer
 
 if TYPE_CHECKING:
     from pylines.core.custom_types import ScancodeWrapper, Surface

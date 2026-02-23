@@ -15,7 +15,9 @@
 
 import random
 from math import cos, pi
+
 from pylines.core.custom_types import Surface
+
 
 class MenuImageManager:
     def __init__(self, images: list[Surface], change_interval: int = 8) -> None:

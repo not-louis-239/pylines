@@ -21,6 +21,7 @@ import pygame as pg
 from pygame.surface import Surface
 
 import pylines.core.constants as C
+
 from .colours import WHITE
 from .custom_types import AColour, Colour, Coord2, RealNumber
 

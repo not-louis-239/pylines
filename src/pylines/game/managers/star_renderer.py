@@ -14,58 +14,24 @@
 
 from __future__ import annotations
 
-import ctypes
 import math
 from dataclasses import dataclass
-from datetime import datetime
-from enum import Enum
-from typing import TYPE_CHECKING, Callable, Generator, Literal, cast
+from typing import TYPE_CHECKING
 
 import numpy as np
-import pygame as pg
 from OpenGL import GL as gl
 
-import pylines.core.colours as cols
 import pylines.core.constants as C
-from pylines.core.paths import DIRECTORIES
-import pylines.core.units as units
-from pylines.core.asset_manager import FLine
-from pylines.core.asset_manager_helpers import ControlsSectionID
-from pylines.core.custom_types import Colour, EventList, RealNumber
 from pylines.core.time_manager import (
     fetch_hour,
-    sky_colour_from_hour,
     sun_direction_from_hour,
-    sunlight_strength_from_hour,
 )
-from pylines.core.utils import (
-    clamp,
-    draw_text,
-    draw_transparent_rect,
-    wrap_text
-)
-from pylines.game.states import State, StateID
-from pylines.objects.buildings import (
-    BuildingDefinition,
-    BuildingMapIconType,
-    draw_building_icon,
-)
-from pylines.objects.buttons import Button, ImageButton
-from pylines.objects.objects import CrashReason, Plane
-from pylines.objects.scenery.ground import Ground
-from pylines.objects.scenery.ocean import Ocean
-from pylines.game.managers.cockpit_renderer import CockpitRenderer
-from pylines.objects.scenery.sky import Moon, Sky, Sun
-from pylines.shaders.shader_manager import load_shader_script
-from pylines.game.managers.smoke_manager import SmokeManager
-from pylines.objects.rotation_input_container import RotationInputContainer
-from pylines.core.asset_manager_helpers import ControlsSectionID, ControlsSection, MusicID
-from pylines.game.managers.jukebox import Jukebox
+from pylines.core.utils import clamp
 from pylines.game.environment import Environment
+from pylines.objects.objects import Plane
 
 if TYPE_CHECKING:
-    from pylines.core.custom_types import ScancodeWrapper, Surface
-    from pylines.game.game import Game
+    pass
 
 @dataclass
 class StarRenderingData:

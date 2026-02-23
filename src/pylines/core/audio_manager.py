@@ -19,6 +19,7 @@ import pygame as pg
 from pylines.core.asset_manager_helpers import MusicID
 from pylines.game.states import StateID
 
+
 class SFXChannelID(IntEnum):
     # Music
     MUSIC = 0

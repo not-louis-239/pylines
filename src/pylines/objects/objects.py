@@ -15,26 +15,26 @@
 """General purpose module in which to place simulation objects."""
 from __future__ import annotations
 
+import random
 from enum import Enum
 from math import asin, atan2, cos, degrees, sin
 from math import radians as rad
-import random
 from typing import TYPE_CHECKING
 
 import pygame as pg
 
 import pylines.core.constants as C
 from pylines.core.asset_manager import Sounds
+from pylines.core.audio_manager import AudioManager, SFXChannelID
 from pylines.core.collision_checkers import (
     point_in_cuboid,
     point_in_cylinder,
     point_in_sphere,
 )
 from pylines.core.custom_types import Surface
-from pylines.core.utils import clamp, point_in_aabb, rotate_around_axis, get_sign
+from pylines.core.utils import clamp, get_sign, point_in_aabb, rotate_around_axis
 from pylines.objects.building_parts import Primitive
 from pylines.objects.rotation_input_container import RotationInputContainer
-from pylines.core.audio_manager import AudioManager, SFXChannelID
 
 if TYPE_CHECKING:
     from pylines.game.environment import Environment

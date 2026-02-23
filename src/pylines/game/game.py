@@ -18,22 +18,20 @@ from typing import TYPE_CHECKING
 
 import pygame as pg
 
-from pylines.core.paths import DIRECTORIES
 from pylines.core.asset_manager import Assets
-from pylines.core.asset_manager_helpers import MusicID
-from pylines.core.audio_manager import SFXChannelID
+from pylines.core.audio_manager import AudioManager
 from pylines.core.data_manager import ConfigObject, load_data, save_data
+from pylines.core.paths import DIRECTORIES
 from pylines.game.environment import Environment
 from pylines.game.live_config_presets import LiveConfigPresets
-from pylines.game.screens.briefing import BriefingScreen
-from pylines.game.screens.loading_screen import LoadingScreen
-from pylines.game.screens.settings import SettingsScreen
-from pylines.game.screens.credits import CreditsScreen
-from pylines.game.screens.title import TitleScreen
-from pylines.game.states import State, StateID
 from pylines.game.managers.menu_images_manager import MenuImageManager
 from pylines.game.managers.smoke_manager import SmokeManager
-from pylines.core.audio_manager import AudioManager
+from pylines.game.screens.briefing import BriefingScreen
+from pylines.game.screens.credits import CreditsScreen
+from pylines.game.screens.loading_screen import LoadingScreen
+from pylines.game.screens.settings import SettingsScreen
+from pylines.game.screens.title import TitleScreen
+from pylines.game.states import State, StateID
 
 if TYPE_CHECKING:
     from pylines.core.custom_types import EventList, ScancodeWrapper, Surface

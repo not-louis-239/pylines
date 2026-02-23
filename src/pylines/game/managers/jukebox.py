@@ -16,12 +16,12 @@ from typing import TYPE_CHECKING
 
 import pygame as pg
 
+import pylines.core.colours as cols
+import pylines.core.constants as C
+from pylines.core.asset_manager_helpers import ControlsSectionID, MusicID
 from pylines.core.custom_types import Sound, Surface
-from pylines.core.asset_manager_helpers import MusicID, ControlsSectionID
 from pylines.core.utils import draw_text, draw_transparent_rect
 from pylines.game.managers.pop_up_menus import PopupMenu
-import pylines.core.constants as C
-import pylines.core.colours as cols
 
 if TYPE_CHECKING:
     from pylines.game.game import Game

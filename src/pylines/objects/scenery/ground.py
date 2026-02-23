@@ -19,13 +19,13 @@ import OpenGL.GL as gl
 import pygame as pg
 
 import pylines.core.constants as C
-from pylines.core.paths import DIRECTORIES
 from pylines.core.constants import (
     MOON_BRIGHTNESS,
     SHADE_BRIGHTNESS_MULT,
     SUN_BRIGHTNESS,
 )
 from pylines.core.custom_types import Surface
+from pylines.core.paths import DIRECTORIES
 from pylines.core.time_manager import (
     fetch_hour,
     sun_direction_from_hour,
