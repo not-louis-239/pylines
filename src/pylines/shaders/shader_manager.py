@@ -13,10 +13,10 @@
 # limitations under the License.
 
 from pathlib import Path
-
-from typing import cast, Literal
+from typing import Literal, cast
 
 import OpenGL.GL as gl
+
 
 class ShaderError(RuntimeError):
     def __init__(

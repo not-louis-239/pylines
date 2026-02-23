@@ -17,14 +17,18 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, cast
 
 import pygame as pg
-from OpenGL import GL as gl, GLU as glu
+from OpenGL import GL as gl
+from OpenGL import GLU as glu
 
 import pylines.core.constants as C
-from pylines.core.asset_manager import CreditEntryCompact, CreditEntryCompactNotes, CreditEntryNotes
-from pylines.core.custom_types import EventList, ScancodeWrapper
+from pylines.core.asset_manager import (
+    CreditEntryCompact,
+    CreditEntryCompactNotes,
+    CreditEntryNotes,
+)
+from pylines.core.custom_types import EventList, ScancodeWrapper, Surface
+from pylines.core.utils import clamp, draw_text
 from pylines.game.states import State, StateID
-from pylines.core.utils import draw_text, clamp
-from pylines.core.custom_types import Surface
 
 if TYPE_CHECKING:
     from pylines.game.game import Game

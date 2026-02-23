@@ -18,7 +18,6 @@ from pygame.font import Font
 
 from pylines.core.custom_types import Surface
 from pylines.core.utils import draw_text
-from pylines.core.asset_manager import Fonts
 
 DEBUG_FONT_SIZE = 28
 

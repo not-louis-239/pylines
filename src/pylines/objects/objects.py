@@ -15,23 +15,24 @@
 """General purpose module in which to place simulation objects."""
 from __future__ import annotations
 
+import random
 from enum import Enum
 from math import asin, atan2, cos, degrees, sin
 from math import radians as rad
-import random
 from typing import TYPE_CHECKING
 
 import pygame as pg
 
 import pylines.core.constants as C
 from pylines.core.asset_manager import Sounds
+from pylines.core.audio_manager import AudioManager, SFXChannelID
 from pylines.core.collision_checkers import (
     point_in_cuboid,
     point_in_cylinder,
     point_in_sphere,
 )
 from pylines.core.custom_types import Surface
-from pylines.core.utils import clamp, point_in_aabb, rotate_around_axis, get_sign
+from pylines.core.utils import clamp, get_sign, point_in_aabb, rotate_around_axis
 from pylines.objects.building_parts import Primitive
 from pylines.objects.rotation_input_container import RotationInputContainer
 
@@ -53,22 +54,31 @@ class Entity:
     def __init__(self, x: float, y: float, z: float) -> None:
         self.pos: pg.Vector3 = pg.Vector3(x, y, z)
 
-    def update(self, dt):
+    def update(self, dt: int):
         pass
 
     def draw(self, wn: Surface):
         pass
 
 class Plane(Entity):
-    def __init__(self, sounds: Sounds, dialog_box: DialogMessage, env: Environment, rot_input_container: RotationInputContainer):
+    def __init__(self, audio_manager: AudioManager, sounds: Sounds, dialog_box: DialogMessage, env: Environment, rot_input_container: RotationInputContainer):
         super().__init__(0, 0, 0)
+        self.audio_manager = audio_manager  # Needs a reference to play sounds directly
+        self.rot_input_container = rot_input_container
+
         self.model: C.PlaneModel = C.PLANE_MODELS["Cessna 172"]
         self.sounds = sounds
-        self.dialog_box = dialog_box
+
         self.env = env
+        self.gps_runway_index: int = 1  # start at second runway
+
+        self.dialog_box = dialog_box
         self.time_since_lethal_crash: float | None = None  # None = hasn't crashed yet, used for explosion animation
-        self.rot_input_container = rot_input_container
+
         self.reset()
+
+    def cycle_gps_waypoint(self) -> None:
+        self.gps_runway_index = (self.gps_runway_index + 1) % len(self.env.runways)
 
     @property
     def crashed(self) -> bool:
@@ -88,7 +98,6 @@ class Plane(Entity):
     def stalled(self) -> bool:
         return self.aoa > self.model.stall_angle
 
-    @property
     def over_runway(self) -> bool:
         x, _, z = self.pos
 
@@ -100,6 +109,25 @@ class Plane(Entity):
 
             inside, _ = point_in_aabb(x, z, rx, rz, rw, rl, runway.heading)
             if inside:
+                return True
+
+        return False
+
+    def over_prohibited_zone(self) -> bool:
+        # This only works for rectangular zones that aren't rotated
+        # but that's good enough for now since there are no rotated zones.
+
+        for zone in self.env.prohibited_zones:
+            px, _, pz = self.pos
+            zone_centre_x, zone_centre_z = zone.pos
+            zone_w, zone_h = zone.dims
+
+            zone_min_x = zone_centre_x - zone_w / 2
+            zone_max_x = zone_centre_x + zone_w / 2
+            zone_min_z = zone_centre_z - zone_h / 2
+            zone_max_z = zone_centre_z + zone_h / 2
+
+            if zone_min_x < px < zone_max_x and zone_min_z < pz < zone_max_z:
                 return True
 
         return False
@@ -155,11 +183,11 @@ class Plane(Entity):
         self.time_since_lethal_crash += dt/1000  # convert ms to seconds
 
     def good_landing(self):
-        self.sounds.good_landing.play()
+        self.audio_manager.channels[SFXChannelID.LANDING_SFX].play(self.sounds.good_landing)
         self.dialog_box.set_message("Good landing!", (0, 255, 0))
 
     def hard_landing(self, *, suppress_dialog: bool = False):
-        self.sounds.hard_landing.play()
+        self.audio_manager.channels[SFXChannelID.LANDING_SFX].play(self.sounds.hard_landing)
         if not suppress_dialog: self.dialog_box.set_message("Hard landing...", (255, 200, 0))
 
     def crash(self, *, reason: CrashReason, suppress_dialog: bool = False, damage_taken: float = 0.0, lethal: bool = False):
@@ -167,12 +195,12 @@ class Plane(Entity):
 
         if self.damage_level >= 1:
             # Lethal crash that renders plane completely unflyable
-            self.sounds.crash.play()
+            self.audio_manager.channels[SFXChannelID.LANDING_SFX].play(self.sounds.crash)
             self.time_since_lethal_crash = 0  # start timer
             self.crash_reason = reason
         else:
             # Damaging but non-fatal crash
-            self.sounds.hard_landing.play()
+            self.audio_manager.channels[SFXChannelID.LANDING_SFX].play(self.sounds.hard_landing)
             if not suppress_dialog: self.dialog_box.set_message("Hard landing. Damage sustained.", (255, 80, 0))
 
     def calculate_aoa(self) -> float:

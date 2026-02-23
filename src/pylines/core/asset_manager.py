@@ -22,7 +22,7 @@ asset_manager.py
 
 import json
 from pathlib import Path
-from typing import cast, Iterator
+from typing import Iterator, cast
 
 import numpy as np
 import pygame as pg
@@ -30,12 +30,22 @@ from PIL import Image
 from pygame.transform import scale, scale_by, smoothscale_by
 
 from pylines.core.asset_manager_helpers import (
-    FLine, CreditSection, CreditEntry, CreditEntryCompact, CreditEntryNotes,
-    CreditEntryCompactNotes, CreditLine, ControlsSection, CreditsContainer,
-    Notes, ControlsSectionID, MusicID
+    ControlsSection,
+    ControlsSectionID,
+    CreditEntry,
+    CreditEntryCompact,
+    CreditEntryCompactNotes,
+    CreditEntryNotes,
+    CreditLine,
+    CreditsContainer,
+    CreditSection,
+    FLine,
+    MusicID,
+    Notes,
 )
-from pylines.core.paths import DIRECTORIES
 from pylines.core.custom_types import Sound, Surface
+from pylines.core.paths import DIRECTORIES
+
 
 class AssetBank:
     """Base class to store assets. Objects of this type should be

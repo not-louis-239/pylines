@@ -12,12 +12,52 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pylines.core.custom_types import Sound
-from pylines.core.asset_manager_helpers import MusicID
+from typing import TYPE_CHECKING
 
-class Jukebox:
+import pygame as pg
+
+import pylines.core.colours as cols
+import pylines.core.constants as C
+from pylines.core.asset_manager_helpers import ControlsSectionID, MusicID
+from pylines.core.custom_types import Sound, Surface
+from pylines.core.utils import draw_text, draw_transparent_rect
+from pylines.game.managers.pop_up_menus import PopupMenu
+
+if TYPE_CHECKING:
+    from pylines.game.game import Game
+
+class Jukebox(PopupMenu):
     """Dedicated class for managing music."""
 
-    def __init__(self, tracks: dict[MusicID, Sound]) -> None:
+    def __init__(self, game: Game, tracks: dict[MusicID, Sound]) -> None:
+        super().__init__(game)
+
         self.tracks = tracks
         self.current_idx = 0
+
+        self.surface: Surface = Surface((540, 600), flags=pg.SRCALPHA)
+
+    def draw(self, surface: Surface) -> None:
+        # Clear jukebox menu surface
+        self.surface.fill((0, 0, 0, 0))
+        draw_transparent_rect(self.surface, (0, 0), (540, 600), (0, 0, 0, 150), 2)
+
+        draw_text(
+            self.surface, (270, 48), 'centre', 'centre',
+            "Jukebox", cols.WHITE, 35, self.game.assets.fonts.monospaced
+        )
+
+        for i, (key, desc) in enumerate(self.game.assets.texts.controls_sections[ControlsSectionID.JUKEBOX].keys.items()):
+            draw_text(
+                self.surface, (16, 105 + 25 * i), 'left', 'centre',
+                key, cols.BLUE, 20, self.game.assets.fonts.monospaced
+            )
+            draw_text(
+                self.surface, (96, 105 + 25 * i), 'left', 'centre',
+                desc, cols.WHITE, 20, self.game.assets.fonts.monospaced
+            )
+
+        ...
+
+        blit_y = C.WN_H - (C.WN_H * 0.93) * self.state.animation_open
+        surface.blit(self.surface, (C.WN_W/2 - 270, blit_y))
