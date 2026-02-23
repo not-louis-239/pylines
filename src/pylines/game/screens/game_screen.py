@@ -19,7 +19,7 @@ from __future__ import annotations
 import ctypes
 import math
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
 from typing import TYPE_CHECKING, Callable, Generator, Literal, cast
 
@@ -33,7 +33,7 @@ from pylines.core.paths import DIRECTORIES
 import pylines.core.units as units
 from pylines.core.asset_manager import FLine
 from pylines.core.asset_manager_helpers import ControlsSectionID
-from pylines.core.custom_types import AColour, Colour, EventList, RealNumber
+from pylines.core.custom_types import Colour, EventList, RealNumber
 from pylines.core.time_manager import (
     fetch_hour,
     sky_colour_from_hour,
@@ -42,12 +42,9 @@ from pylines.core.time_manager import (
 )
 from pylines.core.utils import (
     clamp,
-    draw_needle,
     draw_text,
     draw_transparent_rect,
-    frange,
-    wrap_text,
-    get_lerp_weight
+    wrap_text
 )
 from pylines.game.states import State, StateID
 from pylines.objects.buildings import (
@@ -66,6 +63,7 @@ from pylines.game.managers.smoke_manager import SmokeManager
 from pylines.objects.rotation_input_container import RotationInputContainer
 from pylines.core.asset_manager_helpers import ControlsSectionID, ControlsSection, MusicID
 from pylines.game.managers.jukebox import Jukebox
+from pylines.game.managers.star_renderer import StarRenderer, StarRenderingData
 
 if TYPE_CHECKING:
     from pylines.core.custom_types import ScancodeWrapper, Surface
@@ -222,6 +220,7 @@ class GameScreen(State):
 
         # Cache rotated compasses to save resources when drawing
         self.cockpit_renderer = CockpitRenderer(self.game, self.plane)
+        self.star_renderer = StarRenderer(StarRenderingData(), self.game.env, self.plane)
         self.show_cockpit: bool = True  # Start with cockpit visible
 
         self.grid_labels_x: dict[int, pg.Surface] = {}
@@ -704,137 +703,6 @@ class GameScreen(State):
         gl.glDisableVertexAttribArray(self.building_emissive_loc)
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
         gl.glUseProgram(0)
-
-    def draw_stars(self) -> None:
-        assert self.game.env is not None
-
-        hour = fetch_hour()
-        if 18 >= hour > 6:  # daytime
-            opacity = 0
-        elif 20 >= hour > 18:  # sunset
-            opacity = (hour - 18) / 2
-        elif 6 >= hour > 4:  # sunrise
-            opacity = 1 - (hour - 4) / 2
-        else:  # night
-            opacity = 1
-
-        opacity = clamp(opacity, (0, 1))
-        if opacity == 0:
-            return
-
-        # Initialize star buffers if needed
-        if self._star_dirs is None:
-            dirs = np.array([s.direction for s in self.game.env.stars], dtype=np.float32)
-            # Normalize directions once safely
-            norms = np.linalg.norm(dirs, axis=1, keepdims=True)
-            norms[norms == 0] = 1
-            self._star_dirs = dirs / norms
-            self._star_colors = np.array([s.colour for s in self.game.env.stars], dtype=np.float32) / 255.0
-            self._star_brightness = np.array([s.brightness for s in self.game.env.stars], dtype=np.float32)
-            self._star_count = len(self.game.env.stars)
-
-            # Create VBOs
-            self._star_vbo = gl.glGenBuffers(1)
-            self._star_color_vbo = gl.glGenBuffers(1)
-
-        # Cache base positions when hour bucket or opacity changes; apply camera offset each frame
-        assert self._star_brightness is not None
-        assert self._star_dirs is not None
-
-        hour_bucket = round(fetch_hour(), 2)
-        cache_key = (hour_bucket, round(opacity, 3))
-        if self._star_cache_key != cache_key or self._star_base_positions is None:
-            sun_dir = sun_direction_from_hour(hour_bucket)
-            ref_dir = np.array([0.0, 0.0, -1.0], dtype=np.float32)
-            sun = np.array([sun_dir.x, sun_dir.y, sun_dir.z], dtype=np.float32)
-
-            k = np.cross(ref_dir, sun)
-            k_norm = np.linalg.norm(k)
-            if k_norm < C.MATH_EPSILON:
-                if np.dot(ref_dir, sun) > 0:
-                    rotated = self._star_dirs
-                else:
-                    rotated = -self._star_dirs
-            else:
-                k = k / k_norm
-                cos_theta = np.clip(np.dot(ref_dir, sun), -1.0, 1.0)
-                theta = math.acos(cos_theta)
-                sin_t = math.sin(theta)
-                v = self._star_dirs
-                rotated = (
-                    v * cos_theta +
-                    np.cross(k, v) * sin_t +
-                    k * (np.dot(v, k))[:, None] * (1 - cos_theta)
-                )
-
-            norms = np.linalg.norm(rotated, axis=1, keepdims=True)
-            norms[norms == 0] = 1
-            self._star_base_positions = (rotated / norms) * 1000
-
-            colors = np.empty((self._star_count, 4), dtype=np.float32)
-            colors[:, :3] = self._star_colors
-            colors[:, 3] = self._star_brightness * opacity
-
-            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self._star_color_vbo)
-            gl.glBufferData(gl.GL_ARRAY_BUFFER, colors.nbytes, colors, gl.GL_DYNAMIC_DRAW)
-            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
-
-            self._star_cache_key = cache_key
-
-        assert self._star_base_positions is not None
-        camera_pos = np.array(
-            [self.plane.pos.x, self.plane.pos.y + C.CAMERA_RADIUS, self.plane.pos.z],
-            dtype=np.float32,
-        )
-        positions = self._star_base_positions + camera_pos
-
-        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self._star_vbo)
-        gl.glBufferData(gl.GL_ARRAY_BUFFER, positions.nbytes, positions, gl.GL_DYNAMIC_DRAW)
-        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
-
-        # Save OpenGL states
-        was_blend_enabled = gl.glIsEnabled(gl.GL_BLEND)
-        was_depth_mask_enabled = gl.glGetBooleanv(gl.GL_DEPTH_WRITEMASK)
-        was_depth_test_enabled = gl.glIsEnabled(gl.GL_DEPTH_TEST)
-        current_point_size = gl.glGetFloatv(gl.GL_POINT_SIZE)
-        was_texture_2d_enabled = gl.glIsEnabled(gl.GL_TEXTURE_2D)
-
-        # Configure GL for point rendering
-        gl.glEnable(gl.GL_BLEND)
-        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
-        gl.glDepthMask(gl.GL_FALSE)
-        gl.glDisable(gl.GL_TEXTURE_2D)
-        gl.glDisable(gl.GL_DEPTH_TEST)
-        gl.glPointSize(2.0)
-
-        # Enable vertex/color arrays
-        gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
-        gl.glEnableClientState(gl.GL_COLOR_ARRAY)
-
-        # Bind VBOs
-        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self._star_vbo)
-        gl.glVertexPointer(3, gl.GL_FLOAT, 0, None)
-        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self._star_color_vbo)
-        gl.glColorPointer(4, gl.GL_FLOAT, 0, None)
-
-        # Draw stars
-        gl.glDrawArrays(gl.GL_POINTS, 0, self._star_count)
-
-        # Cleanup
-        gl.glDisableClientState(gl.GL_COLOR_ARRAY)
-        gl.glDisableClientState(gl.GL_VERTEX_ARRAY)
-        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
-
-        # Restore OpenGL states
-        if was_depth_test_enabled:
-            gl.glEnable(gl.GL_DEPTH_TEST)
-        gl.glPointSize(current_point_size)
-        gl.glDepthMask(was_depth_mask_enabled)
-        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
-        if was_texture_2d_enabled:
-            gl.glEnable(gl.GL_TEXTURE_2D)
-        if not was_blend_enabled:
-            gl.glDisable(gl.GL_BLEND)
 
     def draw_map(self):
         assert self.game.env is not None
@@ -1828,7 +1696,7 @@ class GameScreen(State):
 
         camera_fwd = self.plane.native_fwd  # now uses native fwd vector, so no need to recalculate
 
-        self.draw_stars()
+        self.star_renderer.draw_stars()
 
         self.sun.draw()
         self.moon.draw()
