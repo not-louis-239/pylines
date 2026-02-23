@@ -58,6 +58,7 @@ from pylines.game.managers.jukebox import Jukebox
 from pylines.game.managers.star_renderer import StarRenderer, StarRenderingData
 from pylines.game.managers.map_menu import MapMenu
 from pylines.game.managers.controls_reference import ControlsReference
+from pylines.game.managers.building_renderer import BuildingRenderer
 
 if TYPE_CHECKING:
     from pylines.core.custom_types import ScancodeWrapper, Surface
@@ -223,7 +224,7 @@ class GameScreen(State):
         self._init_ocean()
         yield 0.7, "Adding H₂O"
 
-        self._init_buildings()
+        self.building_renderer = BuildingRenderer(self.game)
         yield 0.85, "Making cities"
 
         self.map_menu = MapMenu(self.game, self.plane)
@@ -254,41 +255,6 @@ class GameScreen(State):
 
         self.ocean = Ocean(self.game.assets.images.ocean, self.game.env)
 
-    def _init_buildings(self):
-        assert self.game.env is not None
-
-        # Building rendering setup
-        all_vertices = []
-        for building in self.game.env.buildings:
-            all_vertices.extend(building.get_vertices())
-
-        if all_vertices:
-            self.building_vertices = np.array(all_vertices, dtype=np.float32)
-            self.building_vertex_count = len(self.building_vertices) // 10
-
-            self.buildings_vbo = gl.glGenBuffers(1)
-            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buildings_vbo)
-            gl.glBufferData(gl.GL_ARRAY_BUFFER, self.building_vertices.nbytes, self.building_vertices, gl.GL_STATIC_DRAW)
-            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
-
-            self.building_shader = load_shader_script(
-                DIRECTORIES.src.shaders / "building.vert",
-                DIRECTORIES.src.shaders / "building.frag"
-            )
-            self.building_pos_loc = gl.glGetAttribLocation(self.building_shader, "position")
-            self.building_color_loc = gl.glGetAttribLocation(self.building_shader, "color")
-            self.building_normal_loc = gl.glGetAttribLocation(self.building_shader, "normal")
-            self.building_emissive_loc = gl.glGetAttribLocation(self.building_shader, "in_emissive")
-            self.building_brightness_loc = gl.glGetUniformLocation(self.building_shader, "u_brightness")
-            self.building_sun_direction_loc = gl.glGetUniformLocation(self.building_shader, "u_sun_direction")
-            self.building_min_brightness_loc = gl.glGetUniformLocation(self.building_shader, "u_min_brightness")
-            self.building_max_brightness_loc = gl.glGetUniformLocation(self.building_shader, "u_max_brightness")
-            self.building_shade_multiplier_loc = gl.glGetUniformLocation(self.building_shader, "u_shade_multiplier")
-        else:
-            self.building_vertices = np.array([], dtype=np.float32)
-            self.building_vertex_count = 0
-            self.buildings_vbo = None
-
     def take_screenshot(self, *, notify: bool = True) -> None:
         DIRECTORIES.data.screenshots.mkdir(parents=True, exist_ok=True)
 
@@ -309,52 +275,6 @@ class GameScreen(State):
 
         if notify:
             self.dialog_box.set_message(f"Screenshot saved: {filename}", (255, 240, 209))  # light yellow colour
-
-    def draw_buildings(self, cloud_attenuation: float):
-        if not self.building_vertex_count or self.buildings_vbo is None:
-            return
-
-        gl.glUseProgram(self.building_shader)
-
-        # Set uniforms
-        current_hour = fetch_hour()
-        brightness = sunlight_strength_from_hour(current_hour) * cloud_attenuation
-        sun_direction = sun_direction_from_hour(current_hour)
-
-        gl.glUniform1f(self.building_brightness_loc, brightness)
-        gl.glUniform3f(self.building_sun_direction_loc, sun_direction.x, sun_direction.y, sun_direction.z)
-        gl.glUniform1f(self.building_min_brightness_loc, C.MOON_BRIGHTNESS)
-        gl.glUniform1f(self.building_max_brightness_loc, C.SUN_BRIGHTNESS)
-        gl.glUniform1f(self.building_shade_multiplier_loc, C.SHADE_BRIGHTNESS_MULT)
-
-        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buildings_vbo)
-
-        stride = 10 * ctypes.sizeof(ctypes.c_float)
-
-        # Position
-        gl.glEnableVertexAttribArray(self.building_pos_loc)
-        gl.glVertexAttribPointer(self.building_pos_loc, 3, gl.GL_FLOAT, gl.GL_FALSE, stride, ctypes.c_void_p(0))
-
-        # Color
-        gl.glEnableVertexAttribArray(self.building_color_loc)
-        gl.glVertexAttribPointer(self.building_color_loc, 3, gl.GL_FLOAT, gl.GL_FALSE, stride, ctypes.c_void_p(3 * ctypes.sizeof(ctypes.c_float)))
-
-        # Normal
-        gl.glEnableVertexAttribArray(self.building_normal_loc)
-        gl.glVertexAttribPointer(self.building_normal_loc, 3, gl.GL_FLOAT, gl.GL_FALSE, stride, ctypes.c_void_p(6 * ctypes.sizeof(ctypes.c_float)))
-
-        # Emissive
-        gl.glEnableVertexAttribArray(self.building_emissive_loc)
-        gl.glVertexAttribPointer(self.building_emissive_loc, 1, gl.GL_FLOAT, gl.GL_FALSE, stride, ctypes.c_void_p(9 * ctypes.sizeof(ctypes.c_float)))
-
-        gl.glDrawArrays(gl.GL_TRIANGLES, 0, self.building_vertex_count)
-
-        gl.glDisableVertexAttribArray(self.building_pos_loc)
-        gl.glDisableVertexAttribArray(self.building_color_loc)
-        gl.glDisableVertexAttribArray(self.building_normal_loc)
-        gl.glDisableVertexAttribArray(self.building_emissive_loc)
-        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
-        gl.glUseProgram(0)
 
     def draw_pause_screen(self) -> None:
         for button in (
@@ -982,7 +902,7 @@ class GameScreen(State):
         for cloud_layer in cloud_layers.layers:
             cloud_layer.draw(self.plane.pos, camera_fwd)
 
-        self.draw_buildings(cloud_attenuation)
+        self.building_renderer.draw(cloud_attenuation)
 
         if self.auto_screenshots_enabled and self._auto_screenshot_pending:
             self._auto_screenshot_pending = False
