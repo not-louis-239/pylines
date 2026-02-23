@@ -47,7 +47,7 @@ class Visibility(Enum):
 @dataclass
 class PopupMenuState:
     visibility: Visibility = Visibility.HIDDEN
-    show_position: float = 0  # 0 = down, 1 = up
+    animation_openness: float = 0  # 0 = down, 1 = up
 
 class PopupMenu(ABC):
     def __init__(self, game: Game) -> None:

@@ -141,10 +141,6 @@ class GameScreen(State):
         self.help_scroll_vel: float = 0
 
         # Menu states
-        self.jukebox_menu_surface: Surface = pg.Surface((540, 600), flags=pg.SRCALPHA)
-        self.jukebox_menu_up: RealNumber = 0
-        self.jukebox_menu_state: Visibility = Visibility.HIDDEN
-
         self.controls_quick_ref_up: RealNumber = 0  # represents how active it is
         self.controls_quick_ref_state: Visibility = Visibility.HIDDEN
 
@@ -209,7 +205,7 @@ class GameScreen(State):
         self.controls_quick_ref_surface = self._populate_controls_quick_ref()
 
         self.smoke_manager = SmokeManager(assets.images)
-        self.jukebox = Jukebox(self.game.assets.sounds.jukebox_tracks)
+        self.jukebox = Jukebox(self.game, self.game.assets.sounds.jukebox_tracks)
 
     def reset(self) -> None:
         self.in_menu_confirmation = False
@@ -231,52 +227,6 @@ class GameScreen(State):
         self.sounds.jukebox_tracks[MusicID.OPEN_TWILIGHT].fadeout(1_500)
         self.dialog_box.reset()
         self.time_elapsed = 0
-
-    def _populate_ai_surface(self) -> Surface:
-        width = 170 - 4
-        height = 2000
-        surf = pg.Surface((width, height), pg.SRCALPHA)
-        surf.fill((0, 0, 0, 0))
-
-        tick_spacing = 5  # pixels per 5° of pitch
-        centre_y = height // 2
-
-        for deg in range(-180, 185, 5):  # pitch marks in degrees
-            if deg == 0:
-                line_width = 85
-            elif deg % 10 == 0:
-                line_width = 30
-            else:
-                line_width = 15
-
-            y = centre_y + deg * tick_spacing
-            if 0 <= y <= height:
-                pg.draw.line(
-                    surf,
-                    cols.WHITE,
-                    (width//2 - line_width, y),
-                    (width//2 + line_width, y),
-                    3
-                )
-
-                if deg % 10 == 0 and deg != 0:
-                    if -90 <= deg <= 90:
-                        deg_display_value = deg
-                    elif deg < -90:
-                        deg_display_value = -180 - deg
-                    else:
-                        deg_display_value = 180 - deg
-
-                    draw_text(
-                        surf, (width//2 + line_width + 5, y), 'left', 'centre',
-                        str(abs(deg_display_value)), cols.WHITE, 19, self.fonts.monospaced
-                    )
-                    draw_text(
-                        surf, (width//2 - line_width - 5, y), 'right', 'centre',
-                        str(abs(deg_display_value)), cols.WHITE, 19, self.fonts.monospaced
-                    )
-
-        return surf
 
     def _populate_controls_quick_ref(self) -> Surface:
         """Draw everything to a cached surface for the controls mini-reference
@@ -623,12 +573,12 @@ class GameScreen(State):
             self.cockpit_renderer.draw(self.hud_surface, self.warn_stall, self.warn_overspeed)
 
         # Render map
-        if self.map_menu.state.show_position:
+        if self.map_menu.state.animation_openness:
             self.map_menu.draw(self.hud_surface, self.map_show_advanced_info)
 
         # Render jukebox
         if self.jukebox_menu_up:
-            self.draw_jukebox_menu()
+            self.jukebox.draw(self.hud_surface)
 
         # Render controls quick reference
         if self.controls_quick_ref_up:
@@ -739,29 +689,7 @@ class GameScreen(State):
         gl.glEnable(gl.GL_DEPTH_TEST)
         gl.glDisable(gl.GL_TEXTURE_2D)
 
-    def draw_jukebox_menu(self) -> None:
-        # Clear jukebox menu surface
-        self.jukebox_menu_surface.fill((0, 0, 0, 0))
-        draw_transparent_rect(self.jukebox_menu_surface, (0, 0), (540, 600), (0, 0, 0, 150), 2)
 
-        draw_text(
-            self.jukebox_menu_surface, (270, 48), 'centre', 'centre',
-            "Jukebox", cols.WHITE, 35, self.fonts.monospaced
-        )
-
-        for i, (key, desc) in enumerate(self.game.assets.texts.controls_sections[ControlsSectionID.JUKEBOX].keys.items()):
-            draw_text(
-                self.jukebox_menu_surface, (16, 95 + 25 * i), 'left', 'centre',
-                key, cols.BLUE, 18, self.fonts.monospaced
-            )
-            draw_text(
-                self.jukebox_menu_surface, (96, 95 + 25 * i), 'left', 'centre',
-                desc, cols.WHITE, 18, self.fonts.monospaced
-            )
-
-        ...
-
-        self.hud_surface.blit(self.jukebox_menu_surface, (C.WN_W/2 - 270, C.WN_H - (C.WN_H / 2 + 300) * self.jukebox_menu_up))
 
     def update(self, dt: int):
         assert self.game.env is not None
@@ -809,10 +737,10 @@ class GameScreen(State):
 
         # Map update
         if self.map_menu.state.visibility == Visibility.HIDDEN:
-            self.map_menu.state.show_position -= (dt/1000) / C.MAP_TOGGLE_ANIMATION_DURATION
+            self.map_menu.state.animation_openness -= (dt/1000) / C.MAP_TOGGLE_ANIMATION_DURATION
         else:
-            self.map_menu.state.show_position += (dt/1000) / C.MAP_TOGGLE_ANIMATION_DURATION
-        self.map_menu.state.show_position = clamp(self.map_menu.state.show_position, (0, 1))
+            self.map_menu.state.animation_openness += (dt/1000) / C.MAP_TOGGLE_ANIMATION_DURATION
+        self.map_menu.state.animation_openness = clamp(self.map_menu.state.animation_openness, (0, 1))
 
         # Controls ref update
         if self.controls_quick_ref_state == Visibility.HIDDEN:
@@ -1028,7 +956,7 @@ class GameScreen(State):
                 self.map_menu.viewport_auto_panning = True
         else:
             # Reset map viewport pos once map goes fully down
-            if not self.map_menu.state.show_position:
+            if not self.map_menu.state.animation_openness:
                 self.map_menu.viewport_pos = self.plane.pos.copy()
                 self.map_menu.viewport_auto_panning = True
 
