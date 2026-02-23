@@ -617,7 +617,7 @@ class GameScreen(State):
         else:
             self.game.audio_manager.channels[SFXChannelID.TERRAIN_SCRAPE].stop()
 
-        # Prohibited zone warning
+        # Prohibited zone warning sound
         self.show_prohibited_zone_warning = self.plane.over_prohibited_zone()
         if self.show_prohibited_zone_warning:
             if not self.game.audio_manager.channels[SFXChannelID.WARN_PROHIBITED].get_busy():
@@ -625,6 +625,15 @@ class GameScreen(State):
             self.dialog_box.set_message("Immediately exit this zone - penalties may apply", (255, 127, 0), 100)
         else:
             self.game.audio_manager.channels[SFXChannelID.WARN_PROHIBITED].stop()
+
+        # Update BGM based on jukebox
+        if self.jukebox.volume > 0:
+            music_channel = self.game.audio_manager.channels[SFXChannelID.MUSIC]
+            music_channel.set_volume(self.jukebox.volume)
+            if not music_channel.get_busy():
+                music_channel.play(self.jukebox.get_current_track(), -1)
+        else:
+            self.game.audio_manager.channels[SFXChannelID.MUSIC].stop()
 
     def take_input(self, keys: ScancodeWrapper, events: EventList, dt: int) -> None:
         # Screenshot - this needs to ALWAYS WORK
@@ -726,6 +735,13 @@ class GameScreen(State):
 
             self.update_prev_keys(keys)
             return
+
+        # Jukebox controls
+        if self.pressed(keys, pg.K_MINUS):
+            self.jukebox.volume -= self.jukebox.VOLUME_INCREMENT
+        if self.pressed(keys, pg.K_EQUALS):
+            self.jukebox.volume += self.jukebox.VOLUME_INCREMENT
+        self.jukebox.volume = clamp(self.jukebox.volume, (0, 1))
 
         # Show/hide map
         if self.pressed(keys, pg.K_m):
