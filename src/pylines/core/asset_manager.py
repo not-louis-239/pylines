@@ -42,6 +42,7 @@ from pylines.core.asset_manager_helpers import (
     FLine,
     MusicID,
     Notes,
+    JukeboxTrack
 )
 from pylines.core.custom_types import Sound, Surface
 from pylines.core.paths import DIRS
@@ -150,12 +151,16 @@ class Sounds(AssetBank):
         self.stall_warning: Sound = self._load("stall_warning.ogg")
         self.prohibited_zone_warning: Sound = self._load("prohibited_zone_warning.ogg")
 
-        # Menu music
-        self.jukebox_tracks: dict[MusicID, Sound] = {
-            MusicID.OPEN_TWILIGHT: self._load(DIRS.assets.sounds.jukebox_tracks / "open_twilight.ogg"),
-            MusicID.NIGHTGLIDE: self._load(DIRS.assets.sounds.jukebox_tracks / "nightglide.ogg"),
-            MusicID.SKYLIGHT: self._load(DIRS.assets.sounds.jukebox_tracks / "skylight.ogg")
+        # Jukebox tracks
+        JUKEBOX_TRACKS_DIR = DIRS.assets.sounds.jukebox_tracks
+
+        self.jukebox_tracks: dict[MusicID, JukeboxTrack] = {
+            MusicID.OPEN_TWILIGHT: JukeboxTrack("Open Twilight", JUKEBOX_TRACKS_DIR / "open_twilight.ogg"),
+            MusicID.NIGHTGLIDE: JukeboxTrack("Nightglide", JUKEBOX_TRACKS_DIR / "nightglide.ogg"),
+            MusicID.SKYLIGHT: JukeboxTrack("Skylight", JUKEBOX_TRACKS_DIR / "skylight.ogg"),
         }
+
+        del JUKEBOX_TRACKS_DIR  # Local reference is not for export or use elsewhere
 
         self.augment()
 

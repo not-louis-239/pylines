@@ -17,6 +17,8 @@ from dataclasses import dataclass
 from enum import Enum, StrEnum, auto
 from pathlib import Path
 
+from pygame.mixer import Sound
+
 class FLine:
     """Formatted line for help text"""
 
@@ -103,3 +105,8 @@ class MusicID(StrEnum):
 class JukeboxTrack:
     name: str
     path: Path
+
+    def __post_init__(self):
+        """Dynamically compute a sound object based on the track's path"""
+
+        self.sound_obj: Sound = Sound(str(self.path))
