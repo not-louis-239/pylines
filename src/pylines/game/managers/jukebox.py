@@ -13,16 +13,17 @@
 # limitations under the License.
 
 from typing import TYPE_CHECKING
+from pathlib import Path
 
 import pygame as pg
 
 import pylines.core.colours as cols
 import pylines.core.constants as C
-from pylines.core.audio_manager import SFXChannelID
 from pylines.core.asset_manager_helpers import ControlsSectionID, MusicID
 from pylines.core.custom_types import Sound, Surface
 from pylines.core.utils import draw_text, draw_transparent_rect, format_to_song_length
 from pylines.game.managers.pop_up_menus import PopupMenu
+from pylines.core.paths import DIRECTORIES
 
 if TYPE_CHECKING:
     from pylines.game.game import Game
@@ -31,6 +32,11 @@ class Jukebox(PopupMenu):
     """Dedicated class for managing music."""
 
     VOLUME_INCREMENT: float = 0.1  # amount by which to change volume when pressing volume buttons
+    TRACK_FILENAMES: dict[MusicID, str] = {
+        MusicID.OPEN_TWILIGHT: "open_twilight.ogg",
+        MusicID.NIGHTGLIDE: "nightglide.ogg",
+        MusicID.SKYLIGHT: "skylight.ogg",
+    }
 
     def __init__(self, game: Game, tracks: dict[MusicID, Sound]) -> None:
         super().__init__(game)
@@ -43,10 +49,10 @@ class Jukebox(PopupMenu):
         self.current_idx = 0
         self.volume: float = 1
         self.track_pos_secs: float = 0.0
-        self.track_length_secs: float = self.get_current_track().get_length()
+        self.track_length_secs: float = 0.0
 
         self.surface: Surface = Surface((540, 600), flags=pg.SRCALPHA)
-        self.music_channel = self.game.audio_manager.channels[SFXChannelID.MUSIC]  # Local reference
+        self.track_length_secs = self.calculate_track_length(self.get_current_track_path())
 
     def get_current_track_id(self) -> MusicID:
         """Return the ID and sound object of the current track."""
@@ -60,14 +66,34 @@ class Jukebox(PopupMenu):
         track_list = list(self.tracks.values())
         return track_list[self.current_idx]
 
+    def get_current_track_path(self) -> Path:
+        track_id = self.get_current_track_id()
+        filename = self.TRACK_FILENAMES[track_id]
+        return DIRECTORIES.assets.sounds.jukebox_tracks / filename
+
+    def calculate_track_length(self, path: Path) -> float:
+        if pg.mixer.get_init() is None:
+            return 0  # fallback
+
+        sound = pg.mixer.Sound(str(path))
+        sample_rate = pg.mixer.get_init()[0]
+        if sample_rate is None:
+            return sound.get_length()
+
+        try:
+            samples = pg.sndarray.array(sound)
+            return samples.shape[0] / sample_rate
+        except Exception:
+            return sound.get_length()
+
     def prev_track(self) -> None:
         if not self.tracks:
             raise ValueError("This jukebox has no tracks")
 
         self.current_idx = (self.current_idx - 1) % len(self.tracks)
         self.track_pos_secs = 0.0
-        self.track_length_secs = self.get_current_track().get_length()
-        self.music_channel.stop()  # prepares for new track
+        self.track_length_secs = self.calculate_track_length(self.get_current_track_path())
+        pg.mixer.music.stop()  # prepares for new track
 
     def next_track(self) -> None:
         if not self.tracks:
@@ -75,27 +101,29 @@ class Jukebox(PopupMenu):
 
         self.current_idx = (self.current_idx + 1) % len(self.tracks)
         self.track_pos_secs = 0.0
-        self.track_length_secs = self.get_current_track().get_length()
-        self.music_channel.stop()  # prepares for new track
+        self.track_length_secs = self.calculate_track_length(self.get_current_track_path())
+        pg.mixer.music.stop()  # prepares for new track
 
     def update(self, dt: int) -> None:
         if self.volume > C.MATH_EPSILON and self.is_playing:
-            self.music_channel.set_volume(self.volume)
-            if not self.music_channel.get_busy():
-                sound = self.get_current_track()
-                self.music_channel.play(sound, loops=-1)
+            pg.mixer.music.set_volume(self.volume)
+            if not pg.mixer.music.get_busy():
+                track_path = self.get_current_track_path()
+                pg.mixer.music.load(str(track_path))
+                pg.mixer.music.play(loops=-1)
 
-            if self.track_length_secs > 0:
-                self.track_pos_secs = (self.track_pos_secs + dt / 1000) % self.track_length_secs
+            pos_ms = pg.mixer.music.get_pos()
+            if pos_ms >= 0:
+                self.track_pos_secs = pos_ms / 1000
         else:
-            self.game.audio_manager.channels[SFXChannelID.MUSIC].pause()
+            pg.mixer.music.pause()
 
     def pause(self) -> None:
-        self.music_channel.pause()
+        pg.mixer.music.pause()
         self.is_playing = False
 
     def resume(self) -> None:
-        self.music_channel.unpause()
+        pg.mixer.music.unpause()
         self.is_playing = True
 
     def draw(self, surface: Surface) -> None:

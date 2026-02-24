@@ -647,7 +647,7 @@ class GameScreen(State):
             # Stop all channels if pause button is pressed, except music
             # Then pause the music channel
             self.game.audio_manager.stop_all(exclude=[SFXChannelID.MUSIC])
-            self.jukebox.music_channel.pause()
+            pg.mixer.music.pause()
 
         if self.paused and not (self.in_menu_confirmation or self.in_restart_confirmation):
             if self.controls_button.check_click(events) and not self.in_controls_screen and not self.in_help_screen:
