@@ -627,13 +627,7 @@ class GameScreen(State):
             self.game.audio_manager.channels[SFXChannelID.WARN_PROHIBITED].stop()
 
         # Update BGM based on jukebox
-        if self.jukebox.volume > 0:
-            music_channel = self.game.audio_manager.channels[SFXChannelID.MUSIC]
-            music_channel.set_volume(self.jukebox.volume)
-            if not music_channel.get_busy():
-                music_channel.play(self.jukebox.get_current_track(), -1)
-        else:
-            self.game.audio_manager.channels[SFXChannelID.MUSIC].stop()
+        self.jukebox.update(dt)
 
     def take_input(self, keys: ScancodeWrapper, events: EventList, dt: int) -> None:
         # Screenshot - this needs to ALWAYS WORK
@@ -706,6 +700,7 @@ class GameScreen(State):
 
             self.update_prev_keys(keys); return
 
+        # Menu confirmation
         if self.in_menu_confirmation:
             if self.yes_button.check_click(events):
                 self.game.enter_state(StateID.TITLE)
@@ -713,6 +708,7 @@ class GameScreen(State):
             if self.no_button.check_click(events):
                 self.in_menu_confirmation = False
 
+        # Restart confirmation
         if self.in_restart_confirmation:
             if self.yes_button.check_click(events):
                 self.reset()
@@ -737,11 +733,21 @@ class GameScreen(State):
             return
 
         # Jukebox controls
-        if self.pressed(keys, pg.K_MINUS):
-            self.jukebox.volume -= self.jukebox.VOLUME_INCREMENT
-        if self.pressed(keys, pg.K_EQUALS):
-            self.jukebox.volume += self.jukebox.VOLUME_INCREMENT
-        self.jukebox.volume = clamp(self.jukebox.volume, (0, 1))
+        if self.jukebox.state.visible:
+            if self.pressed(keys, pg.K_MINUS):
+                self.jukebox.volume -= self.jukebox.VOLUME_INCREMENT
+            if self.pressed(keys, pg.K_EQUALS):
+                self.jukebox.volume += self.jukebox.VOLUME_INCREMENT
+            self.jukebox.volume = clamp(self.jukebox.volume, (0, 1))
+
+            if self.pressed(keys, pg.K_LEFTBRACKET):
+                self.jukebox.prev_track()
+            if self.pressed(keys, pg.K_RIGHTBRACKET):
+                self.jukebox.next_track()
+
+            if self.pressed(keys, pg.K_SPACE):
+                func = self.jukebox.pause if self.jukebox.is_playing else self.jukebox.resume
+                func()
 
         # Show/hide map
         if self.pressed(keys, pg.K_m):
