@@ -133,7 +133,7 @@ class Jukebox(PopupMenu):
         buffer_width = 3
         pg.draw.rect(self.surface, cols.WHITE, bar_rect, width=1)
 
-        inner_bar_width = (380 - 2 * buffer_width) * self.volume
+        inner_bar_width = (380 - 2 * buffer_width) * round(self.volume, ndigits=1)  # Round to 1 d.p. to avoid floating point offsets in display
         inner_bar_rect = pg.Rect(96 + buffer_width, volume_display_centre_y - 6 + buffer_width, inner_bar_width, 12 - 2 * buffer_width)
         pg.draw.rect(self.surface, cols.WHITE, inner_bar_rect)
 
