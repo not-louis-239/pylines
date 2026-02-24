@@ -21,7 +21,7 @@ import pygame as pg
 from pylines.core.asset_manager import Assets
 from pylines.core.audio_manager import AudioManager
 from pylines.core.data_manager import ConfigObject, load_data, save_data
-from pylines.core.paths import DIRECTORIES
+from pylines.core.paths import DIRS
 from pylines.game.environment import Environment
 from pylines.game.live_config_presets import LiveConfigPresets
 from pylines.game.managers.menu_images_manager import MenuImageManager
@@ -47,7 +47,7 @@ class Game:
         self.smoke_manager = SmokeManager(self.assets.images)
 
         self.save_data: ConfigObject
-        self.save_data, *_ = load_data(DIRECTORIES.data / "save_data.json")
+        self.save_data, *_ = load_data(DIRS.data / "save_data.json")
 
         config_presets_raw = self.assets.config_presets
         self.config_presets = LiveConfigPresets(config_presets_raw, self.assets.images)

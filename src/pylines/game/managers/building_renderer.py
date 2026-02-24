@@ -21,7 +21,7 @@ import numpy as np
 import OpenGL.GL as gl
 
 import pylines.core.constants as C
-from pylines.core.paths import DIRECTORIES
+from pylines.core.paths import DIRS
 from pylines.core.time_manager import (
     fetch_hour,
     sun_direction_from_hour,
@@ -53,8 +53,8 @@ class BuildingRenderer:
             gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
 
             self.shader = load_shader_script(
-                DIRECTORIES.src.shaders / "building.vert",
-                DIRECTORIES.src.shaders / "building.frag"
+                DIRS.src.shaders / "building.vert",
+                DIRS.src.shaders / "building.frag"
             )
             self.pos_loc = gl.glGetAttribLocation(self.shader, "position")
             self.color_loc = gl.glGetAttribLocation(self.shader, "color")

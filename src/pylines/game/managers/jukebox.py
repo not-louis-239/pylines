@@ -23,7 +23,7 @@ from pylines.core.asset_manager_helpers import ControlsSectionID, MusicID
 from pylines.core.custom_types import Sound, Surface
 from pylines.core.utils import draw_text, draw_transparent_rect, format_to_song_length
 from pylines.game.managers.pop_up_menus import PopupMenu
-from pylines.core.paths import DIRECTORIES
+from pylines.core.paths import DIRS
 
 if TYPE_CHECKING:
     from pylines.game.game import Game
@@ -69,7 +69,7 @@ class Jukebox(PopupMenu):
     def get_current_track_path(self) -> Path:
         track_id = self.get_current_track_id()
         filename = self.TRACK_FILENAMES[track_id]
-        return DIRECTORIES.assets.sounds.jukebox_tracks / filename
+        return DIRS.assets.sounds.jukebox_tracks / filename
 
     def calculate_track_length(self, path: Path) -> float:
         if pg.mixer.get_init() is None:

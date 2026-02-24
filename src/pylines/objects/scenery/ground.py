@@ -25,7 +25,7 @@ from pylines.core.constants import (
     SUN_BRIGHTNESS,
 )
 from pylines.core.custom_types import Surface
-from pylines.core.paths import DIRECTORIES
+from pylines.core.paths import DIRS
 from pylines.core.time_manager import (
     fetch_hour,
     sun_direction_from_hour,
@@ -47,8 +47,8 @@ class Ground(LargeSceneryObject):
 
         # Load and compile the shader program
         self.shader = load_shader_script(
-            DIRECTORIES.src.shaders / "terrain.vert",
-            DIRECTORIES.src.shaders / "terrain.frag"
+            DIRS.src.shaders / "terrain.vert",
+            DIRS.src.shaders / "terrain.frag"
         )
 
         self.position_loc = gl.glGetAttribLocation(self.shader, "position")

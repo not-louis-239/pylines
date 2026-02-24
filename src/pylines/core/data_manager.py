@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import Any, Mapping, Self, TypeAlias
 
 from pylines.core.constants import __version__
-from pylines.core.paths import DIRECTORIES
+from pylines.core.paths import DIRS
 
 JSONValue: TypeAlias = (
     str | int | float | bool | None |
@@ -72,7 +72,7 @@ class ConfigObject(JSONConvertible):
         filtered = {k: v for k, v in data.items() if k in field_names}
         return cls(**filtered)
 
-def save_data(obj: JSONConvertible, path: Path = DIRECTORIES.data / "save_data.json") -> str | None:
+def save_data(obj: JSONConvertible, path: Path = DIRS.data / "save_data.json") -> str | None:
     """
     Return:
         None  -> success

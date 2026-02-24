@@ -33,7 +33,7 @@ from pylines.core.asset_manager_helpers import (
 )
 from pylines.core.audio_manager import SFXChannelID
 from pylines.core.custom_types import Colour, EventList
-from pylines.core.paths import DIRECTORIES
+from pylines.core.paths import DIRS
 from pylines.core.time_manager import (
     fetch_hour,
     sky_colour_from_hour,
@@ -239,11 +239,11 @@ class GameScreen(State):
         self.ocean = Ocean(self.game.assets.images.ocean, self.game.env)
 
     def take_screenshot(self, *, notify: bool = True) -> None:
-        DIRECTORIES.data.screenshots.mkdir(parents=True, exist_ok=True)
+        DIRS.data.screenshots.mkdir(parents=True, exist_ok=True)
 
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         filename = f"screenshot_{timestamp}.png"
-        filepath = DIRECTORIES.data.screenshots / filename
+        filepath = DIRS.data.screenshots / filename
 
         width, height = C.WN_W, C.WN_H
         gl.glPixelStorei(gl.GL_PACK_ALIGNMENT, 1)

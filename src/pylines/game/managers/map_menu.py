@@ -22,7 +22,7 @@ import pylines.core.colours as cols
 import pylines.core.constants as C
 import pylines.core.units as units
 from pylines.core.custom_types import Colour, Surface
-from pylines.core.paths import DIRECTORIES
+from pylines.core.paths import DIRS
 from pylines.core.utils import draw_text
 from pylines.game.managers.pop_up_menus import PopupMenu
 from pylines.objects.buildings import (
@@ -160,7 +160,7 @@ class MapMenu(PopupMenu):
         self.map_tiles: list[list[pg.Surface]] = []
 
         # Make cache directory if it doesn't exist
-        cache_dir = DIRECTORIES.cache / "map_tiles"
+        cache_dir = DIRS.cache / "map_tiles"
         cache_dir.mkdir(parents=True, exist_ok=True)
 
         # Loop over tiles
