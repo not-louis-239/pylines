@@ -93,7 +93,7 @@ GRAVITY = 9.8        # m/s²
 
 # Mathematical
 MATH_EPSILON = 0.0001  # Treat anything smaller than this as zero
-NORMAL_CALC_EPSILON = 1.0  # Epsilon for normal calculation (in metres)
+NORMAL_CALC_EPSILON = 1.0  # Epsilon for normal calculations (in metres)
 
 # Visual
 FOV = 45  # degrees
@@ -122,9 +122,9 @@ SUNSET_END = 20
 
 # Map display
 MAP_OVERLAY_SIZE = 500
-SCALE_BAR_LENGTHS = [25, 100, 500, 1_000, 2_000, 5_000, 10_000]
 MAP_ZOOM_MIN = 1
 MAP_ZOOM_MAX = 100
+SCALE_BAR_LENGTHS = [25, 100, 500, 1_000, 2_000, 5_000, 10_000]
 
 # Controls
 THROTTLE_SPEED = 0.7
@@ -140,3 +140,6 @@ CLOUD_NOISE_SCALE = 0.0004  # world -> noise space
 CLOUD_BASE_ALPHA = 0.4
 
 COMPASS_QUANTISATION_STEPS = 300
+
+# Not for export
+del _WORLD_SIZE

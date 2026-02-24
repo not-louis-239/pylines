@@ -21,7 +21,7 @@ import pylines.core.constants as C
 from pylines.core.audio_manager import SFXChannelID
 from pylines.core.asset_manager_helpers import ControlsSectionID, MusicID
 from pylines.core.custom_types import Sound, Surface
-from pylines.core.utils import draw_text, draw_transparent_rect
+from pylines.core.utils import draw_text, draw_transparent_rect, format_to_song_length
 from pylines.game.managers.pop_up_menus import PopupMenu
 
 if TYPE_CHECKING:
@@ -42,8 +42,8 @@ class Jukebox(PopupMenu):
         self.is_playing = False
         self.current_idx = 0
         self.volume: float = 1
-        self.track_pos_sec: float = 0.0
-        self.track_length_sec: float = self.get_current_track().get_length()
+        self.track_pos_secs: float = 0.0
+        self.track_length_secs: float = self.get_current_track().get_length()
 
         self.surface: Surface = Surface((540, 600), flags=pg.SRCALPHA)
         self.music_channel = self.game.audio_manager.channels[SFXChannelID.MUSIC]  # Local reference
@@ -65,8 +65,8 @@ class Jukebox(PopupMenu):
             raise ValueError("This jukebox has no tracks")
 
         self.current_idx = (self.current_idx - 1) % len(self.tracks)
-        self.track_pos_sec = 0.0
-        self.track_length_sec = self.get_current_track().get_length()
+        self.track_pos_secs = 0.0
+        self.track_length_secs = self.get_current_track().get_length()
         self.music_channel.stop()  # prepares for new track
 
     def next_track(self) -> None:
@@ -74,19 +74,19 @@ class Jukebox(PopupMenu):
             raise ValueError("This jukebox has no tracks")
 
         self.current_idx = (self.current_idx + 1) % len(self.tracks)
-        self.track_pos_sec = 0.0
-        self.track_length_sec = self.get_current_track().get_length()
+        self.track_pos_secs = 0.0
+        self.track_length_secs = self.get_current_track().get_length()
         self.music_channel.stop()  # prepares for new track
 
     def update(self, dt: int) -> None:
-        if self.volume > 0 and self.is_playing:
+        if self.volume > C.MATH_EPSILON and self.is_playing:
             self.music_channel.set_volume(self.volume)
             if not self.music_channel.get_busy():
                 sound = self.get_current_track()
                 self.music_channel.play(sound, loops=-1)
-                
-            if self.track_length_sec > 0:
-                self.track_pos_sec = (self.track_pos_sec + dt / 1000) % self.track_length_sec
+
+            if self.track_length_secs > 0:
+                self.track_pos_secs = (self.track_pos_secs + dt / 1000) % self.track_length_secs
         else:
             self.game.audio_manager.channels[SFXChannelID.MUSIC].pause()
 
@@ -151,24 +151,40 @@ class Jukebox(PopupMenu):
 
         # Song progress bar
         progress_bar_centre_y = 325
+        progress_bar_left = 80
         progress_bar_w = 380
         progress_bar_h = 10
         progress_buffer = 2
-        progress = 0.0
-        if self.track_length_sec > 0:
-            progress = self.track_pos_sec / self.track_length_sec
 
-        outer_rect = pg.Rect(96, progress_bar_centre_y - progress_bar_h // 2, progress_bar_w, progress_bar_h)
+        if self.track_length_secs > 0:
+            progress = self.track_pos_secs / self.track_length_secs
+        else:
+            progress = 0.0  # default, prevents ZeroDivisionError
+
+        outer_rect = pg.Rect(progress_bar_left, progress_bar_centre_y - progress_bar_h // 2, progress_bar_w, progress_bar_h)
         pg.draw.rect(self.surface, cols.WHITE, outer_rect, width=1)
 
         inner_w = int((progress_bar_w - 2 * progress_buffer) * progress)
         inner_rect = pg.Rect(
-            96 + progress_buffer,
+            progress_bar_left + progress_buffer,
             progress_bar_centre_y - progress_bar_h // 2 + progress_buffer,
             inner_w,
             progress_bar_h - 2 * progress_buffer
         )
         pg.draw.rect(self.surface, cols.WHITE, inner_rect)
+
+        # Show durations
+        display_pos = format_to_song_length(self.track_pos_secs)
+        display_length = format_to_song_length(self.track_length_secs)
+
+        draw_text(
+            self.surface, (progress_bar_left - 15, progress_bar_centre_y), 'right', 'centre',
+            display_pos, cols.WHITE, 20, self.game.assets.fonts.monospaced
+        )
+        draw_text(
+            self.surface, (progress_bar_left + progress_bar_w + 15, progress_bar_centre_y), 'left', 'centre',
+            display_length, cols.WHITE, 20, self.game.assets.fonts.monospaced
+        )
 
         # Blit entire display onto target surface
         blit_y = C.WN_H - (C.WN_H * 0.93) * self.state.animation_open
