@@ -16,9 +16,8 @@ from enum import IntEnum
 
 import pygame as pg
 
-from pylines.core.asset_manager_helpers import MusicID
+from pylines.core.asset_manager_helpers import MusicID, JukeboxTrack
 from pylines.game.states import StateID
-
 
 class SFXChannelID(IntEnum):
     # Music
@@ -68,7 +67,9 @@ class AudioManager:
 
         # Play music if entering a menu state from a non-menu state or if transitioning between menu states and music is not playing                                                                                                                          │
         elif is_entering_menu and (not was_in_menu or not self.channels[SFXChannelID.MUSIC].get_busy()):
-            self.channels[SFXChannelID.MUSIC].play(self.game.assets.sounds.jukebox_tracks[MusicID.OPEN_TWILIGHT], loops=-1)
+            track = self.game.assets.sounds.jukebox_tracks[MusicID.OPEN_TWILIGHT]
+            assert isinstance(track, JukeboxTrack)
+            self.channels[SFXChannelID.MUSIC].play(track.sound_obj, loops=-1)
 
     def stop_all(self, *, exclude: list[SFXChannelID] | None = None) -> None:
         """Stops all registered channels, except those in `exclude`.

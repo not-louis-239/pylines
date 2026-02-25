@@ -197,11 +197,13 @@ class GameScreen(State):
 
         self.game.audio_manager.channels[SFXChannelID.TERRAIN_SCRAPE].stop()
 
-        self.sounds.jukebox_tracks[MusicID.OPEN_TWILIGHT].fadeout(1_500)
+        self.sounds.jukebox_tracks[MusicID.OPEN_TWILIGHT].sound_obj.fadeout(1_500)
         self.dialog_box.reset()
         self.time_elapsed = 0
 
     def _build(self) -> Generator[tuple[float, str], None, None]:
+        # TODO: Create a more centralised loading pipeline
+
         yield from self._init_ground(0.3, 0.45)
 
         self._init_ocean()

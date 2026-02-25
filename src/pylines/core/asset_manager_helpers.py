@@ -12,12 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import numpy as np
+from numpy.typing import NDArray
+import pygame as pg
+
 from abc import ABC
 from dataclasses import dataclass
 from enum import Enum, StrEnum, auto
 from pathlib import Path
-
-from pygame.mixer import Sound
 
 class FLine:
     """Formatted line for help text"""
@@ -109,4 +111,5 @@ class JukeboxTrack:
     def __post_init__(self):
         """Dynamically compute a sound object based on the track's path"""
 
-        self.sound_obj: Sound = Sound(str(self.path))
+        self.sound_obj: pg.mixer.Sound = pg.mixer.Sound(str(self.path))
+        self.sound_arr: NDArray[np.int16] = pg.sndarray.array(self.sound_obj)

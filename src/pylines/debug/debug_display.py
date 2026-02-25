@@ -28,14 +28,14 @@ class DebugLog:
         self.font = font
         self.contents: list[str] = []
 
-    def write(self, message: str) -> None:
+    def write(self, message: str, /) -> None:
         """Writes a message to the debug log."""
         self.contents.append(message)
 
-    def prune(self, max_len: int = 20) -> None:
+    def prune(self, *, max_len: int = 20) -> None:
         """Prunes the debug log to the specified maximum length."""
         if max_len < 0 or not isinstance(max_len, int):
-            raise ValueError("max_len must be a non-negative integer (not zero either).")
+            raise ValueError("max_len must be a positive integer.")
 
         if max_len == 0:
             raise ValueError("use clear() to clear the debug log instead of setting max_len to 0.")
