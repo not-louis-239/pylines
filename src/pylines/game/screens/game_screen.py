@@ -646,10 +646,14 @@ class GameScreen(State):
             else:
                 self.paused = not self.paused
 
+                if self.paused:
+                    self.jukebox.pause()
+                else:
+                    self.jukebox.unpause()
+
             # Stop all channels if pause button is pressed, except music
             # Then pause the music channel
             self.game.audio_manager.stop_all(exclude=[SFXChannelID.MUSIC])
-            pg.mixer.music.pause()
 
         if self.paused and not (self.in_menu_confirmation or self.in_restart_confirmation):
             if self.controls_button.check_click(events) and not self.in_controls_screen and not self.in_help_screen:
@@ -696,6 +700,9 @@ class GameScreen(State):
 
             if self.continue_button.check_click(events):
                 self.paused = False
+
+                pg.mixer.music.unpause()
+                self.jukebox.is_playing = True
 
             if self.restart_button.check_click(events):
                 self.in_restart_confirmation = True
@@ -751,8 +758,10 @@ class GameScreen(State):
                 self.jukebox.next_track()
 
             if self.pressed(keys, pg.K_SPACE):
-                func = self.jukebox.pause if self.jukebox.is_playing else self.jukebox.resume
-                func()
+                if self.jukebox.is_playing:
+                    self.jukebox.pause()
+                else:
+                    self.jukebox.unpause()
 
         # Show/hide map
         if self.pressed(keys, pg.K_m):

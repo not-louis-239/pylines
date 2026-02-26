@@ -96,23 +96,21 @@ class Jukebox(PopupMenu):
         self.music_channel.stop()  # prepares for new track
 
     def update(self, dt: int) -> None:
-        if self.volume > C.MATH_EPSILON and self.is_playing:
-            self.music_channel.set_volume(self.volume)
-            if not self.music_channel.get_busy():
-                track = self.get_current_track()
-                self.music_channel.play(track.sound_obj, loops=-1)
+        self.music_channel.set_volume(self.volume)
+        if not self.music_channel.get_busy():
+            track = self.get_current_track()
+            self.music_channel.play(track.sound_obj, loops=-1)
 
-            if self.track_length_secs > 0:
+        if self.track_length_secs > 0:
+            if self.is_playing:
                 self.track_pos_secs = (self.track_pos_secs + dt / 1000) % self.track_length_secs
-        else:
-            self.music_channel.pause()
 
     def pause(self) -> None:
-        self.music_channel.pause()
+        pg.mixer.music.pause()
         self.is_playing = False
 
-    def resume(self) -> None:
-        self.music_channel.unpause()
+    def unpause(self) -> None:
+        pg.mixer.music.unpause()
         self.is_playing = True
 
     def draw(self, surface: Surface) -> None:
