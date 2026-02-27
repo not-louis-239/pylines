@@ -71,13 +71,20 @@ class AudioManager:
             assert isinstance(track, JukeboxTrack)
             self.channels[SFXChannelID.MUSIC].play(track.sound_obj, loops=-1)
 
-    def stop_all(self, *, exclude: list[SFXChannelID] | None = None) -> None:
+    def stop_all(self, *, exclude: SFXChannelID | list[SFXChannelID] | None = None) -> None:
         """Stops all registered channels, except those in `exclude`.
         Stops all channels if no excluded channels are given."""
 
         exclude = exclude or []
+        assert exclude is not None
 
         for channel_id, channel in self.channels.items():
+            # Allow passing a single SFXChannelID directly into exclude, this is just convenience
+            if not isinstance(exclude, list):
+                if channel_id is not exclude:
+                    channel.stop()
+
             # Stop only channels not in `exclude`
-            if channel_id not in exclude:
-                channel.stop()
+            else:
+                if channel_id not in exclude:
+                    channel.stop()

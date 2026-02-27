@@ -656,9 +656,12 @@ class GameScreen(State):
                 self.paused = not self.paused
 
                 if self.paused:
+                    self._jukebox_was_playing = self.jukebox.is_playing  # Must save jukebox play state before pausing
                     self.jukebox.pause()
                 else:
-                    self.jukebox.unpause()
+                    # Only unpause jukebox if it was playing before pause
+                    if self._jukebox_was_playing:
+                        self.jukebox.unpause()
 
             # Stop all channels if pause button is pressed, except music
             # Then pause the music channel
