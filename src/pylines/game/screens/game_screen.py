@@ -100,9 +100,6 @@ class GameScreen(State):
         self._auto_screenshot_elapsed_ms: int = 0
         self._auto_screenshot_pending: bool = False
 
-        # GPS destination
-        self.gps_runway_index: int = 1  # start at second GPS destination
-
         # Pausing
         self.paused: bool = False
 
@@ -181,13 +178,15 @@ class GameScreen(State):
         self.jukebox = Jukebox(self.game, self.game.assets.sounds.jukebox_tracks)
 
     def reset(self) -> None:
+        # Reset confirmations and menus
         self.in_menu_confirmation = False
         self.in_restart_confirmation = False
         self.paused = False
 
+        # Reset plane
         self.plane.reset()
-        self.gps_runway_index = 1
 
+        # Reset sounds
         self.game.audio_manager.channels[SFXChannelID.WIND].stop()
         self.game.audio_manager.channels[SFXChannelID.ENGINE_ACTIVE].stop()
         self.game.audio_manager.channels[SFXChannelID.ENGINE_AMBIENT].stop()
@@ -198,7 +197,16 @@ class GameScreen(State):
         self.game.audio_manager.channels[SFXChannelID.TERRAIN_SCRAPE].stop()
 
         self.sounds.jukebox_tracks[MusicID.OPEN_TWILIGHT].sound_obj.fadeout(1_500)
+
+        # Reset dialog box and jukebox
         self.dialog_box.reset()
+        self.jukebox.reset()
+
+        # Reset tool states
+        self.map_menu.reset_state()
+        self.controls_quick_ref.reset_state()
+
+        # Reset time
         self.time_elapsed = 0
 
     def _build(self) -> Generator[tuple[float, str], None, None]:

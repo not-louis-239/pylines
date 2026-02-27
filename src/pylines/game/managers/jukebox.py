@@ -54,6 +54,15 @@ class Jukebox(PopupMenu):
         self.track_pos_secs: float = 0.0
         self.track_length_secs = self.calculate_track_length(self.get_current_track())
 
+    def reset(self):
+        self.track_pos_secs = 0
+        self.track_length_secs = self.calculate_track_length(self.get_current_track())
+        self.current_idx = 0
+
+        self.is_playing = False
+        self.music_channel.stop()
+        self.reset_state()
+
     def get_current_track_id(self) -> MusicID:
         """Return the ID and sound object of the current track."""
 

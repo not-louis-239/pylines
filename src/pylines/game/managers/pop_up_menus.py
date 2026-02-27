@@ -32,6 +32,10 @@ class PopupMenuState:
     visible: bool = False
     animation_open: float = 0  # 0 = down, 1 = up
 
+    def reset(self) -> None:
+        self.visible = False
+        self.animation_open: float = 0
+
 class PopupMenu(ABC):
     def __init__(self, game: Game) -> None:
         self.state = PopupMenuState()
@@ -40,6 +44,9 @@ class PopupMenu(ABC):
     @abstractmethod
     def draw(self, surface: Surface) -> None:
         raise NotImplementedError
+
+    def reset_state(self) -> None:
+        self.state.reset()
 
     def toggle_visibility(self) -> None:
         self.state.visible = not self.state.visible
