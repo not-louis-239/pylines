@@ -622,7 +622,7 @@ class GameScreen(State):
         self.game.audio_manager.channels[SFXChannelID.ENGINE_ACTIVE].set_volume(throttle_sound_strength)
 
         # Terrain scrape sound
-        if (not self.plane.over_runway) and self.plane.on_ground:
+        if (not self.plane.over_runway()) and self.plane.on_ground:
             if not self.game.audio_manager.channels[SFXChannelID.TERRAIN_SCRAPE].get_busy():
                 self.game.audio_manager.channels[SFXChannelID.TERRAIN_SCRAPE].play(self.sounds.terrain_scrape, -1)
         else:

@@ -281,7 +281,7 @@ class Plane(Entity):
         water_crash = self.pos.y < self.env.sea_level + C.MATH_EPSILON
         if water_crash:
             crash_reason = CrashReason.OCEAN
-        elif self.over_runway:
+        elif self.over_runway():
             crash_reason = CrashReason.RUNWAY
         else:
             crash_reason = CrashReason.TERRAIN
@@ -292,12 +292,12 @@ class Plane(Entity):
             return
 
         if impact_severity <= MAX_SAFE_IMPACT:
-            if self.over_runway:
+            if self.over_runway():
                 self.good_landing()
             else:
                 self.hard_landing(suppress_dialog=True)
         elif impact_severity <= MAX_OK_IMPACT:
-            self.hard_landing(suppress_dialog=(not self.over_runway))
+            self.hard_landing(suppress_dialog=(not self.over_runway()))
         else:
             self.crash(damage_taken=impact_severity-MAX_OK_IMPACT, reason=crash_reason)
 
@@ -587,7 +587,7 @@ class Plane(Entity):
             self.on_ground = True
             self.pos.y = ground_height
 
-            if not self.over_runway:
+            if not self.over_runway():
                 self.vel *= 0.85 ** (dt_seconds)
                 self.damage_level += clamp(self.vel.length() / 30, (0, 1))**2 * 0.2 * dt_seconds  # 30 m/s - max terrain scrape damage
 
