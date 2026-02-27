@@ -43,11 +43,11 @@ class Jukebox(PopupMenu):
         self.is_playing = False
         self.current_idx = 0
         self.volume: float = 1
-        self.track_pos_secs: float = 0.0
-        self.track_length_secs: float = 0.0
 
         self.surface: Surface = Surface((540, 600), flags=pg.SRCALPHA)
         self.music_channel = self.game.audio_manager.channels[SFXChannelID.MUSIC]
+
+        self.track_pos_secs: float = 0.0
         self.track_length_secs = self.calculate_track_length(self.get_current_track())
 
     def get_current_track_id(self) -> MusicID:
@@ -96,14 +96,13 @@ class Jukebox(PopupMenu):
         self.music_channel.stop()  # prepares for new track
 
     def update(self, dt: int) -> None:
-        self.music_channel.set_volume(self.volume)
-        if not self.music_channel.get_busy():
-            track = self.get_current_track()
-            self.music_channel.play(track.sound_obj, loops=-1)
+        dt_seconds = dt / 1000
+        pg.mixer.music.set_volume(self.volume)
 
         if self.track_length_secs > 0:
             if self.is_playing:
-                self.track_pos_secs = (self.track_pos_secs + dt / 1000) % self.track_length_secs
+                self.track_pos_secs += dt_seconds
+                self.track_pos_secs %= self.track_length_secs
 
     def pause(self) -> None:
         pg.mixer.music.pause()

@@ -21,7 +21,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Generator, Literal, cast
 
 import pygame as pg
-from OpenGL import GL as gl
+import OpenGL.GL as gl
 
 import pylines.core.colours as cols
 import pylines.core.constants as C
@@ -530,6 +530,11 @@ class GameScreen(State):
         gl.glDisable(gl.GL_TEXTURE_2D)
 
     def update(self, dt: int):
+
+        # DEBUG
+        if self.time_elapsed > 2000:
+            assert not self.game.audio_manager.channels[SFXChannelID.MUSIC].get_busy()
+
         assert self.game.env is not None
         assert self.game.env.prohibited_zones is not None
 
