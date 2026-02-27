@@ -86,7 +86,7 @@ class GameScreen(State):
 
         self.warn_stall: bool = False
         self.warn_overspeed: bool = False
-        self.time_elapsed: int = 0  # milliseconds
+        self.time_elapsed_ms: int = 0  # milliseconds
 
         self.dialog_box = DialogMessage()
 
@@ -207,7 +207,7 @@ class GameScreen(State):
         self.controls_quick_ref.reset_state()
 
         # Reset time
-        self.time_elapsed = 0
+        self.time_elapsed_ms = 0
 
     def _build(self) -> Generator[tuple[float, str], None, None]:
         # TODO: Create a more centralised loading pipeline
@@ -436,7 +436,7 @@ class GameScreen(State):
         self.cockpit_renderer.draw_crash_flash(self.hud_surface)
 
         # Exit controls
-        if self.time_elapsed < 5_000 or not self.plane.flyable:
+        if self.time_elapsed_ms < 5_000 or not self.plane.flyable:
             draw_text(self.hud_surface, (15, 30), 'left', 'centre', "Press Esc to pause", cols.WHITE, 30, self.fonts.monospaced)
 
         # Show dialog box
@@ -542,7 +542,7 @@ class GameScreen(State):
         assert self.game.env is not None
         assert self.game.env.prohibited_zones is not None
 
-        self.time_elapsed += dt
+        self.time_elapsed_ms += dt
 
         self.sun.update()
         self.moon.update()
