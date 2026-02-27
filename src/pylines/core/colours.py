@@ -17,7 +17,7 @@
 from dataclasses import dataclass
 from typing import cast, overload
 
-from .custom_types import Colour, AColour
+from .custom_types import AColour, Colour
 
 
 @dataclass(frozen=True)

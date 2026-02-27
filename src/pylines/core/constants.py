@@ -15,7 +15,6 @@
 """Program constants"""
 
 from dataclasses import dataclass
-from enum import IntEnum
 
 __version__ = "0.13.5"
 
@@ -43,23 +42,6 @@ class PlaneModel:
     v_ne: float  # Velocity Never Exceed, in m/s
     # Name
     name: str = "UnnamedModel"  # Name is currently owned by the list of PLANE_MODELS
-
-class SFXChannelID(IntEnum):
-    # Music
-    MUSIC = 0
-
-    # Engine
-    ENGINE_AMBIENT = 1
-    ENGINE_ACTIVE = 2
-    WIND = 3
-
-    # Warnings
-    STALL = 4
-    OVERSPEED = 5
-    PROHIBITED = 6
-
-    # Other
-    SCRAPE = 7
 
 # Plane models - these should eventually be moved to a separate file called `plane_models.py`
 PLANE_MODELS: dict[str, PlaneModel] = {
@@ -111,10 +93,10 @@ GRAVITY = 9.8        # m/s²
 
 # Mathematical
 MATH_EPSILON = 0.0001  # Treat anything smaller than this as zero
-NORMAL_CALC_EPSILON = 1.0  # Epsilon for normal calculation (in metres)
+NORMAL_CALC_EPSILON = 1.0  # Epsilon for normal calculations (in metres)
 
 # Visual
-FOV = 45  # degrees
+FOV = 70  # degrees
 
 CHEVRON_ANGLE = 40
 CHEVRON_COLOUR = (255, 0, 0)
@@ -125,6 +107,7 @@ MAP_PIXELS_PER_TILE = 100  # pixels
 METRES_PER_TILE = MAP_METRES_PER_PX * MAP_PIXELS_PER_TILE
 
 CONTROLS_REF_TOGGLE_ANIMATION_DURATION = 0.08  # seconds
+JUKEBOX_MENU_TOGGLE_ANIMATION_DURATION = 0.15
 
 # Terrain brightness
 SHADE_BRIGHTNESS_MULT = 0.5  # Brightness multiplier when shaded
@@ -139,9 +122,9 @@ SUNSET_END = 20
 
 # Map display
 MAP_OVERLAY_SIZE = 500
-SCALE_BAR_LENGTHS = [25, 100, 500, 1_000, 2_000, 5_000, 10_000]
 MAP_ZOOM_MIN = 1
 MAP_ZOOM_MAX = 100
+SCALE_BAR_LENGTHS = [25, 100, 500, 1_000, 2_000, 5_000, 10_000]
 
 # Controls
 THROTTLE_SPEED = 0.7
@@ -157,3 +140,6 @@ CLOUD_NOISE_SCALE = 0.0004  # world -> noise space
 CLOUD_BASE_ALPHA = 0.4
 
 COMPASS_QUANTISATION_STEPS = 300
+
+# Not for export
+del _WORLD_SIZE

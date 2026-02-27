@@ -68,4 +68,4 @@ class Dirs(DirsContainer):
         self.cache = root / "cache"
         self.src = SrcDirs(root / "src" / "pylines")
 
-DIRECTORIES = Dirs(ROOT_DIR)
+DIRS = Dirs(ROOT_DIR)

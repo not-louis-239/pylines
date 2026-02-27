@@ -35,6 +35,14 @@
                 "F1": "Show/Hide Cockpit",
                 "F5": "Take Screenshot (in-game only)"
             }
+        },
+        {
+            "header": "Jukebox",
+            "keys": {
+                "[ / ]": "Previous/Next Song",
+                "Space": "Pause",
+                "- / =": "Volume Up/Down"
+            }
         }
     ]
 }

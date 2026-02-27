@@ -21,6 +21,7 @@ import pygame as pg
 from pygame.surface import Surface
 
 import pylines.core.constants as C
+
 from .colours import WHITE
 from .custom_types import AColour, Colour, Coord2, RealNumber
 
@@ -235,3 +236,17 @@ def wrap_text(text: str, width: RealNumber, font_family: pg.font.Font) -> list[s
         lines.append(current_line)
 
     return lines
+
+def format_to_song_length(time_seconds: int | float) -> str:
+    """Formats a time in seconds to a song length format, e.g. '1:23',
+    rounded down to the nearest second."""
+
+    # No logic for displaying hours is needed as there is no track
+    # that is 1 hour or longer.
+
+    time_seconds = int(time_seconds)
+
+    display_mins = time_seconds // 60
+    display_secs = time_seconds % 60
+
+    return f"{display_mins}:{display_secs:02d}"

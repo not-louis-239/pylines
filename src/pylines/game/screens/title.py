@@ -22,14 +22,14 @@ import pygame as pg
 from OpenGL import GL as gl
 from OpenGL import GLU as glu
 
+import pylines.core.colours as cols
 import pylines.core.constants as C
 from pylines.core.asset_manager import FLine
+from pylines.core.asset_manager_helpers import ControlsSection, ControlsSectionID
 from pylines.core.custom_types import Colour, EventList, ScancodeWrapper, Surface
-from pylines.core.utils import draw_text, wrap_text, draw_transparent_rect
+from pylines.core.utils import draw_text, draw_transparent_rect, wrap_text
 from pylines.game.states import State, StateID
 from pylines.objects.buttons import Button, ImageButton
-import pylines.core.colours as cols
-from pylines.core.asset_manager_helpers import ControlsSection, ControlsSectionID
 
 if TYPE_CHECKING:
     from pylines.game.game import Game

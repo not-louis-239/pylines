@@ -31,6 +31,7 @@ from pylines.core.constants import (
     TPS,
     WN_H,
     WN_W,
+    FOV
 )
 from pylines.game.game import Game
 
@@ -39,12 +40,15 @@ def main():
     game = None
 
     try:
+        # Initialise Pygame and clock
         pg.init()
 
-        TICK = pg.USEREVENT + 1
+        # Initialise time instruments
         clock = pg.time.Clock()
-        pg.time.set_timer(TICK, int(1000/TPS))
+        fixed_dt_ms = 1000 / TPS
+        time_accum: float = 0  # stores time since last batch of updates
 
+        # Initialise window and mixer
         wn = pg.display.set_mode((WN_W, WN_H), pg.DOUBLEBUF | pg.OPENGL)
         pg.display.set_caption("Pylines")
         pg.mixer.set_num_channels(32)
@@ -53,35 +57,41 @@ def main():
         gl.glViewport(0, 0, WN_W, WN_H)
         gl.glMatrixMode(gl.GL_PROJECTION)
         gl.glLoadIdentity()
-        glu.gluPerspective(45, WN_W/WN_H, INNER_RENDER_LIMIT, OUTER_RENDER_LIMIT)  # Field of view, aspect ratio, near, far clipping plane
+        glu.gluPerspective(FOV, WN_W/WN_H, INNER_RENDER_LIMIT, OUTER_RENDER_LIMIT)  # Field of view, aspect ratio, near, far clipping plane
         gl.glMatrixMode(gl.GL_MODELVIEW)
         gl.glLoadIdentity()
         gl.glEnable(gl.GL_DEPTH_TEST)  # Enable depth testing for 3D objects
 
+        # Create Game instance
         game = Game()
 
+        # Main loop
         running = True
         while running:
+            dt_ms = clock.tick(FPS)
+            time_accum += dt_ms
+
             events = pg.event.get()
+
             for event in events:
-                # Quit
                 if event.type == pg.QUIT:
-                    game.quit_game()
+                    game.quit()
                     running = False
 
-                if event.type == TICK:
-                    game.update(1000/TPS)
-
-            dt = clock.tick(FPS)
             keys = pg.key.get_pressed()
 
-            game.take_input(keys, events, dt)
+            game.take_input(keys, events, dt_ms)
+
+            while time_accum > fixed_dt_ms:
+                game.update(fixed_dt_ms)
+                time_accum -= fixed_dt_ms
+
             game.draw(wn)
             pg.display.flip()
 
     except KeyboardInterrupt:
         if game is not None:
-            game.quit_game()  # cleanup + save data to disk
+            game.quit()  # cleanup + save data to disk
 
         print("\nKeyboardInterrupt received. Exiting.")
 

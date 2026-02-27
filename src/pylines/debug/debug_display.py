@@ -18,25 +18,24 @@ from pygame.font import Font
 
 from pylines.core.custom_types import Surface
 from pylines.core.utils import draw_text
-from pylines.core.asset_manager import Fonts
 
 DEBUG_FONT_SIZE = 28
 
 class DebugLog:
     """A class to manage a debug log, allowing for adding messages, pruning old messages, and clearing the log."""
 
-    def __init__(self, *, font: Font | Path) -> None:
+    def __init__(self, font: Font | Path) -> None:
         self.font = font
         self.contents: list[str] = []
 
-    def write(self, message: str) -> None:
+    def write(self, message: str, /) -> None:
         """Writes a message to the debug log."""
         self.contents.append(message)
 
-    def prune(self, max_len: int = 20) -> None:
+    def prune(self, *, max_len: int = 20) -> None:
         """Prunes the debug log to the specified maximum length."""
         if max_len < 0 or not isinstance(max_len, int):
-            raise ValueError("max_len must be a non-negative integer (not zero either).")
+            raise ValueError("max_len must be a positive integer.")
 
         if max_len == 0:
             raise ValueError("use clear() to clear the debug log instead of setting max_len to 0.")

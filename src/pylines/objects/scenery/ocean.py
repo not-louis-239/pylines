@@ -22,8 +22,8 @@ import OpenGL.GL as gl
 import pygame as pg
 
 import pylines.core.constants as C
-from pylines.core.paths import DIRECTORIES
 from pylines.core.custom_types import Surface
+from pylines.core.paths import DIRS
 from pylines.core.time_manager import fetch_hour, sunlight_strength_from_hour
 from pylines.core.utils import lerp
 from pylines.shaders.shader_manager import load_shader_script
@@ -43,8 +43,8 @@ class Ocean(LargeSceneryObject):
         self.texture_repeat_count = 25.0
 
         self.shader = load_shader_script(
-            str(DIRECTORIES.src.shaders / "ocean.vert"),
-            str(DIRECTORIES.src.shaders / "ocean.frag")
+            DIRS.src.shaders / "ocean.vert",
+            DIRS.src.shaders / "ocean.frag"
         )
         self.position_loc = gl.glGetAttribLocation(self.shader, "position")
         self.tex_coord_loc = gl.glGetAttribLocation(self.shader, "tex_coord")

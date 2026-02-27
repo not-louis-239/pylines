@@ -23,7 +23,7 @@ import numpy as np
 import pygame as pg
 
 from pylines.core.asset_manager import Images
-from pylines.core.constants import MATH_EPSILON, HALF_WORLD_SIZE
+from pylines.core.constants import HALF_WORLD_SIZE, MATH_EPSILON
 from pylines.core.custom_types import Coord2
 from pylines.core.utils import map_value
 from pylines.objects.building_parts import BuildingPart, match_primitive
