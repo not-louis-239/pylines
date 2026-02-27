@@ -89,5 +89,5 @@ class Game:
 
         self.states[self.state].draw(wn)
 
-    def quit_game(self):
+    def quit(self):
         save_data(self.save_data)
