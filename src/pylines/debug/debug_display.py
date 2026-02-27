@@ -24,7 +24,7 @@ DEBUG_FONT_SIZE = 28
 class DebugLog:
     """A class to manage a debug log, allowing for adding messages, pruning old messages, and clearing the log."""
 
-    def __init__(self, *, font: Font | Path) -> None:
+    def __init__(self, font: Font | Path) -> None:
         self.font = font
         self.contents: list[str] = []
 

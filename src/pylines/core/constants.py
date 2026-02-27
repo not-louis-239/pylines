@@ -96,7 +96,7 @@ MATH_EPSILON = 0.0001  # Treat anything smaller than this as zero
 NORMAL_CALC_EPSILON = 1.0  # Epsilon for normal calculations (in metres)
 
 # Visual
-FOV = 45  # degrees
+FOV = 70  # degrees
 
 CHEVRON_ANGLE = 40
 CHEVRON_COLOUR = (255, 0, 0)

@@ -31,6 +31,7 @@ from pylines.core.constants import (
     TPS,
     WN_H,
     WN_W,
+    FOV
 )
 from pylines.game.game import Game
 
@@ -53,7 +54,7 @@ def main():
         gl.glViewport(0, 0, WN_W, WN_H)
         gl.glMatrixMode(gl.GL_PROJECTION)
         gl.glLoadIdentity()
-        glu.gluPerspective(45, WN_W/WN_H, INNER_RENDER_LIMIT, OUTER_RENDER_LIMIT)  # Field of view, aspect ratio, near, far clipping plane
+        glu.gluPerspective(FOV, WN_W/WN_H, INNER_RENDER_LIMIT, OUTER_RENDER_LIMIT)  # Field of view, aspect ratio, near, far clipping plane
         gl.glMatrixMode(gl.GL_MODELVIEW)
         gl.glLoadIdentity()
         gl.glEnable(gl.GL_DEPTH_TEST)  # Enable depth testing for 3D objects
