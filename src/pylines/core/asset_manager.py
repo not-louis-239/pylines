@@ -115,7 +115,7 @@ class Images(AssetBank):
 
         images: Iterator[Path] = DIRS.assets.images.menu_images.glob("*.png")
         for image in images:
-            self.menu_images.append(smoothscale_by(self._load(str(image)), 1.5))  # Allows Ken Burns-style effects
+            self.menu_images.append(scale_by(self._load(str(image)), 1.5))  # Allows Ken Burns-style effects
 
         self.augment()
 
