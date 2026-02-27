@@ -39,7 +39,11 @@ class Jukebox(PopupMenu):
             # Jukebox needs tracks to play
             raise ValueError("Jukebox needs at least one track")
 
+        # Must be initialised before attempting to fetch track IDs or track objects
         self.tracks = tracks
+        self._cached_track_ids = list(self.tracks.keys())
+        self._cached_track_objs = list(self.tracks.values())
+
         self.is_playing = False
         self.current_idx = 0
         self.volume: float = 1
@@ -53,14 +57,12 @@ class Jukebox(PopupMenu):
     def get_current_track_id(self) -> MusicID:
         """Return the ID and sound object of the current track."""
 
-        track_list = list(self.tracks.keys())
-        return track_list[self.current_idx]
+        return self._cached_track_ids[self.current_idx]
 
     def get_current_track(self) -> JukeboxTrack:
         """Return the current track container."""
 
-        track_list = list(self.tracks.values())
-        return track_list[self.current_idx]
+        return self._cached_track_objs[self.current_idx]
 
     def calculate_track_length(self, track: JukeboxTrack) -> float:
         if pg.mixer.get_init() is None:
@@ -97,19 +99,22 @@ class Jukebox(PopupMenu):
 
     def update(self, dt: int) -> None:
         dt_seconds = dt / 1000
-        pg.mixer.music.set_volume(self.volume)
+        self.music_channel.set_volume(self.volume)
 
         if self.track_length_secs > 0:
             if self.is_playing:
+                if not self.music_channel.get_busy():
+                    self.music_channel.play(self.get_current_track().sound_obj)
+
                 self.track_pos_secs += dt_seconds
                 self.track_pos_secs %= self.track_length_secs
 
     def pause(self) -> None:
-        pg.mixer.music.pause()
+        self.music_channel.pause()
         self.is_playing = False
 
     def unpause(self) -> None:
-        pg.mixer.music.unpause()
+        self.music_channel.unpause()
         self.is_playing = True
 
     def draw(self, surface: Surface) -> None:

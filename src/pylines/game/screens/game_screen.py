@@ -531,10 +531,6 @@ class GameScreen(State):
 
     def update(self, dt: int):
 
-        # DEBUG
-        if self.time_elapsed > 2000:
-            assert not self.game.audio_manager.channels[SFXChannelID.MUSIC].get_busy()
-
         assert self.game.env is not None
         assert self.game.env.prohibited_zones is not None
 
@@ -706,7 +702,7 @@ class GameScreen(State):
             if self.continue_button.check_click(events):
                 self.paused = False
 
-                pg.mixer.music.unpause()
+                self.jukebox.music_channel.unpause()
                 self.jukebox.is_playing = True
 
             if self.restart_button.check_click(events):
