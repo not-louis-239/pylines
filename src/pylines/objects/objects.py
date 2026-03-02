@@ -96,7 +96,31 @@ class Plane(Entity):
 
     @property
     def stalled(self) -> bool:
-        return self.aoa > self.model.stall_angle
+        # Calculate pitch difference between the forward vector and velocity vector
+        # This is more lenient and prevents the plane from instantly stalling
+        # when a user attempts to turn.
+        # + forward higher than vel, - forward lower than vel
+
+        if self.vel.length() < C.MATH_EPSILON:
+            return False
+
+        right = self.native_right
+
+        # Project velocity into the pitch plane (forward-up), removing sideslip.
+        vel_proj = self.vel - right * self.vel.dot(right)
+        if vel_proj.length() < C.MATH_EPSILON:
+            return False
+
+        vel_unit = vel_proj.normalize()
+        fwd_unit = self.native_fwd
+
+        dot = clamp(fwd_unit.dot(vel_unit), (-1, 1))
+        cross = fwd_unit.cross(vel_unit)
+        # Signed angle around right axis; positive = nose above velocity.
+        signed = cross.dot(right)
+        pitch_difference = -degrees(atan2(signed, dot))
+
+        return pitch_difference > self.model.stall_angle
 
     def over_runway(self) -> bool:
         x, _, z = self.pos
@@ -388,7 +412,7 @@ class Plane(Entity):
             align_factor = clamp(5.0 / (airspeed + 1e-6), (0, 1))
 
             # blend
-            self.vel = self.vel.lerp(target_vel, align_factor * dt_seconds)
+            self.vel = self.vel.lerp(target_vel, min(1, align_factor * dt_seconds))
 
         # Calculate thrust and weight force vectors
         thrust: pg.Vector3 = pg.Vector3(0, 0, 0) if self.disabled else self.native_fwd * self.throttle_frac * self.model.max_throttle

@@ -27,7 +27,7 @@ from typing import Iterator, cast
 import numpy as np
 import pygame as pg
 from PIL import Image
-from pygame.transform import scale, scale_by, smoothscale_by
+from pygame.transform import scale, scale_by
 
 from pylines.core.asset_manager_helpers import (
     ControlsSection,
