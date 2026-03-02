@@ -491,12 +491,16 @@ class Plane(Entity):
         else:
             boundary_bias = pg.Vector3(0, 0, 0)
 
-        # Combine and integrate forces: F = ma -> a = F/m, then integrate acceleration to velocity and velocity to position
+        # Combine forces before integrating
         net_force = thrust + weight + lift + drag + boundary_bias  # Force vectors in Newtons
 
+        # Verlet integration reduces the effect of TPS lag on displacement and velocity
         self.acc = net_force / self.model.mass  # a = F/m
+        # Calculate displacement using the velocity at the midpoint of the tick
+        # s_next = s_now + (v + 0.5 * a * dt) * dt
+        self.pos += (self.vel + (self.acc * (dt_seconds * 0.5))) * dt_seconds
+        # Then update velocity for the next tick
         self.vel += self.acc * dt_seconds
-        self.pos += self.vel * dt_seconds
 
         # Clamp height
         ground_height = self.env.get_ground_height(self.pos.x, self.pos.z)
