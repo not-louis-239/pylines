@@ -239,7 +239,12 @@ class Plane(Entity):
         if self.vel.length() < C.MATH_EPSILON:
             return 0  # Default fallback AoA when stationary
 
-        vel_unit = self.vel.normalize()
+        # Project velocity into the pitch plane (forward-up), removing sideslip.
+        vel_proj = self.vel - self.native_right * self.vel.dot(self.native_right)
+        if vel_proj.length() < C.MATH_EPSILON:
+            return 0
+
+        vel_unit = vel_proj.normalize()
 
         # dot product for cosine, cross magnitude for sine
         dot = clamp(self.native_fwd.dot(vel_unit), (-1, 1))
