@@ -23,7 +23,7 @@ import pylines.core.constants as C
 import pylines.core.units as units
 from pylines.core.custom_types import Colour, Surface
 from pylines.core.paths import DIRS
-from pylines.core.utils import draw_text
+from pylines.core.utils import draw_text, draw_transparent_rect
 from pylines.game.managers.pop_up_menus import PopupMenu
 from pylines.objects.buildings import (
     BuildingDefinition,
@@ -258,7 +258,7 @@ class MapMenu(PopupMenu):
         self.building_legend_surface = self.generate_building_legend()
         self.height_legend_surface = self.generate_height_legend()
 
-    def draw(self, surface: Surface, show_advanced_info: bool) -> None:
+    def draw(self, surface: Surface, show_advanced_info: bool, mouse_down: bool, mouse_pos: tuple[float, float]) -> None:
         assert self.game.env is not None
 
         _, yaw, _ = self.plane.get_rot()
@@ -617,3 +617,38 @@ class MapMenu(PopupMenu):
                 self.height_legend_surface,
                 (C.WN_W//2 - C.MAP_OVERLAY_SIZE//2 - 200, map_centre[1] - 180)
             )
+
+        # Show height of land at mouse pos if mouse is down
+        if mouse_down:
+            if map_rect.collidepoint(mouse_pos):
+                local_x = mouse_pos[0] - map_rect.left
+                local_y = mouse_pos[1] - map_rect.top
+
+                world_x = viewport_top_left_x + local_x * self.viewport_zoom
+                world_z = viewport_top_left_z + local_y * self.viewport_zoom
+
+                height_m = self.game.env.get_ground_height(world_x, world_z)
+                height_ft = units.convert_units(height_m, units.METRES, units.FEET)
+
+                font_size = 18
+                font = pg.font.Font(self.game.assets.fonts.monospaced, font_size)
+                text = f"{height_ft:,.0f} ft"
+                text_surf = font.render(text, True, cols.WHITE)
+
+                padding = 6
+                box_w = text_surf.get_width() + padding * 2
+                box_h = text_surf.get_height() + padding * 2
+
+                tooltip_x = mouse_pos[0] + 12
+                tooltip_y = mouse_pos[1] + 12
+                tooltip_x = min(tooltip_x, C.WN_W - box_w - 5)
+                tooltip_y = min(tooltip_y, C.WN_H - box_h - 5)
+
+                draw_transparent_rect(
+                    surface,
+                    (tooltip_x, tooltip_y),
+                    (box_w, box_h),
+                    (0, 0, 0, 180),
+                    1
+                )
+                surface.blit(text_surf, (tooltip_x + padding, tooltip_y + padding))

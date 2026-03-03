@@ -425,7 +425,9 @@ class GameScreen(State):
 
         # Render map
         if self.map_menu.state.animation_open:
-            self.map_menu.draw(self.hud_surface, self.map_show_advanced_info)
+            mouse_down = pg.mouse.get_pressed(num_buttons=3)[0]
+            mouse_pos = pg.mouse.get_pos()
+            self.map_menu.draw(self.hud_surface, self.map_show_advanced_info, mouse_down, mouse_pos)
 
         # Render jukebox
         if self.jukebox.state.animation_open:
