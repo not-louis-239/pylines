@@ -44,7 +44,6 @@ from pylines.game.managers.cockpit_renderer import CockpitRenderer
 from pylines.game.managers.controls_reference import ControlsReference
 from pylines.game.managers.jukebox import Jukebox
 from pylines.game.managers.map_menu import MapMenu
-from pylines.game.managers.smoke_manager import SmokeManager
 from pylines.game.managers.star_renderer import StarRenderer, StarRenderingData
 from pylines.game.states import State, StateID
 from pylines.objects.buttons import Button, ImageButton
@@ -174,7 +173,8 @@ class GameScreen(State):
         self.controls_quick_ref = ControlsReference(self.game)
         self.show_cockpit: bool = True  # Start with cockpit visible
 
-        self.smoke_manager = SmokeManager(assets.images)
+        # Use the shared smoke manager so updates and draws reference the same instance.
+        self.smoke_manager = self.game.smoke_manager
         self.jukebox = Jukebox(self.game, self.game.assets.sounds.jukebox_tracks)
 
     def reset(self) -> None:
@@ -185,6 +185,8 @@ class GameScreen(State):
 
         # Reset plane
         self.plane.reset()
+        # Clear crash smoke from any prior run
+        self.smoke_manager.smoke_blobs.clear()
 
         # Reset sounds
         self.game.audio_manager.channels[SFXChannelID.WIND].stop()
