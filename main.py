@@ -17,6 +17,7 @@
 import os
 import sys
 
+import time
 import pygame as pg
 from OpenGL import GL as gl
 from OpenGL import GLU as glu
@@ -34,7 +35,6 @@ from pylines.core.constants import (
     FOV
 )
 from pylines.game.game import Game
-
 
 def main():
     game = None
@@ -83,11 +83,23 @@ def main():
             game.take_input(keys, events, dt_ms)
 
             while time_accum > fixed_dt_ms:
+                ti = time.perf_counter()
                 game.update(fixed_dt_ms)
+                tf = time.perf_counter()
+
+                game.diagnostics_manager.record_tick((tf - ti) * 1000)
+
                 time_accum -= fixed_dt_ms
 
+            ti = time.perf_counter()
             game.draw(wn)
             pg.display.flip()
+            tf = time.perf_counter()
+
+            game.diagnostics_manager.record_frame((tf - ti) * 1000)
+
+            # Always call this to clear the most recent entries
+            game.diagnostics_manager.prune()
 
     except KeyboardInterrupt:
         if game is not None:

@@ -423,6 +423,9 @@ class GameScreen(State):
         if self.show_cockpit or self.plane.crashed:
             self.cockpit_renderer.draw(self.hud_surface, self.warn_stall, self.warn_overspeed)
 
+        # Show diagnostics
+        self.game.diagnostics_manager.draw(self.hud_surface)
+
         # Render map
         if self.map_menu.state.animation_open:
             mouse_down = pg.mouse.get_pressed(num_buttons=3)[0]
@@ -751,6 +754,10 @@ class GameScreen(State):
         # Cockpit visibility toggling
         if self.pressed(keys, pg.K_F1):  # F1 to toggle HUD
             self.show_cockpit = not self.show_cockpit
+
+        # Diagnostics - should NOT be blocked by crashed plane
+        if self.pressed(keys, pg.K_F2):
+            self.game.diagnostics_manager.toggle_visibility()
 
         # Block flight controls if crashed or disabled
         if not self.plane.flyable:

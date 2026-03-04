@@ -32,6 +32,7 @@ from pylines.game.screens.loading_screen import LoadingScreen
 from pylines.game.screens.settings import SettingsScreen
 from pylines.game.screens.title import TitleScreen
 from pylines.game.states import State, StateID
+from pylines.game.managers.diagnostics import DiagnosticsManager
 
 if TYPE_CHECKING:
     from pylines.core.custom_types import EventList, ScancodeWrapper, Surface
@@ -40,7 +41,9 @@ class Game:
     def __init__(self) -> None:
         # Lazy-load structure / lightweight constructor
 
-        self.assets = Assets()
+        self.assets = Assets()  # MUST be first as almost everything uses it
+
+        self.diagnostics_manager = DiagnosticsManager(self)
         self.audio_manager = AudioManager(self)
 
         self.menu_image_manager = MenuImageManager(self.assets.images.menu_images)  # This is in Game to make it accessible from multiple states
