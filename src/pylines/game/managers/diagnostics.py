@@ -114,6 +114,8 @@ class DiagnosticsManager(PopupMenu):
         Draw a bar graph of values in bar_plot_rect.
         Bar colour ranges from (0, 255, 0) (green) for 0 to
         (255, 0, 0) (red) for max_ok, and red for any value greater than max_ok.
+        Yellow (255, 255, 0) is used for values halfway between 0 and max_ok, with linear
+        interpolation between green and yellow or yellow and red as required.
 
         A bar for the value of max_ok should be the height of max_ok_h, with linear
         scaling for other values. Height is not restricted or clamped.
@@ -125,8 +127,48 @@ class DiagnosticsManager(PopupMenu):
         if max_ok_h is None:
             # If a max_ok_h is not given, assume that the maximum OK height
             # bar should extend to the very top of the plot area.
-            
+
             max_ok_h = plot_area.bottom - plot_area.top
+
+        if not values:
+            raise ValueError("_plot_bars: requires values to plot")
+
+        bar_count = min(len(values), max(1, plot_area.width))
+        values = values[-bar_count:]
+
+        bar_w = max(1, plot_area.width // bar_count)
+        total_w = bar_w * bar_count
+        left = plot_area.right - total_w
+
+        baseline_y = plot_area.bottom
+        green = (0, 255, 0)
+        yellow = (255, 255, 0)
+        red = (255, 0, 0)
+
+        for i, value in enumerate(values):
+            if max_ok <= 0:
+                t = 0.0
+                bar_h = 0.0
+            else:
+                t = max(0.0, min(1.0, float(value) / max_ok))
+                bar_h = (float(value) / max_ok) * max_ok_h
+
+            if bar_h <= 0:
+                continue
+
+            if t <= 0.5:
+                colour = lerp_colours(green, yellow, t * 2)
+            elif t < 1:
+                colour = lerp_colours(yellow, red, (t - 0.5) * 2)
+            else:
+                # Use red for any value > max_ok
+                colour = red
+
+            x = left + i * bar_w
+            y = int(baseline_y - bar_h)
+            h = int(bar_h)
+
+            pg.draw.rect(surface, colour, pg.Rect(x, y, bar_w, h))
 
     def prune(self, max_len: int = MAX_HISTORY_LEN) -> None:
         if max_len <= 0:
@@ -142,18 +184,28 @@ class DiagnosticsManager(PopupMenu):
         self.tick_durs.append(dt_ms)
 
     def draw(self, surface: pg.Surface) -> None:
+        # NOTE: animation_open is unused for draw() here as this is a diagnostic
+        # that should instantly appear/disappear
+
+        if not self.state.visible:
+            return
 
         # Blit cached background surface
         surface.blit(self.static_bg_surface, (0, 0))
+        self.prune()
 
-        MAX_OK_DUR_FRAME = 1000 / C.FPS
-        MAX_OK_DUR_TICK = 1000 / C.TPS
+        MAX_OK_DUR_FRAME = 1000 / C.FPS * 2  # 30 FPS = top of graph
+        MAX_OK_DUR_TICK = 1000 / C.TPS       # 1 / C.TPS = top of graph
+        # yeah I know they're different
 
         # Draw FPS bars
-        ...
+        self._plot_bars(surface, self.frame_graph_plot_rect, self.frame_durs, MAX_OK_DUR_FRAME)
 
         # Draw TPS bars
-        ...
+        self._plot_bars(surface, self.tick_graph_plot_rect, self.tick_durs, MAX_OK_DUR_TICK)
 
         # Blit cached foreground surface
         surface.blit(self.static_fg_surface, (0, 0))
+
+        print(self.frame_durs)
+        print(self.tick_durs)
