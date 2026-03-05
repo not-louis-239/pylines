@@ -62,6 +62,29 @@ class Timespans:
         cutoff = now - t
         return [interval for interval in self.intervals if interval.ti >= cutoff]
 
+    def avg_freq_from_last(self, t: float) -> float:
+        """Get the average frequency of time intervals from the last t seconds.
+
+        For example, if there are 50 interval objects whose initial time is from
+        the last 20 seconds, and t=20, this function should output 2.5
+
+        It should adjust if the first interval was less than t seconds ago, where
+        it instead outputs the average frequency in the last i seconds, where
+        i is the time since the first interval."""
+
+        recent = self.get_intervals_from_last(t)
+
+        if not recent:
+            return 0  # no entries, so no valid frequency
+
+        now = time.perf_counter()
+        time_since_first = now - recent[0].ti
+
+        if time_since_first == 0:
+            return 0  # guard against ZeroDivisionError
+
+        return len(recent) / time_since_first
+
     def prune_seconds(self, t: float) -> None:
         """Prune intervals to only those whose initial time is within the last t seconds
         NOTE: this creates a new list with each call of this function"""
@@ -108,11 +131,16 @@ class DiagnosticsManager(PopupMenu):
             return
 
         self.debug_log.clear()
+
+        # Show capable FPS/TPS (maximum possible given recent averages)
         self.debug_log.write(f"capable fps: {display_sf(1000 / mean(self.frame_durs.get_ms_durations()), 3)} (target: {C.FPS:.0f})")
         self.debug_log.write(f"capable tps: {1000 / mean(self.tick_durs.get_ms_durations()):,.0f} (target: {C.TPS:.0f})")
 
-        self.debug_log.write(f"recent fps: {len(self.frame_durs.get_intervals_from_last(1))} (last 1s) | {len(self.frame_durs.get_intervals_from_last(10)) / 10:.1f} (last 10s)")
-        self.debug_log.write(f"recent tps: {len(self.tick_durs.get_intervals_from_last(1))} (last 1s) | {len(self.tick_durs.get_intervals_from_last(10)) / 10:.1f} (last 10s)")
+        # Show average FPS/TPS for last few seconds
+        # TODO: if <1s/10s, divide by the time since the first one, e.g. 2s
+        # to avoid inaccurate initial framerate
+        self.debug_log.write(f"recent fps: {self.frame_durs.avg_freq_from_last(1):.0f} (last 1s) | {self.frame_durs.avg_freq_from_last(10):.1f} (last 10s)")
+        self.debug_log.write(f"recent tps: {self.tick_durs.avg_freq_from_last(1):.0f} (last 1s) | {self.tick_durs.avg_freq_from_last(10):.1f} (last 10s)")
 
     def populate_static_surfaces(self) -> None:
         # Draw elements to cached surface once to avoid
@@ -203,7 +231,7 @@ class DiagnosticsManager(PopupMenu):
         total_w = bar_w * bar_count
         left = plot_area.right - total_w
 
-        baseline_y = plot_area.bottom
+        baseline_y = plot_area.bottom + 1  # `+1` needed to adjust alignment to avoid empty row of pixels
         green = (0, 255, 0)
         yellow = (255, 255, 0)
         red = (255, 0, 0)
@@ -261,8 +289,8 @@ class DiagnosticsManager(PopupMenu):
         # yeah I know they're different
 
         # Duration lists - convert to milliseconds
-        frame_durs_floats: list[float] = self.frame_durs.get_ms_durations()
-        tick_durs_floats: list[float] = self.tick_durs.get_ms_durations()
+        frame_durs_floats: list[float] = self.frame_durs.get_ms_durations()[-self.MAX_HISTORY_LEN:]
+        tick_durs_floats: list[float] = self.tick_durs.get_ms_durations()[-self.MAX_HISTORY_LEN:]
 
         # Draw FPS bars
         self._plot_bars(surface, self.frame_graph_plot_rect, frame_durs_floats, MAX_OK_DUR_FRAME)
