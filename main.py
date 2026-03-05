@@ -35,6 +35,7 @@ from pylines.core.constants import (
     FOV
 )
 from pylines.game.game import Game
+from pylines.game.managers.diagnostics import TimeInterval
 
 def main():
     game = None
@@ -87,7 +88,7 @@ def main():
                 game.update(fixed_dt_ms)
                 tf = time.perf_counter()
 
-                game.diagnostics_manager.record_tick((tf - ti) * 1000)
+                game.diagnostics_manager.record_tick(TimeInterval(ti, tf))
 
                 time_accum -= fixed_dt_ms
 
@@ -96,10 +97,7 @@ def main():
             pg.display.flip()
             tf = time.perf_counter()
 
-            game.diagnostics_manager.record_frame((tf - ti) * 1000)
-
-            # Always call this to clear the most recent entries
-            game.diagnostics_manager.prune()
+            game.diagnostics_manager.record_frame(TimeInterval(ti, tf))
 
     except KeyboardInterrupt:
         if game is not None:

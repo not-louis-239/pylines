@@ -250,3 +250,26 @@ def format_to_song_length(time_seconds: int | float) -> str:
     display_secs = time_seconds % 60
 
     return f"{display_mins}:{display_secs:02d}"
+
+def display_sf(val: float, ndigits: int, /) -> str:
+    if ndigits <= 0:
+        raise ValueError("need positive integer number of significant figures")
+
+    if val == 0:
+        return f"{0:.{ndigits-1}f}"
+
+    # Preliminary rounding to handle cases like 9.99 -> 10.0
+    # This prevents the "magnitude shift" error where it displays an incorrect
+    # number of digits
+    pre_mag = math.floor(math.log10(abs(val)))
+    val = round(val, ndigits - 1 - pre_mag)
+
+    # Recalculate magnitude and decimals based on the rounded value
+    magnitude = math.floor(math.log10(abs(val)))
+    decimals = ndigits - 1 - magnitude
+
+    if decimals >= 0:
+        return f"{val:.{decimals}f}"
+    else:
+        # Returns as an integer string (e.g., "1200")
+        return f"{int(round(val, decimals))}"

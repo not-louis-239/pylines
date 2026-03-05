@@ -646,6 +646,7 @@ class GameScreen(State):
 
         # Update BGM based on jukebox
         self.jukebox.update(dt)
+        self.game.diagnostics_manager.update_debug_log()
 
     def take_input(self, keys: ScancodeWrapper, events: EventList, dt: int) -> None:
         # Screenshot - this needs to ALWAYS WORK
