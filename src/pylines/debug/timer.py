@@ -14,7 +14,7 @@
 
 import time
 from functools import wraps
-from typing import Callable
+from typing import Callable, ParamSpec, TypeVar, overload
 
 START_TIME = time.perf_counter()
 last_segment_time = START_TIME
@@ -74,24 +74,31 @@ def log_total_time():
     elapsed_time = time.perf_counter() - START_TIME
     print(f"Total time elapsed: {COL_TOTAL}{elapsed_time:,.4f}s{COL_RESET}")
 
-def timer(_func: Callable | None = None, *, max_acceptable_ms: float = DEFAULT_MAX_ACCEPTABLE):
-    def decorator(func: Callable) -> Callable:
-        @wraps(func)
-        def timed_func(*args, **kwargs):
+P = ParamSpec("P")
+R = TypeVar("R")
+
+@overload
+def timer(func: Callable[P, R], *, max_acceptable_ms: float = DEFAULT_MAX_ACCEPTABLE) -> Callable[P, R]: ...
+@overload
+def timer(func: None = None, *, max_acceptable_ms: float = DEFAULT_MAX_ACCEPTABLE) -> Callable[[Callable[P, R]], Callable[P, R]]: ...
+def timer(func: Callable[P, R] | None = None, *, max_acceptable_ms: float = DEFAULT_MAX_ACCEPTABLE):
+    def decorator(inner: Callable[P, R]) -> Callable[P, R]:
+        @wraps(inner)
+        def timed_func(*args: P.args, **kwargs: P.kwargs) -> R:
             start = time.perf_counter()
-            result = func(*args, **kwargs)
+            result = inner(*args, **kwargs)
             duration_ms = (time.perf_counter() - start) * 1000
 
             colour = get_duration_colour(duration_ms, max_acceptable_ms)
             print(
-                f"Time taken for function {COL_NAMES_FUNCS}'{func.__name__}'{COL_RESET}: "
+                f"Time taken for function {COL_NAMES_FUNCS}'{inner.__name__}'{COL_RESET}: "
                 f"{colour}{duration_ms:.2f} ms{COL_RESET}"
             )
             return result
         return timed_func
 
     # Handles @timer vs @timer(...)
-    if _func is not None:
-        return decorator(_func)
+    if func is not None:
+        return decorator(func)
 
     return decorator
