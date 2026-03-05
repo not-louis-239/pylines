@@ -25,6 +25,9 @@ import pylines.core.constants as C
 from pylines.core.utils import draw_text, draw_transparent_rect, display_sf
 from pylines.game.managers.pop_up_menus import PopupMenu
 from pylines.debug.debug_display import DebugLog
+from pylines.debug.memory_usage_fetcher import MemoryUsageFetcher
+
+from pylines.debug.timer import timer
 
 if TYPE_CHECKING:
     from pylines.game.game import Game
@@ -123,24 +126,9 @@ class DiagnosticsManager(PopupMenu):
         self.frame_durs: Timespans = Timespans()
         self.tick_durs: Timespans = Timespans()
 
+        self.memory_usage_fetcher: MemoryUsageFetcher = MemoryUsageFetcher()
+
         self.debug_log = DebugLog(game.assets.fonts.monospaced)
-
-    def update_debug_log(self) -> None:
-        # Prevent ZeroDivisionError from calculating FPS/TPS
-        if (not self.frame_durs) or (not self.tick_durs):
-            return
-
-        self.debug_log.clear()
-
-        # Show capable FPS/TPS (maximum possible given recent averages)
-        self.debug_log.write(f"capable fps: {display_sf(1000 / mean(self.frame_durs.get_ms_durations()), 3)} (target: {C.FPS:.0f})")
-        self.debug_log.write(f"capable tps: {1000 / mean(self.tick_durs.get_ms_durations()):,.0f} (target: {C.TPS:.0f})")
-
-        # Show average FPS/TPS for last few seconds
-        # TODO: if <1s/10s, divide by the time since the first one, e.g. 2s
-        # to avoid inaccurate initial framerate
-        self.debug_log.write(f"recent fps: {self.frame_durs.avg_freq_from_last(1):.0f} (last 1s) | {self.frame_durs.avg_freq_from_last(10):.1f} (last 10s)")
-        self.debug_log.write(f"recent tps: {self.tick_durs.avg_freq_from_last(1):.0f} (last 1s) | {self.tick_durs.avg_freq_from_last(10):.1f} (last 10s)")
 
     def populate_static_surfaces(self) -> None:
         # Draw elements to cached surface once to avoid
@@ -260,6 +248,27 @@ class DiagnosticsManager(PopupMenu):
 
             pg.draw.rect(surface, colour, pg.Rect(x, y, bar_w, bar_h))
 
+    def update_debug_log(self) -> None:
+        # Prevent ZeroDivisionError from calculating FPS/TPS
+        if (not self.frame_durs) or (not self.tick_durs):
+            return
+
+        self.debug_log.clear()
+
+        # Show capable FPS/TPS (maximum possible given recent averages)
+        self.debug_log.write(f"capable fps: {display_sf(1000 / mean(self.frame_durs.get_ms_durations()), 3)} (target: {C.FPS:.0f})")
+        self.debug_log.write(f"capable tps: {1000 / mean(self.tick_durs.get_ms_durations()):,.0f} (target: {C.TPS:.0f})")
+
+        # Show average FPS/TPS for last few seconds
+        # TODO: if <1s/10s, divide by the time since the first one, e.g. 2s
+        # to avoid inaccurate initial framerate
+        self.debug_log.write(f"recent fps: {self.frame_durs.avg_freq_from_last(1):.0f} (last 1s) | {self.frame_durs.avg_freq_from_last(10):.1f} (last 10s)")
+        self.debug_log.write(f"recent tps: {self.tick_durs.avg_freq_from_last(1):.0f} (last 1s) | {self.tick_durs.avg_freq_from_last(10):.1f} (last 10s)")
+
+        # Fetch memory usage
+        BYTES_PER_MEBIBYTE = 1_048_576
+        self.debug_log.write(f"memory usage: {self.memory_usage_fetcher.fetch_memory_usage() / BYTES_PER_MEBIBYTE:.2f} MiB")
+
     def prune(self, t: int = _MAX_INTERNAL_HISTORY_LEN_SECONDS) -> None:
         if t <= 0:
             raise ValueError("prune: max_len must be a positive integer")
@@ -273,6 +282,7 @@ class DiagnosticsManager(PopupMenu):
     def record_tick(self, interval: TimeInterval) -> None:
         self.tick_durs.add_interval(interval)
 
+    @timer
     def draw(self, surface: pg.Surface) -> None:
         # NOTE: animation_open is unused for draw() here as this is a diagnostic
         # that should instantly appear/disappear

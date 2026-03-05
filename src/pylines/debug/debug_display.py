@@ -19,6 +19,8 @@ from pygame.font import Font
 from pylines.core.custom_types import Surface
 from pylines.core.utils import draw_text
 
+from pylines.debug.timer import timer
+
 DEBUG_FONT_SIZE = 28
 
 class DebugLog:
@@ -46,6 +48,7 @@ class DebugLog:
         """Clears the debug log."""
         self.contents.clear()
 
+    @timer
     def draw(self, surface: Surface, font_family: Font | Path | None = None, font_size: int = DEBUG_FONT_SIZE) -> None:
         """Draws the debug log contents onto the given surface."""
         y = font_size + 10  # Start drawing from the top of the surface
