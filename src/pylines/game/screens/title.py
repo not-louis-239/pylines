@@ -30,6 +30,7 @@ from pylines.core.custom_types import Colour, EventList, ScancodeWrapper, Surfac
 from pylines.core.utils import draw_text, draw_transparent_rect, wrap_text
 from pylines.game.states import State, StateID
 from pylines.objects.buttons import Button, ImageButton
+from pylines.game.managers.help_screen_renderer import HelpScreen
 
 if TYPE_CHECKING:
     from pylines.game.game import Game
@@ -44,21 +45,19 @@ class TitleScreen(State):
             (90, C.WN_H-50), 150, 60, (25, 75, 75), (200, 255, 255),
             "Settings", self.fonts.monospaced, 30
         )
+
         self.credits_button = Button(
             (250, C.WN_H-50), 150, 60, (25, 75, 75), (200, 255, 255),
             "Credits", self.fonts.monospaced, 30
         )
-        self.help_button = ImageButton((C.WN_W - 75, C.WN_H - 75), self.images.help_icon)
-
-        self.in_help_screen = False
-        self.help_screen_offset = 0
-        self.help_max_offset = 0
-        self.help_scroll_vel = 0.0
 
         self.return_button = Button(
             (C.WN_W - 120, C.WN_H - 60), 200, 60, (25, 75, 75), (200, 255, 255),
             "Return", self.fonts.monospaced, 30
         )
+
+        self.help_screen = HelpScreen(self.game)
+        self.help_button = ImageButton((C.WN_W - 75, C.WN_H - 75), self.images.help_icon)
 
     def reset(self) -> None:
         self.sounds.stall_warning.stop()
@@ -67,130 +66,22 @@ class TitleScreen(State):
         self.game.menu_image_manager.update(dt)
 
     def take_input(self, keys: ScancodeWrapper, events: EventList, dt: int) -> None:
-        if self.pressed(keys, pg.K_SPACE) and not self.in_help_screen:
+        if self.pressed(keys, pg.K_SPACE) and not self.help_screen.state.visible:
             self.game.enter_state(StateID.BRIEFING if self.game.save_data.show_briefing else StateID.GAME)
-        if self.settings_button.check_click(events) and not self.in_help_screen:
+        if self.settings_button.check_click(events) and not self.help_screen.state.visible:
             self.game.enter_state(StateID.SETTINGS)
-        if self.credits_button.check_click(events) and not self.in_help_screen:
+        if self.credits_button.check_click(events) and not self.help_screen.state.visible:
             self.game.enter_state(StateID.CREDITS)
 
-        if self.help_button.check_click(events) and not self.in_help_screen:
-            self.in_help_screen = True
-        elif self.return_button.check_click(events) and self.in_help_screen:
-            self.in_help_screen = False
-            self.help_screen_offset = 0  # reset scrolling
-            self.help_scroll_vel = 0.0
+        if self.help_button.check_click(events) and not self.help_screen.state.visible:
+            self.help_screen.state.visible = True
+        elif self.return_button.check_click(events) and self.help_screen.state.visible:
+            self.help_screen.state.visible = False
 
-        if self.in_help_screen:
-            scroll_accel = 0.004 * dt
-            wheel_impulse = 25
-
-            for event in events:
-                if event.type == pg.MOUSEWHEEL:
-                    self.help_scroll_vel -= event.y * wheel_impulse
-
-            if keys[pg.K_UP]:
-                self.help_scroll_vel -= scroll_accel
-            if keys[pg.K_DOWN]:
-                self.help_scroll_vel += scroll_accel
-            if self.pressed(keys, pg.K_PAGEUP):
-                self.help_scroll_vel -= 220
-            if self.pressed(keys, pg.K_PAGEDOWN):
-                self.help_scroll_vel += 220
-
-            self.help_screen_offset += self.help_scroll_vel
-
-            self.help_scroll_vel *= 0.85
-            if abs(self.help_scroll_vel) < 0.02:
-                self.help_scroll_vel = 0.0
-
-            if self.help_screen_offset < 0:
-                self.help_screen_offset = 0
-                self.help_scroll_vel = 0.0
-            elif self.help_screen_offset > self.help_max_offset:
-                self.help_screen_offset = self.help_max_offset
-                self.help_scroll_vel = 0.0
+        if self.help_screen.state.visible:
+            self.help_screen.take_input(keys, events, dt)
 
         self.update_prev_keys(keys)
-
-    def draw_help_screen(self):
-        rect = self.images.logo.get_rect(center=(C.WN_W//2, 100))
-        self.display_surface.blit(self.images.logo, rect)
-        draw_text(
-            self.display_surface, (rect.centerx, rect.bottom + 8), 'centre', 'top',
-            "Help", (0, 192, 255), 36, self.fonts.monospaced
-        )
-
-        left = 100
-        top = rect.bottom + 120
-        bottom = C.WN_H - 160
-        width = C.WN_W - 235
-        logical_y = top
-        indent_px = 24
-        scrollbar_w = 12
-        scrollbar_x = left + width + 20
-
-        draw_transparent_rect(
-            self.display_surface, (left - 50, top - 50), (width + 135, bottom - top + 100), (0, 0, 0, 85), 2
-        )
-
-        self.return_button.draw(self.display_surface)
-
-        VISUAL_STYLES: dict[FLine.Style, tuple[int, Colour, bool]] = {
-            FLine.Style.HEADING_1: (36, (0, 192, 255), False),
-            FLine.Style.HEADING_2: (28, (0, 192, 255), False),
-            FLine.Style.BULLET: (24, cols.WHITE, True),
-            FLine.Style.NORMAL: (24, cols.WHITE, False),
-        }
-
-        for fline in self.game.assets.texts.help_lines:
-            size, colour, bullet = VISUAL_STYLES[fline.style]
-
-            x = left + indent_px * fline.indent
-            max_w = width - indent_px * fline.indent
-
-            font = pg.font.Font(self.fonts.monospaced, size)
-            if bullet:
-                bullet_prefix = "• "
-                prefix_w = font.size(bullet_prefix)[0]
-                wrapped = wrap_text(fline.text, max_w - prefix_w, font)
-                for i, line in enumerate(wrapped):
-                    render_y = logical_y - self.help_screen_offset
-                    if render_y + font.get_linesize() >= top and render_y <= bottom:
-                        if i == 0:
-                            draw_text(self.display_surface, (x, render_y), 'left', 'top', bullet_prefix, colour, size, font)
-                        draw_text(self.display_surface, (x + prefix_w, render_y), 'left', 'top', line, colour, size, font)
-                    logical_y += font.get_linesize() + 4
-            else:
-                for line in wrap_text(fline.text, max_w, font):
-                    render_y = logical_y - self.help_screen_offset
-                    if render_y + font.get_linesize() >= top and render_y <= bottom:
-                        draw_text(self.display_surface, (x, render_y), 'left', 'top', line, colour, size, font)
-                    logical_y += font.get_linesize() + 4
-
-            logical_y += 6  # extra spacing between FLine entries
-
-        content_height = max(0, logical_y - top)
-        view_height = max(0, bottom - top)
-        self.help_max_offset = max(0, content_height - view_height)
-        self.help_screen_offset = max(0, min(self.help_screen_offset, self.help_max_offset))
-
-        # Scrollbar
-        scrollbar_h = max(0, bottom - top)
-        bar_bg = pg.Rect(scrollbar_x, top, scrollbar_w, scrollbar_h)
-        pg.draw.rect(self.display_surface, (55, 55, 55), bar_bg)
-
-        if content_height > 0:
-            if self.help_max_offset == 0:
-                thumb_h = scrollbar_h
-                thumb_y = top
-            else:
-                thumb_h = max(24, int(scrollbar_h * (view_height / content_height)))
-                max_thumb_y = top + scrollbar_h - thumb_h
-                thumb_y = top + int((self.help_screen_offset / self.help_max_offset) * (max_thumb_y - top))
-
-            thumb = pg.Rect(scrollbar_x, thumb_y, scrollbar_w, thumb_h)
-            pg.draw.rect(self.display_surface, (185, 185, 185), thumb)
 
     def draw_title_screen(self):
         rect = self.images.logo.get_rect(center=(C.WN_W//2, C.WN_H*0.11))
@@ -240,8 +131,8 @@ class TitleScreen(State):
 
         self.game.menu_image_manager.draw_current(self.display_surface)
 
-        if self.in_help_screen:
-            self.draw_help_screen()
+        if self.help_screen.state.visible:
+            self.help_screen.draw(self.display_surface)
         else:
             self.draw_title_screen()
 

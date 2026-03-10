@@ -25,7 +25,6 @@ import pylines.core.constants as C
 from .colours import WHITE
 from .custom_types import AColour, Colour, Coord2, RealNumber
 
-
 def draw_text(
         surface: Surface, pos: tuple[float, float],
         horiz_align: Literal['left', 'centre', 'right'],
@@ -273,3 +272,11 @@ def display_sf(val: float, ndigits: int, /) -> str:
     else:
         # Returns as an integer string (e.g., "1200")
         return f"{int(round(val, decimals))}"
+
+def clamp_surf_to_non_empty(surf: Surface) -> Surface:
+    """Clamp a surface to only the non-transparent parts
+    (cut off any top, bottom, leftmost or rightmost rows
+    or columns of pixels that are all completely transparent)"""
+
+    rect = surf.get_bounding_rect(min_alpha=1)
+    return surf.subsurface(rect).copy()
