@@ -30,7 +30,7 @@ from pylines.core.custom_types import Colour, EventList, ScancodeWrapper, Surfac
 from pylines.core.utils import draw_text, draw_transparent_rect, wrap_text
 from pylines.game.states import State, StateID
 from pylines.objects.buttons import Button, ImageButton
-from pylines.game.managers.help_screen_renderer import HelpScreen
+from pylines.game.managers.help_screen import HelpScreen
 
 if TYPE_CHECKING:
     from pylines.game.game import Game
@@ -64,6 +64,7 @@ class TitleScreen(State):
 
     def update(self, dt: int) -> None:
         self.game.menu_image_manager.update(dt)
+        self.help_screen.update(dt)
 
     def take_input(self, keys: ScancodeWrapper, events: EventList, dt: int) -> None:
         if self.pressed(keys, pg.K_SPACE) and not self.help_screen.state.visible:
@@ -125,6 +126,7 @@ class TitleScreen(State):
         self.credits_button.draw(self.display_surface)
         self.help_button.draw(self.display_surface)
 
+    # TODO: remove `wn` parameter as OpenGL rendering doesn't use `wn`
     def draw(self, wn: Surface):
         # Clear the display surface first
         self.display_surface.fill((0, 0, 0))
@@ -133,6 +135,7 @@ class TitleScreen(State):
 
         if self.help_screen.state.visible:
             self.help_screen.draw(self.display_surface)
+            self.return_button.draw(self.display_surface)
         else:
             self.draw_title_screen()
 

@@ -28,7 +28,7 @@ class ScrollPhysics1D:
     DEFAULT_SCROLL_ACCEL = C.WN_H * 0.3   # pix/s²
     PAGE_IMPULSE = C.WN_H                 # pix/s
     WHEEL_IMPULSE = C.WN_H * 0.08         # pix/s
-    SCROLL_FRICTION = 0.15                # damping factor when there is no input
+    SCROLL_FRICTION = 0.935                 # damping factor per second when there is no input
 
     MAX_SCROLL_VELOCITY = C.WN_H * 1.2    # pix/s
     MIN_SCROLL_VELOCITY = C.WN_H * 0.002  # min, below this stop
@@ -38,8 +38,8 @@ class ScrollPhysics1D:
 
         # Displacement
         self.disp = 0
-        self._min_disp = 0
-        self._max_disp = max(0, surf_height - viewport_height)
+        self.min_disp = 0
+        self.max_disp = max(0, surf_height - viewport_height)
 
         # Velocity & acceleration
         self.vel = 0
@@ -49,7 +49,7 @@ class ScrollPhysics1D:
         self.disp = 0
         self.vel = 0
 
-    def take_input(self, dt_ms: int, keys: pg.key.ScancodeWrapper, events: list[pg.event.Event]):
+    def take_input(self, keys: pg.key.ScancodeWrapper, events: list[pg.event.Event], dt_ms: int):
         """Process keyboard and mouse input to modify scroll velocity."""
         dt_seconds = dt_ms / 1000
         accel = self.scroll_accel * dt_seconds
@@ -81,11 +81,11 @@ class ScrollPhysics1D:
             self.vel = 0
 
         # Clamp displacement to limits
-        if self.disp < self._min_disp:
-            self.disp = self._min_disp
+        if self.disp < self.min_disp:
+            self.disp = self.min_disp
             self.vel = 0.0
-        elif self.disp > self._max_disp:
-            self.disp = self._max_disp
+        elif self.disp > self.max_disp:
+            self.disp = self.max_disp
             self.vel = 0.0
 
 class ScrollPhysics2D:

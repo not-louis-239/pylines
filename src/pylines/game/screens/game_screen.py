@@ -45,6 +45,7 @@ from pylines.game.managers.controls_reference import ControlsReference
 from pylines.game.managers.jukebox import Jukebox
 from pylines.game.managers.map_menu import MapMenu
 from pylines.game.managers.star_renderer import StarRenderer, StarRenderingData
+from pylines.game.managers.help_screen import HelpScreen
 from pylines.game.states import State, StateID
 from pylines.objects.buttons import Button, ImageButton
 from pylines.objects.objects import CrashReason, Plane
@@ -110,11 +111,6 @@ class GameScreen(State):
         self.in_restart_confirmation: bool = False
         self.in_controls_screen: bool = False
 
-        self.in_help_screen: bool = False
-        self.help_screen_offset: float = 0
-        self.help_max_offset: float = 0
-        self.help_scroll_vel: float = 0
-
         self.continue_button = Button(
             (C.WN_W//2-400, C.WN_H//2), 250, 50, (0, 96, 96), (128, 255, 255),
             "Continue", self.fonts.monospaced, 30
@@ -168,6 +164,7 @@ class GameScreen(State):
         self.hud_surface = pg.Surface((C.WN_W, C.WN_H), pg.SRCALPHA)
 
         # Cache rotated compasses to save resources when drawing
+        self.help_screen = HelpScreen(self.game)
         self.cockpit_renderer = CockpitRenderer(self.game, self.plane)
         self.star_renderer = StarRenderer(StarRenderingData(), self.game.env, self.plane)
         self.controls_quick_ref = ControlsReference(self.game)
@@ -336,84 +333,6 @@ class GameScreen(State):
             draw_text(self.hud_surface, (C.WN_W//2 + 20, C.WN_H * (0.69 + 0.03*i)), 'left', 'centre', key, (150, 230, 255), 21, self.fonts.monospaced)
             draw_text(self.hud_surface, (C.WN_W//2 + 140, C.WN_H * (0.69 + 0.03*i)), 'left', 'centre', action, cols.WHITE, 21, self.fonts.monospaced)
 
-    def draw_help_screen(self) -> None:
-        draw_transparent_rect(
-            self.hud_surface, (30, 30), (C.WN_W - 60, C.WN_H - 60), border_thickness=3
-        )
-
-        rect = self.images.logo.get_rect(center=(C.WN_W//2, 100))
-        self.hud_surface.blit(self.images.logo, rect)
-        draw_text(
-            self.hud_surface, (rect.centerx, rect.bottom + 8), 'centre', 'top',
-            "Help", (0, 192, 255), 36, self.fonts.monospaced
-        )
-
-        self.back_button.draw(self.hud_surface)
-
-        left = 80
-        top = rect.bottom + 80
-        bottom = C.WN_H - 120
-        width = C.WN_W - 320
-        logical_y = top
-        indent_px = 24
-        scrollbar_w = 12
-        scrollbar_x = left + width + 20
-
-        visual_styles: dict[FLine.Style, tuple[int, Colour, bool]] = {
-            FLine.Style.HEADING_1: (36, (0, 192, 255), False),
-            FLine.Style.HEADING_2: (28, (0, 192, 255), False),
-            FLine.Style.BULLET: (24, cols.WHITE, True),
-            FLine.Style.NORMAL: (24, cols.WHITE, False),
-        }
-
-        for fline in self.game.assets.texts.help_lines:
-            size, colour, bullet = visual_styles[fline.style]
-
-            x = left + indent_px * fline.indent
-            max_w = width - indent_px * fline.indent
-
-            font = pg.font.Font(self.fonts.monospaced, size)
-            if bullet:
-                bullet_prefix = "• "
-                prefix_w = font.size(bullet_prefix)[0]
-                wrapped = wrap_text(fline.text, max_w - prefix_w, font)
-                for i, line in enumerate(wrapped):
-                    render_y = logical_y - self.help_screen_offset
-                    if render_y + font.get_linesize() >= top and render_y <= bottom:
-                        if i == 0:
-                            draw_text(self.hud_surface, (x, render_y), 'left', 'top', bullet_prefix, colour, size, font)
-                        draw_text(self.hud_surface, (x + prefix_w, render_y), 'left', 'top', line, colour, size, font)
-                    logical_y += font.get_linesize() + 4
-            else:
-                for line in wrap_text(fline.text, max_w, font):
-                    render_y = logical_y - self.help_screen_offset
-                    if render_y + font.get_linesize() >= top and render_y <= bottom:
-                        draw_text(self.hud_surface, (x, render_y), 'left', 'top', line, colour, size, font)
-                    logical_y += font.get_linesize() + 4
-
-            logical_y += 6  # extra spacing between FLine entries
-
-        content_height = max(0, logical_y - top)
-        view_height = max(0, bottom - top)
-        self.help_max_offset = max(0, content_height - view_height)
-        self.help_screen_offset = max(0, min(self.help_screen_offset, self.help_max_offset))
-
-        scrollbar_h = max(0, bottom - top)
-        bar_bg = pg.Rect(scrollbar_x, top, scrollbar_w, scrollbar_h)
-        pg.draw.rect(self.hud_surface, (55, 55, 55), bar_bg)
-
-        if content_height > 0:
-            if self.help_max_offset == 0:
-                thumb_h = scrollbar_h
-                thumb_y = top
-            else:
-                thumb_h = max(24, int(scrollbar_h * (view_height / content_height)))
-                max_thumb_y = top + scrollbar_h - thumb_h
-                thumb_y = top + int((self.help_screen_offset / self.help_max_offset) * (max_thumb_y - top))
-
-            thumb = pg.Rect(scrollbar_x, thumb_y, scrollbar_w, thumb_h)
-            pg.draw.rect(self.hud_surface, (185, 185, 185), thumb)
-
     def draw_hud(self):
 
         self.hud_surface.fill((0, 0, 0, 0))  # clear with transparency
@@ -494,8 +413,9 @@ class GameScreen(State):
 
             if self.in_controls_screen:
                 self.draw_controls_screen()
-            elif self.in_help_screen:
-                self.draw_help_screen()
+            elif self.help_screen.state.visible:
+                self.help_screen.draw(self.hud_surface)
+                self.back_button.draw(self.hud_surface)
             else:
                 self.draw_pause_screen()
 
@@ -655,11 +575,11 @@ class GameScreen(State):
 
         # Meta controls
         if self.pressed(keys, pg.K_ESCAPE):
-            if self.in_controls_screen or self.in_help_screen:
+            if self.in_controls_screen or self.help_screen.state.visible:
                 self.in_controls_screen = False
-                self.in_help_screen = False
-                self.help_screen_offset = 0
-                self.help_scroll_vel = 0
+                self.help_screen.toggle_visibility()
+                self.help_screen.scroll_disp = 0
+                self.help_screen.scroll_vel = 0
             else:
                 self.paused = not self.paused
 
@@ -676,47 +596,47 @@ class GameScreen(State):
             self.game.audio_manager.stop_all(exclude=[SFXChannelID.MUSIC])
 
         if self.paused and not (self.in_menu_confirmation or self.in_restart_confirmation):
-            if self.controls_button.check_click(events) and not self.in_controls_screen and not self.in_help_screen:
+            if self.controls_button.check_click(events) and not self.in_controls_screen and not self.help_screen.state.visible:
                 self.in_controls_screen = True
-                self.in_help_screen = False
-            elif self.help_button.check_click(events) and not self.in_controls_screen and not self.in_help_screen:
-                self.in_help_screen = True
+                self.help_screen.state.visible = False
+            elif self.help_button.check_click(events) and not self.in_controls_screen and not self.help_screen.state.visible:
+                self.help_screen.state.visible = True
                 self.in_controls_screen = False
-            elif self.back_button.check_click(events) and (self.in_controls_screen or self.in_help_screen):
+            elif self.back_button.check_click(events) and (self.in_controls_screen or self.help_screen.state.visible):
                 self.in_controls_screen = False
-                self.in_help_screen = False
-                self.help_screen_offset = 0.0
-                self.help_scroll_vel = 0.0
+                self.help_screen.state.visible = False
+                self.help_screen.scroll_disp = 0.0
+                self.help_screen.scroll_vel = 0.0
 
-            if self.in_help_screen:
+            if self.help_screen.state.visible:
                 scroll_accel = 0.004 * dt
                 wheel_impulse = 25
 
                 for event in events:
                     if event.type == pg.MOUSEWHEEL:
-                        self.help_scroll_vel -= event.y * wheel_impulse
+                        self.help_screen.scroll_vel -= event.y * wheel_impulse
 
                 if keys[pg.K_UP]:
-                    self.help_scroll_vel -= scroll_accel
+                    self.help_screen.scroll_vel -= scroll_accel
                 if keys[pg.K_DOWN]:
-                    self.help_scroll_vel += scroll_accel
+                    self.help_screen.scroll_vel += scroll_accel
                 if self.pressed(keys, pg.K_PAGEUP):
-                    self.help_scroll_vel -= 220
+                    self.help_screen.scroll_vel -= 220
                 if self.pressed(keys, pg.K_PAGEDOWN):
-                    self.help_scroll_vel += 220
+                    self.help_screen.scroll_vel += 220
 
-                self.help_screen_offset += self.help_scroll_vel
+                self.help_screen.scroll_disp += self.help_screen.scroll_vel
 
-                self.help_scroll_vel *= 0.85
-                if abs(self.help_scroll_vel) < 0.02:
-                    self.help_scroll_vel = 0.0
+                self.help_screen.scroll_vel *= 0.85
+                if abs(self.help_screen.scroll_vel) < 0.02:
+                    self.help_screen.scroll_vel = 0.0
 
-                if self.help_screen_offset < 0:
-                    self.help_screen_offset = 0
-                    self.help_scroll_vel = 0.0
-                elif self.help_screen_offset > self.help_max_offset:
-                    self.help_screen_offset = self.help_max_offset
-                    self.help_scroll_vel = 0.0
+                if self.help_screen.scroll_disp < 0:
+                    self.help_screen.scroll_disp = 0
+                    self.help_screen.scroll_vel = 0.0
+                elif self.help_screen.scroll_disp > self.help_screen.scroll_disp_max:
+                    self.help_screen.scroll_disp = self.help_screen.scroll_disp_max
+                    self.help_screen.scroll_vel = 0.0
 
             if self.continue_button.check_click(events):
                 self.paused = False
