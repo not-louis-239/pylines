@@ -474,6 +474,9 @@ class GameScreen(State):
         self.sun.update()
         self.moon.update()
 
+        if self.help_screen.state.visible:
+            self.help_screen.update(dt)
+
         if self.paused:
             return
 
@@ -578,8 +581,7 @@ class GameScreen(State):
             if self.in_controls_screen or self.help_screen.state.visible:
                 self.in_controls_screen = False
                 self.help_screen.toggle_visibility()
-                self.help_screen.scroll_disp = 0
-                self.help_screen.scroll_vel = 0
+                self.help_screen.scroll_physics.reset()
             else:
                 self.paused = not self.paused
 
@@ -605,38 +607,10 @@ class GameScreen(State):
             elif self.back_button.check_click(events) and (self.in_controls_screen or self.help_screen.state.visible):
                 self.in_controls_screen = False
                 self.help_screen.state.visible = False
-                self.help_screen.scroll_disp = 0.0
-                self.help_screen.scroll_vel = 0.0
+                self.help_screen.scroll_physics.reset()
 
             if self.help_screen.state.visible:
-                scroll_accel = 0.004 * dt
-                wheel_impulse = 25
-
-                for event in events:
-                    if event.type == pg.MOUSEWHEEL:
-                        self.help_screen.scroll_vel -= event.y * wheel_impulse
-
-                if keys[pg.K_UP]:
-                    self.help_screen.scroll_vel -= scroll_accel
-                if keys[pg.K_DOWN]:
-                    self.help_screen.scroll_vel += scroll_accel
-                if self.pressed(keys, pg.K_PAGEUP):
-                    self.help_screen.scroll_vel -= 220
-                if self.pressed(keys, pg.K_PAGEDOWN):
-                    self.help_screen.scroll_vel += 220
-
-                self.help_screen.scroll_disp += self.help_screen.scroll_vel
-
-                self.help_screen.scroll_vel *= 0.85
-                if abs(self.help_screen.scroll_vel) < 0.02:
-                    self.help_screen.scroll_vel = 0.0
-
-                if self.help_screen.scroll_disp < 0:
-                    self.help_screen.scroll_disp = 0
-                    self.help_screen.scroll_vel = 0.0
-                elif self.help_screen.scroll_disp > self.help_screen.scroll_disp_max:
-                    self.help_screen.scroll_disp = self.help_screen.scroll_disp_max
-                    self.help_screen.scroll_vel = 0.0
+                self.help_screen.take_input(keys, events, dt)
 
             if self.continue_button.check_click(events):
                 self.paused = False
