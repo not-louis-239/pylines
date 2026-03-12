@@ -697,8 +697,10 @@ class GameScreen(State):
             # While map is shown: control zoom
             if keys[pg.K_w]:
                 self.map_menu.viewport_zoom /= 2.5 ** (dt/1000)
+                self.map_menu.render_dirty = True
             if keys[pg.K_s]:
                 self.map_menu.viewport_zoom *= 2.5 ** (dt/1000)
+                self.map_menu.render_dirty = True
             self.map_menu.viewport_zoom = clamp(self.map_menu.viewport_zoom, (C.MAP_ZOOM_MIN, C.MAP_ZOOM_MAX))
         else:
             # Throttle controls
@@ -720,25 +722,31 @@ class GameScreen(State):
             if keys[pg.K_UP]:
                 self.map_menu.viewport_pos.z -= panning_speed * dt/1000
                 self.map_menu.viewport_auto_panning = False
+                self.map_menu.render_dirty = True
             if keys[pg.K_DOWN]:
                 self.map_menu.viewport_pos.z += panning_speed * dt/1000
                 self.map_menu.viewport_auto_panning = False
+                self.map_menu.render_dirty = True
             if keys[pg.K_LEFT]:
                 self.map_menu.viewport_pos.x -= panning_speed * dt/1000
                 self.map_menu.viewport_auto_panning = False
+                self.map_menu.render_dirty = True
             if keys[pg.K_RIGHT]:
                 self.map_menu.viewport_pos.x += panning_speed * dt/1000
                 self.map_menu.viewport_auto_panning = False
+                self.map_menu.render_dirty = True
 
             # Reset map viewport pos
             if self.pressed(keys, pg.K_SPACE):
                 self.map_menu.viewport_pos = self.plane.pos.copy()
                 self.map_menu.viewport_auto_panning = True
+                self.map_menu.render_dirty = True
         else:
             # Reset map viewport pos once map goes fully down
             if not self.map_menu.state.animation_open:
                 self.map_menu.viewport_pos = self.plane.pos.copy()
                 self.map_menu.viewport_auto_panning = True
+                self.map_menu.render_dirty = True
 
             # Pitch
             direction: Literal[-1, 1] = -1 if self.game.save_data.invert_y_axis else 1

@@ -57,10 +57,8 @@ class _MapSurfaceCache:
         self.rotated_planes_cache: dict[int, Surface] = {}
         self.runway_info_cache: dict[int, Surface] = {}
 
-        # Dynamic caches - must be updated sometimes, e.g. when the viewport changes position or zoom level
-        self.display_surface: Surface = Surface((C.MAP_OVERLAY_SIZE, C.MAP_OVERLAY_SIZE), pg.SRCALPHA)
-        self.grid_surface: Surface = Surface((C.MAP_OVERLAY_SIZE, C.MAP_OVERLAY_SIZE), pg.SRCALPHA)
-        self.zone_overlay_surface = Surface((C.MAP_OVERLAY_SIZE, C.MAP_OVERLAY_SIZE), pg.SRCALPHA)
+        # Dynamic caches that may change during runtime
+        self.grid_cache: Surface = pg.Surface((C.MAP_OVERLAY_SIZE, C.MAP_OVERLAY_SIZE), flags=pg.SRCALPHA)
 
         self.populate_static_caches()
 
@@ -134,6 +132,8 @@ class MapMenu(PopupMenu):
         self.grid_labels_x: dict[int, Surface] = {}  # value, surface
         self.grid_labels_y: dict[int, Surface] = {}  # value, surface
         self.grid_detail_level: int | None = None
+
+        self.render_dirty: bool = True  # Start as True to force an initial draw
 
         self.build()
 
@@ -338,11 +338,6 @@ class MapMenu(PopupMenu):
         # Clear surface to black first
         self.surface.fill((0, 0, 0, 255))
 
-        # Map border
-        outer_map_rect = pg.Rect(0, 0, C.MAP_OVERLAY_SIZE+10, C.MAP_OVERLAY_SIZE+10)
-        outer_map_rect.center = (int(ctx.map_centre.x), int(ctx.map_centre.y))
-        pg.draw.rect(ctx.display_surf, cols.MAP_BORDER_COLOUR, outer_map_rect)
-
     def _draw_tiles(self, ctx: _MapRenderContext) -> None:
         NUM_TILES = math.ceil(C.HALF_WORLD_SIZE*2 / (C.METRES_PER_TILE))
 
@@ -516,7 +511,7 @@ class MapMenu(PopupMenu):
         icon_rect = icon_surf.get_rect(center=(icon_x, icon_z))
         self.surface.blit(icon_surf, icon_rect)
 
-    def _draw_grid(self, ctx: _MapRenderContext, minor_interval) -> None:
+    def _redraw_grid(self, ctx: _MapRenderContext, minor_interval: int) -> None:
         def world_to_map(world_x, world_z) -> tuple[float, float]:
             screen_x = (world_x - ctx.view_topleft.x) * (1/self.viewport_zoom)
             screen_y = (world_z - ctx.view_topleft.y) * (1/self.viewport_zoom)
@@ -526,30 +521,29 @@ class MapMenu(PopupMenu):
         GRID_MAJOR_COL = (255, 255, 255, 140)
         ORIGIN_POINT_COLOUR = (0, 255, 0)
 
-        MINOR_INTERVAL = minor_interval
-        MAJOR_INTERVAL = 5 * MINOR_INTERVAL
+        major_interval = 5 * minor_interval
 
         self.grid_surface.fill((0, 0, 0, 0))
-        if self.grid_detail_level != MINOR_INTERVAL:  # Clear label dicts when detail level changes
+        if self.grid_detail_level != minor_interval:  # Clear label dicts when detail level changes
             self.grid_labels_x.clear()
             self.grid_labels_y.clear()
-            self.grid_detail_level = MINOR_INTERVAL
+            self.grid_detail_level = minor_interval
 
         label_font = pg.font.Font(self.game.assets.fonts.monospaced, 18)
 
         # Grid overlay bounds
-        start_grid_x = int(ctx.view_topleft.x // MINOR_INTERVAL) * MINOR_INTERVAL
-        end_grid_x = int((ctx.view_topleft.x + C.MAP_OVERLAY_SIZE * self.viewport_zoom) // MINOR_INTERVAL) * MINOR_INTERVAL + MINOR_INTERVAL
-        start_grid_z = int(ctx.view_topleft.y // MINOR_INTERVAL) * MINOR_INTERVAL
-        end_grid_z = int((ctx.view_topleft.y + C.MAP_OVERLAY_SIZE * self.viewport_zoom) // MINOR_INTERVAL) * MINOR_INTERVAL + MINOR_INTERVAL
+        start_grid_x = int(ctx.view_topleft.x // minor_interval) * minor_interval
+        end_grid_x = int((ctx.view_topleft.x + C.MAP_OVERLAY_SIZE * self.viewport_zoom) // minor_interval) * minor_interval + minor_interval
+        start_grid_z = int(ctx.view_topleft.y // minor_interval) * minor_interval
+        end_grid_z = int((ctx.view_topleft.y + C.MAP_OVERLAY_SIZE * self.viewport_zoom) // minor_interval) * minor_interval + minor_interval
 
         # Draw grid
-        for world_x in range(start_grid_x, end_grid_x, MINOR_INTERVAL):
+        for world_x in range(start_grid_x, end_grid_x, minor_interval):
             p1 = world_to_map(world_x, ctx.view_topleft.y)
             p2 = world_to_map(world_x, ctx.view_topleft.y + C.MAP_OVERLAY_SIZE * self.viewport_zoom)
-            pg.draw.line(self.grid_surface, GRID_MAJOR_COL if abs(world_x % MAJOR_INTERVAL) < C.MATH_EPSILON else GRID_MINOR_COL, p1, p2, 1)
+            pg.draw.line(self.grid_surface, GRID_MAJOR_COL if abs(world_x % major_interval) < C.MATH_EPSILON else GRID_MINOR_COL, p1, p2, 1)
 
-            if abs(world_x % MAJOR_INTERVAL) <= C.MATH_EPSILON:
+            if abs(world_x % major_interval) <= C.MATH_EPSILON:
                 label_val = int(world_x)
                 label_surf = self.grid_labels_x.get(label_val)
                 if label_surf is None:
@@ -558,12 +552,12 @@ class MapMenu(PopupMenu):
                 label_rect = label_surf.get_rect(center=(p1[0], C.MAP_OVERLAY_SIZE - 15))
                 self.grid_surface.blit(label_surf, label_rect)
 
-        for world_z in range(start_grid_z, end_grid_z, MINOR_INTERVAL):
+        for world_z in range(start_grid_z, end_grid_z, minor_interval):
             p1 = world_to_map(ctx.view_topleft.x, world_z)
             p2 = world_to_map(ctx.view_topleft.x + C.MAP_OVERLAY_SIZE * self.viewport_zoom, world_z)
-            pg.draw.line(self.grid_surface, GRID_MAJOR_COL if abs(world_z % MAJOR_INTERVAL) < C.MATH_EPSILON else GRID_MINOR_COL, p1, p2, 1)
+            pg.draw.line(self.grid_surface, GRID_MAJOR_COL if abs(world_z % major_interval) < C.MATH_EPSILON else GRID_MINOR_COL, p1, p2, 1)
 
-            if abs(world_z % MAJOR_INTERVAL) <= C.MATH_EPSILON:
+            if abs(world_z % major_interval) <= C.MATH_EPSILON:
                 label_val = int(world_z)
                 label_surf = self.grid_labels_y.get(label_val)
                 if label_surf is None:
@@ -578,9 +572,6 @@ class MapMenu(PopupMenu):
         origin_map_x, origin_map_y = world_to_map(0, 0)
         if 0 <= origin_map_x <= C.MAP_OVERLAY_SIZE and 0 <= origin_map_y <= C.MAP_OVERLAY_SIZE:
             pg.draw.circle(self.grid_surface, ORIGIN_POINT_COLOUR, (origin_map_x, origin_map_y), 5)
-
-        # Blit grid surface onto map surface
-        self.surface.blit(self.grid_surface, (0, 0))
 
     def _draw_legends(self, ctx: _MapRenderContext) -> None:
         # Show building legend
@@ -699,6 +690,7 @@ class MapMenu(PopupMenu):
 
         if self.viewport_auto_panning:
             # Auto-update to the plane's position if auto-panning
+            self.render_dirty = True
             self.viewport_pos = self.plane.pos.copy()
 
         # Build context
@@ -714,22 +706,36 @@ class MapMenu(PopupMenu):
         target_size = self.viewport_zoom * C.MAP_MAX_SCALE_BAR_SIZE
         scale_bar_length_world = max([l for l in C.SCALE_BAR_LENGTHS if l <= target_size], default=C.SCALE_BAR_LENGTHS[0])
 
+        # Map border
+        outer_map_rect = pg.Rect(0, 0, C.MAP_OVERLAY_SIZE+10, C.MAP_OVERLAY_SIZE+10)
+        outer_map_rect.center = (int(ctx.map_centre.x), int(ctx.map_centre.y))
+        pg.draw.rect(ctx.display_surf, cols.MAP_BORDER_COLOUR, outer_map_rect)
+
         # Draw elements
-        self._draw_base(ctx)
-        self._draw_tiles(ctx)
-        self._draw_building_icons(ctx)
-        self._draw_runways(ctx)
-        self._draw_prohibited_zones(ctx, show_advanced_info)
+        if self.render_dirty:
+            self._draw_base(ctx)
+            self._draw_tiles(ctx)
+            self._draw_building_icons(ctx)
+            self._draw_runways(ctx)
+            self._draw_prohibited_zones(ctx, show_advanced_info)
+
         self._draw_plane_icon()
         self._draw_navigation_info(scale_bar_length_world)
 
         # Show advanced info
         if show_advanced_info:
             self._draw_legends(ctx)
-            self._draw_grid(ctx, scale_bar_length_world)
+
+            if self.render_dirty:
+                self._redraw_grid(ctx, scale_bar_length_world)
+                # Blit grid surface onto map surface
+            self.surface.blit(self.grid_surface, (0, 0))
 
         # Show tooltip
         self._draw_tooltip(ctx, mouse_down, mouse_pos, map_rect)
 
         # Blit the completed map to the main HUD surface
         surface.blit(self.surface, map_rect)
+
+        if self.render_dirty:
+            self.render_dirty = False
