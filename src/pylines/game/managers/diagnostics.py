@@ -97,6 +97,10 @@ class Timespans:
     def get_ms_durations(self) -> list[float]:
         return [t.duration_ms() for t in self.intervals]
 
+class _DiagnosticsTextCache:
+    def __init__(self) -> None:
+        pass
+
 class DiagnosticsManager(PopupMenu):
     DISPLAY_RECT_W: int = 600
     DISPLAY_RECT_H: int = 250
@@ -119,6 +123,7 @@ class DiagnosticsManager(PopupMenu):
     def __init__(self, game: Game) -> None:
         super().__init__(game)
 
+        self._text_cache: _DiagnosticsTextCache = _DiagnosticsTextCache()
         self.static_bg_surface: pg.Surface = pg.Surface((C.WN_W, C.WN_H), pg.SRCALPHA)
         self.static_fg_surface: pg.Surface = pg.Surface((C.WN_W, C.WN_H), pg.SRCALPHA)
         self.populate_static_surfaces()  # Must be called *after* creating the surfaces
