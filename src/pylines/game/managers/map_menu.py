@@ -505,15 +505,16 @@ class MapMenu(PopupMenu):
 
     def _draw_plane_icon(self) -> None:
         _, yaw, _ = self.plane.get_rot()
+        icon_yaw = int(round(yaw, ndigits=-1)) % 360  # using `ndigits=-1` rounds to nearest 10
 
         # Draw plane icon
         cx, cz = C.MAP_OVERLAY_SIZE/2, C.MAP_OVERLAY_SIZE/2
         icon_x = cx - (self.viewport_pos.x - self.plane.pos.x) / self.viewport_zoom
         icon_z = cz - (self.viewport_pos.z - self.plane.pos.z) / self.viewport_zoom
 
-        plane_icon_rotated = pg.transform.rotate(self.game.assets.images.plane_icon, -yaw)
-        rotated_icon_rect = plane_icon_rotated.get_rect(center=(icon_x, icon_z))
-        self.surface.blit(plane_icon_rotated, rotated_icon_rect)
+        icon_surf = self._surface_cache.rotated_planes_cache[icon_yaw]
+        icon_rect = icon_surf.get_rect(center=(icon_x, icon_z))
+        self.surface.blit(icon_surf, icon_rect)
 
     def _draw_grid(self, ctx: _MapRenderContext, minor_interval) -> None:
         def world_to_map(world_x, world_z) -> tuple[float, float]:
