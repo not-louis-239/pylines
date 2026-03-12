@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import math
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Callable, cast
 
 import numpy as np
@@ -35,28 +36,48 @@ if TYPE_CHECKING:
     from pylines.game.game import Game
     from pylines.objects.objects import Plane
 
+@dataclass
+class _MapRenderContext:
+    display_surf: Surface
+    zoom: float
+    view_topleft: pg.Vector2  # Vector2 allows referencing `x` and `y` attributes
+    view_half_size_m: float
+    map_centre: pg.Vector2
+
+class _MapSurfaceCache:
+    def __init__(self) -> None:
+        self.display_surface: Surface = Surface((C.MAP_OVERLAY_SIZE, C.MAP_OVERLAY_SIZE), pg.SRCALPHA)
+        self.grid_surface: Surface = Surface((C.MAP_OVERLAY_SIZE, C.MAP_OVERLAY_SIZE), pg.SRCALPHA)
+        self.zone_overlay_surface = Surface((C.MAP_OVERLAY_SIZE, C.MAP_OVERLAY_SIZE), pg.SRCALPHA)
+
+    def save_surfaces(self, display_surface: Surface, grid_surface: Surface, zone_overlay_surface: Surface):
+        self.display_surface = display_surface
+        self.grid_surface = grid_surface
+        self.zone_overlay_surface = zone_overlay_surface
 
 class MapMenu(PopupMenu):
     def __init__(self, game: Game, plane: Plane) -> None:
         super().__init__(game)
+
+        self.surface_cache = _MapSurfaceCache()
         self.plane = plane
         self.viewport_pos: pg.Vector3 = self.plane.pos.copy()
         self.viewport_auto_panning: bool = True
 
         # Cached surface
-        self.surface: Surface = pg.Surface((C.MAP_OVERLAY_SIZE, C.MAP_OVERLAY_SIZE), pg.SRCALPHA)
+        self.surface: Surface = Surface((C.MAP_OVERLAY_SIZE, C.MAP_OVERLAY_SIZE), pg.SRCALPHA)
 
         # Surface to which to draw prohibited zones before blitting to a main HUD surface
-        self.zone_overlay = pg.Surface((C.MAP_OVERLAY_SIZE, C.MAP_OVERLAY_SIZE), pg.SRCALPHA)
+        self.zone_overlay = Surface((C.MAP_OVERLAY_SIZE, C.MAP_OVERLAY_SIZE), pg.SRCALPHA)
         self.zone_overlay.fill((0, 0, 0, 0))
 
         # Grid for advanced map info
-        self.grid_surface = pg.Surface((C.MAP_OVERLAY_SIZE, C.MAP_OVERLAY_SIZE), pg.SRCALPHA)
+        self.grid_surface = Surface((C.MAP_OVERLAY_SIZE, C.MAP_OVERLAY_SIZE), pg.SRCALPHA)
         self.grid_surface.fill((0, 0, 0, 0))
 
         # Cache numeric grid labels to avoid wasteful text redraws
-        self.grid_labels_x: dict[int, pg.Surface] = {}  # value, surface
-        self.grid_labels_y: dict[int, pg.Surface] = {}  # value, surface
+        self.grid_labels_x: dict[int, Surface] = {}  # value, surface
+        self.grid_labels_y: dict[int, Surface] = {}  # value, surface
         self.grid_detail_level: int | None = None
 
         self.build()
@@ -65,7 +86,7 @@ class MapMenu(PopupMenu):
         assert self.game.env is not None
 
         width, height = 200, 360
-        surf = pg.Surface((width, height), pg.SRCALPHA)
+        surf = Surface((width, height), pg.SRCALPHA)
         surf.fill((0, 0, 0, 180))
         pg.draw.rect(surf, cols.MAP_BORDER_COLOUR, surf.get_rect(), 2)
 
@@ -85,7 +106,7 @@ class MapMenu(PopupMenu):
             return 0
 
         screen_y = 60
-        for idx, (name, def_) in enumerate(items):
+        for idx, (_, def_) in enumerate(items):
             draw_text(surf, (75, screen_y), 'left', 'centre', f"{def_.common_name}", cols.WHITE, 15, self.game.assets.fonts.monospaced)
             draw_building_icon(surf, 35, screen_y, def_.appearance)
 
@@ -98,7 +119,7 @@ class MapMenu(PopupMenu):
 
     def generate_height_legend(self) -> Surface:
         width, height = 180, 360
-        surf = pg.Surface((width, height), pg.SRCALPHA)
+        surf = Surface((width, height), pg.SRCALPHA)
         surf.fill((0, 0, 0, 180))
         pg.draw.rect(surf, cols.MAP_BORDER_COLOUR, surf.get_rect(), 2)
 
@@ -157,7 +178,7 @@ class MapMenu(PopupMenu):
         HEIGHT_COLOUR_LOOKUP = [height_to_colour(h) for h in range(-4_000, 6_001)]
 
         NUM_TILES = math.ceil(C.HALF_WORLD_SIZE*2 / (C.METRES_PER_TILE))
-        self.map_tiles: list[list[pg.Surface]] = []
+        self.map_tiles: list[list[Surface]] = []
 
         # Make cache directory if it doesn't exist
         cache_dir = DIRS.cache / "map_tiles"
@@ -165,7 +186,7 @@ class MapMenu(PopupMenu):
 
         # Loop over tiles
         for tile_z in range(NUM_TILES):
-            tile_row: list[pg.Surface] = []
+            tile_row: list[Surface] = []
             for tile_x in range(NUM_TILES):
                 tile_filename = f"tile_{tile_x}_{tile_z}.png"
                 tile_cache_path = cache_dir / tile_filename
@@ -179,7 +200,7 @@ class MapMenu(PopupMenu):
                 tile_start_z = -C.HALF_WORLD_SIZE + C.METRES_PER_TILE * tile_z
 
                 # Make a new Surface for each tile
-                current_tile = pg.Surface((C.MAP_PIXELS_PER_TILE, C.MAP_PIXELS_PER_TILE)).convert()
+                current_tile = Surface((C.MAP_PIXELS_PER_TILE, C.MAP_PIXELS_PER_TILE)).convert()
 
                 # Vectorized tile sampling from heightmap
                 env = self.game.env
@@ -247,7 +268,7 @@ class MapMenu(PopupMenu):
         # Height key setup
         self.HEIGHT_KEY_W = 25
         self.HEIGHT_KEY_H = 280
-        self.height_key: pg.Surface = pg.Surface((self.HEIGHT_KEY_W, self.HEIGHT_KEY_H))
+        self.height_key: Surface = Surface((self.HEIGHT_KEY_W, self.HEIGHT_KEY_H))
 
         for i in range(self.HEIGHT_KEY_H):
             # i goes from 0 (top) to self.HEIGHT_KEY_H - 1 (bottom)
@@ -258,38 +279,22 @@ class MapMenu(PopupMenu):
         self.building_legend_surface = self.generate_building_legend()
         self.height_legend_surface = self.generate_height_legend()
 
-    def draw(self, surface: Surface, show_advanced_info: bool, mouse_down: bool, mouse_pos: tuple[float, float]) -> None:
-        assert self.game.env is not None
-
-        _, yaw, _ = self.plane.get_rot()
-
+    def _draw_base(self, ctx: _MapRenderContext) -> None:
         self.surface.fill((0, 0, 0, 255))
-        NUM_TILES = math.ceil(C.HALF_WORLD_SIZE*2 / (C.METRES_PER_TILE))
-
-        if self.viewport_auto_panning:
-            self.viewport_pos = self.plane.pos.copy()
-
-        px, _, pz = self.viewport_pos
-
-        # Render base map
-        map_centre = C.WN_W//2, int(285 + C.WN_H * (1 - self.state.animation_open))
 
         # Map border
         outer_map_rect = pg.Rect(0, 0, C.MAP_OVERLAY_SIZE+10, C.MAP_OVERLAY_SIZE+10)
-        outer_map_rect.center = map_centre
-        pg.draw.rect(surface, cols.MAP_BORDER_COLOUR, outer_map_rect)
+        outer_map_rect.center = (int(ctx.map_centre.x), int(ctx.map_centre.y))
+        pg.draw.rect(ctx.display_surf, cols.MAP_BORDER_COLOUR, outer_map_rect)
 
-        # Draw map tiles
-        # World coordinates of the top-left corner of the map viewport
-        viewport_half_size_metres = C.MAP_OVERLAY_SIZE / 2 * self.viewport_zoom
-        viewport_top_left_x = px - viewport_half_size_metres
-        viewport_top_left_z = pz - viewport_half_size_metres
+    def _draw_tiles(self, ctx: _MapRenderContext) -> None:
+        NUM_TILES = math.ceil(C.HALF_WORLD_SIZE*2 / (C.METRES_PER_TILE))
 
         # Tile indices for the visible area
-        start_tile_x = int((viewport_top_left_x + C.HALF_WORLD_SIZE) / C.METRES_PER_TILE)
-        start_tile_z = int((viewport_top_left_z + C.HALF_WORLD_SIZE) / C.METRES_PER_TILE)
-        end_tile_x = int((viewport_top_left_x + 2 * viewport_half_size_metres + C.HALF_WORLD_SIZE) / C.METRES_PER_TILE)
-        end_tile_z = int((viewport_top_left_z + 2 * viewport_half_size_metres + C.HALF_WORLD_SIZE) / C.METRES_PER_TILE)
+        start_tile_x = int((ctx.view_topleft.x + C.HALF_WORLD_SIZE) / C.METRES_PER_TILE)
+        start_tile_z = int((ctx.view_topleft.y + C.HALF_WORLD_SIZE) / C.METRES_PER_TILE)
+        end_tile_x = int((ctx.view_topleft.x + 2 * ctx.view_half_size_m + C.HALF_WORLD_SIZE) / C.METRES_PER_TILE)
+        end_tile_z = int((ctx.view_topleft.y + 2 * ctx.view_half_size_m + C.HALF_WORLD_SIZE) / C.METRES_PER_TILE)
 
         # Draw tiles
         for tile_z in range(start_tile_z, end_tile_z + 1):
@@ -304,10 +309,10 @@ class MapMenu(PopupMenu):
                 tile_world_x2 = tile_world_x + C.METRES_PER_TILE
                 tile_world_z2 = tile_world_z + C.METRES_PER_TILE
 
-                inter_left = max(tile_world_x, viewport_top_left_x)
-                inter_top = max(tile_world_z, viewport_top_left_z)
-                inter_right = min(tile_world_x2, viewport_top_left_x + 2 * viewport_half_size_metres)
-                inter_bottom = min(tile_world_z2, viewport_top_left_z + 2 * viewport_half_size_metres)
+                inter_left = max(tile_world_x, ctx.view_topleft.x)
+                inter_top = max(tile_world_z, ctx.view_topleft.y)
+                inter_right = min(tile_world_x2, ctx.view_topleft.x + 2 * ctx.view_half_size_m)
+                inter_bottom = min(tile_world_z2, ctx.view_topleft.y + 2 * ctx.view_half_size_m)
 
                 if inter_left >= inter_right or inter_top >= inter_bottom:
                     continue
@@ -318,8 +323,8 @@ class MapMenu(PopupMenu):
                 src_w = (inter_right - inter_left) * px_per_m
                 src_h = (inter_bottom - inter_top) * px_per_m
 
-                dest_x = (inter_left - viewport_top_left_x) / self.viewport_zoom
-                dest_y = (inter_top - viewport_top_left_z) / self.viewport_zoom
+                dest_x = (inter_left - ctx.view_topleft.x) / self.viewport_zoom
+                dest_y = (inter_top - ctx.view_topleft.y) / self.viewport_zoom
                 dest_w = (inter_right - inter_left) / self.viewport_zoom
                 dest_h = (inter_bottom - inter_top) / self.viewport_zoom
 
@@ -343,8 +348,8 @@ class MapMenu(PopupMenu):
                 world_w = (src_rect.w / px_per_m)
                 world_h = (src_rect.h / px_per_m)
 
-                dest_x = (world_left - viewport_top_left_x) / self.viewport_zoom
-                dest_y = (world_top - viewport_top_left_z) / self.viewport_zoom
+                dest_x = (world_left - ctx.view_topleft.x) / self.viewport_zoom
+                dest_y = (world_top - ctx.view_topleft.y) / self.viewport_zoom
                 dest_w = world_w / self.viewport_zoom
                 dest_h = world_h / self.viewport_zoom
                 dest_rect = pg.Rect(dest_x, dest_y, dest_w, dest_h)
@@ -353,72 +358,17 @@ class MapMenu(PopupMenu):
                 scaled_tile = pg.transform.scale(tile_crop, (max(1, int(dest_rect.w) + 1), max(1, int(dest_rect.h) + 1)))
                 self.surface.blit(scaled_tile, dest_rect)
 
+    def _draw_runways(self, ctx: _MapRenderContext) -> None:
+        assert self.game.env is not None
 
-        # Show buildings
-        if self.viewport_zoom < 10:  # Only show if zoomed in far enough for performance
-            for building in self.game.env.buildings:
-                # Calculate screen position for the building
-                screen_x = (building.pos.x - viewport_top_left_x) / self.viewport_zoom
-                screen_y = (building.pos.z - viewport_top_left_z) / self.viewport_zoom
-
-                SAFETY_BUFFER = 25  # for smoothness
-                if (-SAFETY_BUFFER < screen_x < C.MAP_OVERLAY_SIZE + SAFETY_BUFFER
-                and -SAFETY_BUFFER < screen_y < C.MAP_OVERLAY_SIZE + SAFETY_BUFFER):
-                    # Retrieve building definition
-                    def_ = self.game.env.building_defs[building.type_]
-
-                    # Draw the building icon
-                    draw_building_icon(self.surface, screen_x, screen_y, def_.appearance, self.viewport_zoom)
-
-        # Show building legend if advanced map info is enabled
-        if show_advanced_info:
-            surface.blit(
-                self.building_legend_surface,
-                (map_centre[0] + C.MAP_OVERLAY_SIZE/2 + 20, map_centre[1] - 180)
-            )
-
-
-        # Draw prohibited zones
-        self.zone_overlay.fill((0, 0, 0, 0))
-        for zone in self.game.env.prohibited_zones:
-            # Calculate top-left corner in world coordinates
-            zone_top_left_wld = zone.pos[0] - zone.dims[0] / 2, zone.pos[1] - zone.dims[1] / 2
-
-            # Calculate screen position and dimensions
-            screen_pos_x = (zone_top_left_wld[0] - viewport_top_left_x) / self.viewport_zoom
-            screen_pos_z = (zone_top_left_wld[1] - viewport_top_left_z) / self.viewport_zoom
-            screen_w = zone.dims[0] / self.viewport_zoom
-            screen_h = zone.dims[1] / self.viewport_zoom
-
-            zone_rect = pg.Rect(screen_pos_x, screen_pos_z, screen_w, screen_h)
-            pg.draw.rect(self.zone_overlay, cols.MAP_PROHIBITED_FILL_COLOR, zone_rect)
-
-        self.surface.blit(self.zone_overlay, (0, 0))
-
-        for zone in self.game.env.prohibited_zones:
-            zone_top_left_wld = zone.pos[0] - zone.dims[0] / 2, zone.pos[1] - zone.dims[1] / 2
-            screen_pos_x = (zone_top_left_wld[0] - viewport_top_left_x) / self.viewport_zoom
-            screen_pos_z = (zone_top_left_wld[1] - viewport_top_left_z) / self.viewport_zoom
-            screen_w = zone.dims[0] / self.viewport_zoom
-            screen_h = zone.dims[1] / self.viewport_zoom
-            zone_rect = pg.Rect(screen_pos_x, screen_pos_z, screen_w, screen_h)
-
-            pg.draw.rect(self.surface, cols.MAP_PROHIBITED_BORDER_COLOR, zone_rect, 2)
-
-            if show_advanced_info:
-                text_centre = (screen_pos_x + screen_w / 2, screen_pos_z + screen_h / 2)
-                draw_text(self.surface, text_centre, 'centre', 'centre', zone.code, cols.MAP_PROHIBITED_TEXT_COLOUR, 20, self.game.assets.fonts.monospaced)
-
-
-        # Draw runways
         for runway in self.game.env.runways:
             # Convert runway world dimensions to map pixel dimensions, 1 pix min size
             runway_width_on_map = max(1, int(runway.w / self.viewport_zoom))
             runway_length_on_map = max(1, int(runway.l / self.viewport_zoom))
 
             # Calculate the runway's center position on the map_surface in pixels.
-            runway_map_center_x = (runway.pos.x - viewport_top_left_x) / self.viewport_zoom
-            runway_map_center_y = (runway.pos.z - viewport_top_left_z) / self.viewport_zoom
+            runway_map_center_x = (runway.pos.x - ctx.view_topleft.x) / self.viewport_zoom
+            runway_map_center_y = (runway.pos.z - ctx.view_topleft.y) / self.viewport_zoom
 
             # Skip if completely off-screen
             half_diag = 0.5 * math.hypot(runway_width_on_map, runway_length_on_map)
@@ -429,7 +379,7 @@ class MapMenu(PopupMenu):
                 continue
 
             # Create a base surface for the runway. Its length (l) will align with the Y-axis when unrotated.
-            runway_surface_base = pg.Surface((runway_width_on_map, runway_length_on_map), pg.SRCALPHA)
+            runway_surface_base = Surface((runway_width_on_map, runway_length_on_map), pg.SRCALPHA)
             runway_surface_base.fill((cols.MAP_RUNWAY_COLOUR))
 
             rotated_runway_surface = pg.transform.rotate(runway_surface_base, -runway.heading)
@@ -453,6 +403,53 @@ class MapMenu(PopupMenu):
             info_text = f"{runway.heading:03d}°, {units.convert_units(runway.pos.y, units.METRES, units.FEET):,.0f} ft"
             draw_text(self.surface, (runway_cx, runway_cy - 30), 'centre', 'centre', info_text, cols.WHITE, 15, self.game.assets.fonts.monospaced)
 
+    def _draw_building_icons(self, ctx: _MapRenderContext) -> None:
+        assert self.game.env is not None
+
+        if self.viewport_zoom < 10:  # Only show if zoomed in far enough for performance
+            for building in self.game.env.buildings:
+                # Calculate screen position for the building
+                screen_x = (building.pos.x - ctx.view_topleft[0]) / self.viewport_zoom
+                screen_y = (building.pos.z - ctx.view_topleft[1]) / self.viewport_zoom
+
+                SAFETY_BUFFER = 25  # for smoothness
+                if (-SAFETY_BUFFER < screen_x < C.MAP_OVERLAY_SIZE + SAFETY_BUFFER
+                and -SAFETY_BUFFER < screen_y < C.MAP_OVERLAY_SIZE + SAFETY_BUFFER):
+                    # Retrieve building definition
+                    def_ = self.game.env.building_defs[building.type_]
+
+                    # Draw the building icon
+                    draw_building_icon(self.surface, screen_x, screen_y, def_.appearance, self.viewport_zoom)
+
+    def _draw_prohibited_zones(self, ctx: _MapRenderContext, show_advanced_info: bool) -> None:
+        assert self.game.env is not None
+
+        # Draw prohibited zones
+        self.zone_overlay.fill((0, 0, 0, 0))
+        for zone in self.game.env.prohibited_zones:
+            # Calculate top-left corner in world coordinates
+            zone_top_left_wld = zone.pos[0] - zone.dims[0] / 2, zone.pos[1] - zone.dims[1] / 2
+
+            # Calculate screen position and dimensions
+            screen_pos_x = (zone_top_left_wld[0] - ctx.view_topleft.x) / self.viewport_zoom
+            screen_pos_z = (zone_top_left_wld[1] - ctx.view_topleft.y) / self.viewport_zoom
+            screen_w = zone.dims[0] / self.viewport_zoom
+            screen_h = zone.dims[1] / self.viewport_zoom
+
+            zone_rect = pg.Rect(screen_pos_x, screen_pos_z, screen_w, screen_h)
+
+            pg.draw.rect(self.zone_overlay, cols.MAP_PROHIBITED_FILL_COLOR, zone_rect)
+            pg.draw.rect(self.zone_overlay, cols.MAP_PROHIBITED_BORDER_COLOR, zone_rect, border_radius=2)
+
+            if show_advanced_info:
+                text_centre = (screen_pos_x + screen_w / 2, screen_pos_z + screen_h / 2)
+                draw_text(self.surface, text_centre, 'centre', 'centre', zone.code, cols.MAP_PROHIBITED_TEXT_COLOUR, 20, self.game.assets.fonts.monospaced)
+
+        self.surface.blit(self.zone_overlay, (0, 0))
+
+    def _draw_plane_icon(self) -> None:
+        _, yaw, _ = self.plane.get_rot()
+
         # Draw plane icon
         cx, cz = C.MAP_OVERLAY_SIZE/2, C.MAP_OVERLAY_SIZE/2
         icon_x = cx - (self.viewport_pos.x - self.plane.pos.x) / self.viewport_zoom
@@ -462,78 +459,87 @@ class MapMenu(PopupMenu):
         rotated_icon_rect = plane_icon_rotated.get_rect(center=(icon_x, icon_z))
         self.surface.blit(plane_icon_rotated, rotated_icon_rect)
 
-        # Define scale bar size here as the world length is also used in grid rendering
-        MAX_SCALE_BAR_SIZE = 80  # pixels
-        target_size = self.viewport_zoom * MAX_SCALE_BAR_SIZE
+    def _draw_grid(self, ctx: _MapRenderContext, minor_interval) -> None:
+        GRID_MINOR_COL = (255, 255, 255, 80)
+        GRID_MAJOR_COL = (255, 255, 255, 140)
+        ORIGIN_POINT_COLOUR = (0, 255, 0)
 
-        scale_bar_length_world = max([l for l in C.SCALE_BAR_LENGTHS if l <= target_size], default=C.SCALE_BAR_LENGTHS[0])
+        MINOR_INTERVAL = minor_interval
+        MAJOR_INTERVAL = 5 * MINOR_INTERVAL
 
-        # Show grid
-        if show_advanced_info:
-            GRID_MINOR_COL = (255, 255, 255, 80)
-            GRID_MAJOR_COL = (255, 255, 255, 140)
-            ORIGIN_POINT_COLOUR = (0, 255, 0)
+        self.grid_surface.fill((0, 0, 0, 0))
+        if self.grid_detail_level != MINOR_INTERVAL:  # Clear label dicts when detail level changes
+            self.grid_labels_x.clear()
+            self.grid_labels_y.clear()
+            self.grid_detail_level = MINOR_INTERVAL
 
-            MINOR_INTERVAL = scale_bar_length_world
-            MAJOR_INTERVAL = 5 * MINOR_INTERVAL
+        label_font = pg.font.Font(self.game.assets.fonts.monospaced, 18)
 
-            self.grid_surface.fill((0, 0, 0, 0))
-            if self.grid_detail_level != MINOR_INTERVAL:  # Clear label dicts when detail level changes
-                self.grid_labels_x.clear()
-                self.grid_labels_y.clear()
-                self.grid_detail_level = MINOR_INTERVAL
+        def world_to_map(world_x, world_z) -> tuple[float, float]:
+            screen_x = (world_x - ctx.view_topleft.x) * (1/self.viewport_zoom)
+            screen_y = (world_z - ctx.view_topleft.y) * (1/self.viewport_zoom)
+            return screen_x, screen_y
 
-            label_font = pg.font.Font(self.game.assets.fonts.monospaced, 18)
+        # Grid overlay bounds
+        start_grid_x = int(ctx.view_topleft.x // MINOR_INTERVAL) * MINOR_INTERVAL
+        end_grid_x = int((ctx.view_topleft.x + C.MAP_OVERLAY_SIZE * self.viewport_zoom) // MINOR_INTERVAL) * MINOR_INTERVAL + MINOR_INTERVAL
+        start_grid_z = int(ctx.view_topleft.y // MINOR_INTERVAL) * MINOR_INTERVAL
+        end_grid_z = int((ctx.view_topleft.y + C.MAP_OVERLAY_SIZE * self.viewport_zoom) // MINOR_INTERVAL) * MINOR_INTERVAL + MINOR_INTERVAL
 
-            def world_to_map(world_x, world_z) -> tuple[float, float]:
-                screen_x = (world_x - viewport_top_left_x) * (1/self.viewport_zoom)
-                screen_y = (world_z - viewport_top_left_z) * (1/self.viewport_zoom)
-                return screen_x, screen_y
+        # Draw grid
+        for world_x in range(start_grid_x, end_grid_x, MINOR_INTERVAL):
+            p1 = world_to_map(world_x, ctx.view_topleft.y)
+            p2 = world_to_map(world_x, ctx.view_topleft.y + C.MAP_OVERLAY_SIZE * self.viewport_zoom)
+            pg.draw.line(self.grid_surface, GRID_MAJOR_COL if abs(world_x % MAJOR_INTERVAL) < C.MATH_EPSILON else GRID_MINOR_COL, p1, p2, 1)
 
-            # Grid overlay bounds
-            start_grid_x = int(viewport_top_left_x // MINOR_INTERVAL) * MINOR_INTERVAL
-            end_grid_x = int((viewport_top_left_x + C.MAP_OVERLAY_SIZE * self.viewport_zoom) // MINOR_INTERVAL) * MINOR_INTERVAL + MINOR_INTERVAL
-            start_grid_z = int(viewport_top_left_z // MINOR_INTERVAL) * MINOR_INTERVAL
-            end_grid_z = int((viewport_top_left_z + C.MAP_OVERLAY_SIZE * self.viewport_zoom) // MINOR_INTERVAL) * MINOR_INTERVAL + MINOR_INTERVAL
+            if abs(world_x % MAJOR_INTERVAL) <= C.MATH_EPSILON:
+                label_val = int(world_x)
+                label_surf = self.grid_labels_x.get(label_val)
+                if label_surf is None:
+                    label_surf = label_font.render(f"{label_val:,.0f}", True, cols.WHITE)
+                    self.grid_labels_x[label_val] = label_surf
+                label_rect = label_surf.get_rect(center=(p1[0], C.MAP_OVERLAY_SIZE - 15))
+                self.grid_surface.blit(label_surf, label_rect)
 
-            # Draw grid
-            for world_x in range(start_grid_x, end_grid_x, MINOR_INTERVAL):
-                p1 = world_to_map(world_x, viewport_top_left_z)
-                p2 = world_to_map(world_x, viewport_top_left_z + C.MAP_OVERLAY_SIZE * self.viewport_zoom)
-                pg.draw.line(self.grid_surface, GRID_MAJOR_COL if abs(world_x % MAJOR_INTERVAL) < C.MATH_EPSILON else GRID_MINOR_COL, p1, p2, 1)
+        for world_z in range(start_grid_z, end_grid_z, MINOR_INTERVAL):
+            p1 = world_to_map(ctx.view_topleft.x, world_z)
+            p2 = world_to_map(ctx.view_topleft.x + C.MAP_OVERLAY_SIZE * self.viewport_zoom, world_z)
+            pg.draw.line(self.grid_surface, GRID_MAJOR_COL if abs(world_z % MAJOR_INTERVAL) < C.MATH_EPSILON else GRID_MINOR_COL, p1, p2, 1)
 
-                if abs(world_x % MAJOR_INTERVAL) <= C.MATH_EPSILON:
-                    label_val = int(world_x)
-                    label_surf = self.grid_labels_x.get(label_val)
-                    if label_surf is None:
-                        label_surf = label_font.render(f"{label_val:,.0f}", True, cols.WHITE)
-                        self.grid_labels_x[label_val] = label_surf
-                    label_rect = label_surf.get_rect(center=(p1[0], C.MAP_OVERLAY_SIZE - 15))
-                    self.grid_surface.blit(label_surf, label_rect)
+            if abs(world_z % MAJOR_INTERVAL) <= C.MATH_EPSILON:
+                label_val = int(world_z)
+                label_surf = self.grid_labels_y.get(label_val)
+                if label_surf is None:
+                    label_surf = label_font.render(f"{label_val:,.0f}", True, cols.WHITE)
+                    self.grid_labels_y[label_val] = label_surf
+                label_rect = label_surf.get_rect()
+                label_rect.left = 5
+                label_rect.centery = int(p1[1])
+                self.grid_surface.blit(label_surf, label_rect)
 
-            for world_z in range(start_grid_z, end_grid_z, MINOR_INTERVAL):
-                p1 = world_to_map(viewport_top_left_x, world_z)
-                p2 = world_to_map(viewport_top_left_x + C.MAP_OVERLAY_SIZE * self.viewport_zoom, world_z)
-                pg.draw.line(self.grid_surface, GRID_MAJOR_COL if abs(world_z % MAJOR_INTERVAL) < C.MATH_EPSILON else GRID_MINOR_COL, p1, p2, 1)
+        # Draw origin
+        origin_map_x, origin_map_y = world_to_map(0, 0)
+        if 0 <= origin_map_x <= C.MAP_OVERLAY_SIZE and 0 <= origin_map_y <= C.MAP_OVERLAY_SIZE:
+            pg.draw.circle(self.grid_surface, ORIGIN_POINT_COLOUR, (origin_map_x, origin_map_y), 5)
 
-                if abs(world_z % MAJOR_INTERVAL) <= C.MATH_EPSILON:
-                    label_val = int(world_z)
-                    label_surf = self.grid_labels_y.get(label_val)
-                    if label_surf is None:
-                        label_surf = label_font.render(f"{label_val:,.0f}", True, cols.WHITE)
-                        self.grid_labels_y[label_val] = label_surf
-                    label_rect = label_surf.get_rect()
-                    label_rect.left = 5
-                    label_rect.centery = int(p1[1])
-                    self.grid_surface.blit(label_surf, label_rect)
+        # Blit grid surface onto map surface
+        self.surface.blit(self.grid_surface, (0, 0))
 
-            # Draw origin
-            origin_map_x, origin_map_y = world_to_map(0, 0)
-            if 0 <= origin_map_x <= C.MAP_OVERLAY_SIZE and 0 <= origin_map_y <= C.MAP_OVERLAY_SIZE:
-                pg.draw.circle(self.grid_surface, ORIGIN_POINT_COLOUR, (origin_map_x, origin_map_y), 5)
+    def _draw_legends(self, ctx: _MapRenderContext) -> None:
+        # Show building legend
+        ctx.display_surf.blit(
+            self.building_legend_surface,
+            (ctx.map_centre[0] + C.MAP_OVERLAY_SIZE/2 + 20, ctx.map_centre[1] - 180)
+        )
 
-            # Blit grid surface onto map surface
-            self.surface.blit(self.grid_surface, (0, 0))
+        # Show height key
+        ctx.display_surf.blit(
+            self.height_legend_surface,
+            (C.WN_W//2 - C.MAP_OVERLAY_SIZE//2 - 200, ctx.map_centre[1] - 180)
+        )
+
+    def _draw_navigation_info(self, ctx: _MapRenderContext, scale_bar_length_world: float) -> None:
+        assert self.game.env is not None
 
         # North indicator - draw an arrow pointing upwards
         north_indicator_size = 20
@@ -576,14 +582,14 @@ class MapMenu(PopupMenu):
         plane_pos_flat = pg.Vector3(self.plane.pos.x, 0, self.plane.pos.z)
         vel_flat = pg.Vector3(self.plane.vel.x, 0, self.plane.vel.z)
 
-        vec_to_dest = dest_pos_flat - plane_pos_flat
-        distance = vec_to_dest.length()
+        to_dest = dest_pos_flat - plane_pos_flat
+        distance = to_dest.length()
 
         if distance <= C.MATH_EPSILON:
             # Very small distance -> already at destination
             eta_seconds = 0
         else:
-            direction = vec_to_dest.normalize()
+            direction = to_dest.normalize()
             ground_speed_towards_dest = vel_flat.dot(direction)
 
             eta_seconds: float | None
@@ -607,48 +613,82 @@ class MapMenu(PopupMenu):
         draw_text(self.surface, (C.MAP_OVERLAY_SIZE//2 - 100, 55), 'left', 'centre', 'ETA', (100, 255, 255), 25, self.game.assets.fonts.monospaced)
         draw_text(self.surface, (C.MAP_OVERLAY_SIZE//2 - 45, 55), 'left', 'centre', eta_text, cols.WHITE, 25, self.game.assets.fonts.monospaced)
 
-        # Blit the completed map to the main HUD surface
+    def _draw_tooltip(self, ctx: _MapRenderContext, mouse_down: bool, mouse_pos: tuple[float, float], map_rect: pg.Rect) -> None:
+        assert self.game.env is not None
+
+        # Only show tooltip if mouse down and in map area
+        if not (mouse_down and map_rect.collidepoint(mouse_pos)):
+            return
+
+        local_x = mouse_pos[0] - map_rect.left
+        local_y = mouse_pos[1] - map_rect.top
+
+        world_x = ctx.view_topleft.x + local_x * self.viewport_zoom
+        world_z = ctx.view_topleft.y + local_y * self.viewport_zoom
+
+        height_m = self.game.env.get_ground_height(world_x, world_z)
+        height_ft = units.convert_units(height_m, units.METRES, units.FEET)
+
+        font_size = 18
+        font = pg.font.Font(self.game.assets.fonts.monospaced, font_size)
+        text = f"{height_ft:,.0f} ft"
+        text_surf = font.render(text, True, cols.WHITE)
+
+        padding = 6
+        box_w = text_surf.get_width() + padding * 2
+        box_h = text_surf.get_height() + padding * 2
+
+        tooltip_x = mouse_pos[0] + 12
+        tooltip_y = mouse_pos[1] + 12
+        tooltip_x = min(tooltip_x, C.WN_W - box_w - 5)
+        tooltip_y = min(tooltip_y, C.WN_H - box_h - 5)
+
+        draw_transparent_rect(
+            ctx.display_surf,
+            (tooltip_x, tooltip_y),
+            (box_w, box_h),
+            (0, 0, 0, 180),
+            1
+        )
+        ctx.display_surf.blit(text_surf, (tooltip_x + padding, tooltip_y + padding))
+
+    def draw(self, surface: Surface, show_advanced_info: bool, mouse_down: bool, mouse_pos: tuple[float, float]) -> None:
+        assert self.game.env is not None
+
+        if self.viewport_auto_panning:
+            # Auto-update to the plane's position if auto-panning
+            self.viewport_pos = self.plane.pos.copy()
+
+        # Build context
+        map_centre = pg.Vector2(C.WN_W//2, int(285 + C.WN_H * (1 - self.state.animation_open)))
         map_rect = self.surface.get_rect(center=(map_centre))
-        surface.blit(self.surface, map_rect)
+        px, _, pz = self.viewport_pos
+        viewport_half_size_m = C.MAP_OVERLAY_SIZE / 2 * self.viewport_zoom
+        view_topleft_x = px - viewport_half_size_m
+        view_topleft_z = pz - viewport_half_size_m
+        ctx = _MapRenderContext(surface, self.viewport_zoom, pg.Vector2(view_topleft_x, view_topleft_z), viewport_half_size_m, map_centre)
 
-        # Show height key
+        # Define scale bar size here as the world length is also used in grid rendering
+        MAX_SCALE_BAR_SIZE = 80  # pixels  # TODO: move to constants
+        target_size = self.viewport_zoom * MAX_SCALE_BAR_SIZE
+        scale_bar_length_world = max([l for l in C.SCALE_BAR_LENGTHS if l <= target_size], default=C.SCALE_BAR_LENGTHS[0])
+
+        # Draw elements
+        self._draw_base(ctx)
+        self._draw_tiles(ctx)
+        self._draw_building_icons(ctx)
+        self._draw_runways(ctx)
+        self._draw_prohibited_zones(ctx, show_advanced_info)
+        self._draw_plane_icon()
+        self._draw_navigation_info(ctx, scale_bar_length_world)
+
+        # Show advanced info
         if show_advanced_info:
-            surface.blit(
-                self.height_legend_surface,
-                (C.WN_W//2 - C.MAP_OVERLAY_SIZE//2 - 200, map_centre[1] - 180)
-            )
+            self._draw_legends(ctx)
+            self._draw_grid(ctx, scale_bar_length_world)
 
-        # Show height of land at mouse pos if mouse is down
-        if mouse_down:
-            if map_rect.collidepoint(mouse_pos):
-                local_x = mouse_pos[0] - map_rect.left
-                local_y = mouse_pos[1] - map_rect.top
+        # Show tooltip
+        self._draw_tooltip(ctx, mouse_down, mouse_pos, map_rect)
 
-                world_x = viewport_top_left_x + local_x * self.viewport_zoom
-                world_z = viewport_top_left_z + local_y * self.viewport_zoom
-
-                height_m = self.game.env.get_ground_height(world_x, world_z)
-                height_ft = units.convert_units(height_m, units.METRES, units.FEET)
-
-                font_size = 18
-                font = pg.font.Font(self.game.assets.fonts.monospaced, font_size)
-                text = f"{height_ft:,.0f} ft"
-                text_surf = font.render(text, True, cols.WHITE)
-
-                padding = 6
-                box_w = text_surf.get_width() + padding * 2
-                box_h = text_surf.get_height() + padding * 2
-
-                tooltip_x = mouse_pos[0] + 12
-                tooltip_y = mouse_pos[1] + 12
-                tooltip_x = min(tooltip_x, C.WN_W - box_w - 5)
-                tooltip_y = min(tooltip_y, C.WN_H - box_h - 5)
-
-                draw_transparent_rect(
-                    surface,
-                    (tooltip_x, tooltip_y),
-                    (box_w, box_h),
-                    (0, 0, 0, 180),
-                    1
-                )
-                surface.blit(text_surf, (tooltip_x + padding, tooltip_y + padding))
+        # Blit the completed map to the main HUD surface
+        surface.blit(self.surface, map_rect)
