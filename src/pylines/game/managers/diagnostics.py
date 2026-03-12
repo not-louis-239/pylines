@@ -183,7 +183,7 @@ class DiagnosticsManager(PopupMenu):
             "30 FPS", label_colour, label_size, label_font_family
         )
         draw_text(
-            self.static_fg_surface, (align_offset, C.WN_H - self.DISPLAY_RECT_H / 2), 'left', 'top',
+            self.static_fg_surface, (align_offset, int(C.WN_H - self.DISPLAY_RECT_H / 2)), 'left', 'top',
             "60 FPS", label_colour, label_size, label_font_family
         )
 

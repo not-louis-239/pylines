@@ -23,10 +23,12 @@ from pygame.surface import Surface
 import pylines.core.constants as C
 
 from .colours import WHITE
-from .custom_types import AColour, Colour, Coord2, RealNumber
+from .custom_types import AColour, Colour, Coord2, RealNumber, DiscreteCoord2
+
+_FONT_OBJECT_CACHE: dict[tuple[str | None, int], pg.font.Font] = {}
 
 def draw_text(
-        surface: Surface, pos: tuple[float, float],
+        surface: Surface, pos: DiscreteCoord2,
         horiz_align: Literal['left', 'centre', 'right'],
         vert_align: Literal['top', 'centre', 'bottom'],
         text: str, colour: Colour | AColour,
@@ -35,37 +37,43 @@ def draw_text(
     ) -> None:
     if isinstance(font_family, pg.font.Font):
         font_obj = font_family
-    elif isinstance(font_family, (str, Path)):
-        font_obj = pg.font.Font(str(font_family), font_size)
     else:
-        font_obj = pg.font.Font(None, font_size)
+        font_obj_profile = (str(font_family) if font_family is not None else None, font_size)
+
+        # Cache font objects to save time
+        if font_obj_profile not in _FONT_OBJECT_CACHE:
+            font_obj = pg.font.Font(font_obj_profile[0], font_obj_profile[1])
+            _FONT_OBJECT_CACHE[font_obj_profile] = font_obj
+        else:
+            font_obj = _FONT_OBJECT_CACHE[font_obj_profile]
 
     img = font_obj.render(text, True, colour)
     if rotation != 0:
         img = pg.transform.rotate(img, rotation)
-    r = img.get_rect()
+
+    rect = img.get_rect()
 
     # Horizontal
     if horiz_align == "left":
-        setattr(r, "left", pos[0])
+        rect.left = pos[0]
     elif horiz_align == "centre":
-        setattr(r, "centerx", pos[0])
+        rect.centerx = pos[0]
     elif horiz_align == "right":
-        setattr(r, "right", pos[0])
+        rect.right = pos[0]
     else:
-        raise ValueError("Invalid horiz_align")
+        raise ValueError(f"Invalid horiz_align: {horiz_align}")
 
     # Vertical
     if vert_align == "top":
-        setattr(r, "top", pos[1])
+        rect.top = pos[1]
     elif vert_align == "centre":
-        setattr(r, "centery", pos[1])
+        rect.centery = pos[1]
     elif vert_align == "bottom":
-        setattr(r, "bottom", pos[1])
+        rect.bottom = pos[1]
     else:
-        raise ValueError("Invalid vert_align")
+        raise ValueError(f"Invalid vert_align: {vert_align}")
 
-    surface.blit(img, r)
+    surface.blit(img, rect)
 
 def draw_needle(surf: Surface, centre: Coord2, angle_deg: RealNumber, length: RealNumber, colour: Colour = (255, 0, 0), width: int = 3):
     angle_rad = math.radians(angle_deg)
