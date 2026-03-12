@@ -27,8 +27,6 @@ from pylines.game.managers.pop_up_menus import PopupMenu
 from pylines.debug.debug_display import DebugLog
 from pylines.debug.memory_usage_fetcher import MemoryUsageFetcher
 
-from pylines.debug.timer import timer, log_segment
-
 if TYPE_CHECKING:
     from pylines.game.game import Game
 
@@ -291,9 +289,7 @@ class DiagnosticsManager(PopupMenu):
     def record_tick(self, interval: TimeInterval) -> None:
         self.tick_durs.add_interval(interval)
 
-    @timer
     def draw(self, surface: pg.Surface) -> None:
-        log_segment()
         # NOTE: animation_open is unused for draw() here as this is a diagnostic
         # that should instantly appear/disappear
 
@@ -303,7 +299,6 @@ class DiagnosticsManager(PopupMenu):
         # Blit cached background surface
         surface.blit(self.static_bg_surface, (0, C.WN_H - self.static_bg_surface.get_height()))
         self.prune()
-        log_segment("blit cached bg surface")
 
         MAX_OK_DUR_FRAME = 1000 / C.FPS * 2  # 30 FPS = top of graph
         MAX_OK_DUR_TICK = 1000 / C.TPS       # 1 / C.TPS = top of graph
@@ -312,7 +307,6 @@ class DiagnosticsManager(PopupMenu):
         # Duration lists - convert to milliseconds
         frame_durs_floats: list[float] = self.frame_durs.get_ms_durations()[-self.MAX_HISTORY_LEN:]
         tick_durs_floats: list[float] = self.tick_durs.get_ms_durations()[-self.MAX_HISTORY_LEN:]
-        log_segment("compute frame_durs_floats and tick_durs_floats")
 
         # Draw FPS bars
         self._plot_bars(surface, self.frame_graph_plot_rect, frame_durs_floats, MAX_OK_DUR_FRAME)
@@ -320,11 +314,8 @@ class DiagnosticsManager(PopupMenu):
         # Draw TPS bars
         self._plot_bars(surface, self.tick_graph_plot_rect, tick_durs_floats, MAX_OK_DUR_TICK)
 
-        log_segment("plot FPS & TPS bars")
-
         # Blit cached foreground surface
         surface.blit(self.static_fg_surface, (0, C.WN_H - self.static_fg_surface.get_height()))
-        log_segment("blit cached foreground surface")
 
         # Compute min, avg, max
         text_colour = (255, 255, 255, 255)
@@ -340,8 +331,6 @@ class DiagnosticsManager(PopupMenu):
 
         offset = 4
         num_sig_figs = 3
-
-        log_segment("compute summary statistics")
 
         # FPS min, avg, max
         draw_text(
@@ -371,8 +360,5 @@ class DiagnosticsManager(PopupMenu):
             f"max: {display_sf(max_tick_dur, num_sig_figs)} ms", text_colour, font_size, self.game.assets.fonts.monospaced
         )
 
-        log_segment("draw text")
-
         # Debug summary
         self.debug_log.draw(surface)
-        log_segment("draw debug log")
