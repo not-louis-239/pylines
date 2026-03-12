@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import math
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Callable, cast
@@ -35,6 +37,7 @@ from pylines.objects.buildings import (
 if TYPE_CHECKING:
     from pylines.game.game import Game
     from pylines.objects.objects import Plane
+    from pylines.core.asset_manager import Assets
 
 @dataclass
 class _MapRenderContext:
@@ -45,21 +48,73 @@ class _MapRenderContext:
     map_centre: pg.Vector2
 
 class _MapSurfaceCache:
-    def __init__(self) -> None:
+    def __init__(self, game: Game) -> None:
+        self.game = game  # Needs reference to assets and environment
+
+        # Static caches - made once, then cached for the rest of the program
+        self.ni_cache: Surface = pg.Surface((100, 100), flags=pg.SRCALPHA)
+        self.scale_bar_label_cache: dict[int | float, Surface] = {}
+        self.rotated_planes_cache: dict[int, Surface] = {}
+        self.runway_info_cache: dict[int, Surface] = {}
+
+        # Dynamic caches - must be updated sometimes, e.g. when the viewport changes position or zoom level
         self.display_surface: Surface = Surface((C.MAP_OVERLAY_SIZE, C.MAP_OVERLAY_SIZE), pg.SRCALPHA)
         self.grid_surface: Surface = Surface((C.MAP_OVERLAY_SIZE, C.MAP_OVERLAY_SIZE), pg.SRCALPHA)
         self.zone_overlay_surface = Surface((C.MAP_OVERLAY_SIZE, C.MAP_OVERLAY_SIZE), pg.SRCALPHA)
 
-    def save_surfaces(self, display_surface: Surface, grid_surface: Surface, zone_overlay_surface: Surface):
-        self.display_surface = display_surface
-        self.grid_surface = grid_surface
-        self.zone_overlay_surface = zone_overlay_surface
+        self.populate_static_caches()
+
+    def _populate_ni_cache(self) -> None:
+        # North indicator cache
+        north_indicator_size = 20
+        ni_centre_x, ni_centre_y = 50,  50
+
+        # Calculate arrow vertices
+        arrow_points = [
+            (ni_centre_x, ni_centre_y - north_indicator_size // 2),  # Top point
+            (ni_centre_x - north_indicator_size // 4, ni_centre_y + north_indicator_size // 2),  # Bottom-left
+            (ni_centre_x, ni_centre_y + north_indicator_size // 4),  # Bottom-middle (for dart shape)
+            (ni_centre_x + north_indicator_size // 4, ni_centre_y + north_indicator_size // 2),  # Bottom-right
+        ]
+
+        # Draw
+        pg.draw.polygon(self.ni_cache, cols.WHITE, arrow_points)
+        draw_text(self.ni_cache, (ni_centre_x, ni_centre_y - 40), 'centre', 'top', "N", cols.WHITE, 25, self.game.assets.fonts.monospaced)
+
+    def populate_static_caches(self) -> None:
+        assert self.game.env is not None
+
+        self._populate_ni_cache()
+
+        # Rotated plane icon caches
+        INTERVAL = 10  # degrees
+        for yaw in range(0, 360, INTERVAL):
+            # Use get_rect(center=(i, j)) when blitting rotated
+            # images or else they will appear to shift
+            plane_icon_rotated = pg.transform.rotate(self.game.assets.images.plane_icon, -yaw)
+            self.rotated_planes_cache[yaw] = plane_icon_rotated
+
+        # Scale bar label cache
+        font_obj = pg.font.Font(self.game.assets.fonts.monospaced, 20)
+        for length in C.SCALE_BAR_LENGTHS:
+            text_surf = font_obj.render(f"{length:,} m", True, cols.WHITE)
+            self.scale_bar_label_cache[length] = text_surf
+
+        # Runway info cache
+        for i, runway in enumerate(self.game.env.runways):
+            INFO_SURF_SIZE = 120
+            info_surf = pg.Surface((INFO_SURF_SIZE, INFO_SURF_SIZE), flags=pg.SRCALPHA)
+
+            info_text = f"{runway.heading:03d}°, {units.convert_units(runway.pos.y, units.METRES, units.FEET):,.0f} ft"
+            draw_text(info_surf, (INFO_SURF_SIZE / 2, INFO_SURF_SIZE / 2 - 50), 'centre', 'centre', runway.name, cols.WHITE, 20, self.game.assets.fonts.monospaced)
+            draw_text(info_surf, (INFO_SURF_SIZE / 2, INFO_SURF_SIZE / 2 - 30), 'centre', 'centre', info_text, cols.WHITE, 15, self.game.assets.fonts.monospaced)
+            self.runway_info_cache[i] = info_surf
 
 class MapMenu(PopupMenu):
     def __init__(self, game: Game, plane: Plane) -> None:
         super().__init__(game)
 
-        self.surface_cache = _MapSurfaceCache()
+        self._surface_cache = _MapSurfaceCache(self.game)
         self.plane = plane
         self.viewport_pos: pg.Vector3 = self.plane.pos.copy()
         self.viewport_auto_panning: bool = True
@@ -280,6 +335,7 @@ class MapMenu(PopupMenu):
         self.height_legend_surface = self.generate_height_legend()
 
     def _draw_base(self, ctx: _MapRenderContext) -> None:
+        # Clear surface to black first
         self.surface.fill((0, 0, 0, 255))
 
         # Map border
@@ -361,17 +417,17 @@ class MapMenu(PopupMenu):
     def _draw_runways(self, ctx: _MapRenderContext) -> None:
         assert self.game.env is not None
 
-        for runway in self.game.env.runways:
+        for i, runway in enumerate(self.game.env.runways):
             # Convert runway world dimensions to map pixel dimensions, 1 pix min size
-            runway_width_on_map = max(1, int(runway.w / self.viewport_zoom))
-            runway_length_on_map = max(1, int(runway.l / self.viewport_zoom))
+            runway_width_map = max(1, int(runway.w / self.viewport_zoom))
+            runway_length_map = max(1, int(runway.l / self.viewport_zoom))
 
             # Calculate the runway's center position on the map_surface in pixels.
             runway_map_center_x = (runway.pos.x - ctx.view_topleft.x) / self.viewport_zoom
             runway_map_center_y = (runway.pos.z - ctx.view_topleft.y) / self.viewport_zoom
 
             # Skip if completely off-screen
-            half_diag = 0.5 * math.hypot(runway_width_on_map, runway_length_on_map)
+            half_diag = 0.5 * math.hypot(runway_width_map, runway_length_map)
             if (runway_map_center_x + half_diag < 0
                 or runway_map_center_x - half_diag > C.MAP_OVERLAY_SIZE
                 or runway_map_center_y + half_diag < 0
@@ -379,7 +435,7 @@ class MapMenu(PopupMenu):
                 continue
 
             # Create a base surface for the runway. Its length (l) will align with the Y-axis when unrotated.
-            runway_surface_base = Surface((runway_width_on_map, runway_length_on_map), pg.SRCALPHA)
+            runway_surface_base = Surface((runway_width_map, runway_length_map), pg.SRCALPHA)
             runway_surface_base.fill((cols.MAP_RUNWAY_COLOUR))
 
             rotated_runway_surface = pg.transform.rotate(runway_surface_base, -runway.heading)
@@ -398,10 +454,10 @@ class MapMenu(PopupMenu):
                 self.surface.blit(self.game.assets.images.gps_dest_marker, gps_rect)
 
             # Runway information
+            info_surf = self._surface_cache.runway_info_cache[i]
+            info_rect = info_surf.get_rect(center=(runway_cx, runway_cy))
             draw_text(self.surface, (runway_cx, runway_cy - 50), 'centre', 'centre', runway.name, cols.WHITE, 20, self.game.assets.fonts.monospaced)
-
-            info_text = f"{runway.heading:03d}°, {units.convert_units(runway.pos.y, units.METRES, units.FEET):,.0f} ft"
-            draw_text(self.surface, (runway_cx, runway_cy - 30), 'centre', 'centre', info_text, cols.WHITE, 15, self.game.assets.fonts.monospaced)
+            self.surface.blit(info_surf, info_rect)
 
     def _draw_building_icons(self, ctx: _MapRenderContext) -> None:
         assert self.game.env is not None
@@ -439,11 +495,11 @@ class MapMenu(PopupMenu):
             zone_rect = pg.Rect(screen_pos_x, screen_pos_z, screen_w, screen_h)
 
             pg.draw.rect(self.zone_overlay, cols.MAP_PROHIBITED_FILL_COLOR, zone_rect)
-            pg.draw.rect(self.zone_overlay, cols.MAP_PROHIBITED_BORDER_COLOR, zone_rect, border_radius=2)
+            pg.draw.rect(self.zone_overlay, cols.MAP_PROHIBITED_BORDER_COLOR, zone_rect, width=2)  # width=2 controls border width
 
             if show_advanced_info:
                 text_centre = (screen_pos_x + screen_w / 2, screen_pos_z + screen_h / 2)
-                draw_text(self.surface, text_centre, 'centre', 'centre', zone.code, cols.MAP_PROHIBITED_TEXT_COLOUR, 20, self.game.assets.fonts.monospaced)
+                draw_text(self.zone_overlay, text_centre, 'centre', 'centre', zone.code, cols.MAP_PROHIBITED_TEXT_COLOUR, 20, self.game.assets.fonts.monospaced)
 
         self.surface.blit(self.zone_overlay, (0, 0))
 
@@ -460,6 +516,11 @@ class MapMenu(PopupMenu):
         self.surface.blit(plane_icon_rotated, rotated_icon_rect)
 
     def _draw_grid(self, ctx: _MapRenderContext, minor_interval) -> None:
+        def world_to_map(world_x, world_z) -> tuple[float, float]:
+            screen_x = (world_x - ctx.view_topleft.x) * (1/self.viewport_zoom)
+            screen_y = (world_z - ctx.view_topleft.y) * (1/self.viewport_zoom)
+            return screen_x, screen_y
+
         GRID_MINOR_COL = (255, 255, 255, 80)
         GRID_MAJOR_COL = (255, 255, 255, 140)
         ORIGIN_POINT_COLOUR = (0, 255, 0)
@@ -474,11 +535,6 @@ class MapMenu(PopupMenu):
             self.grid_detail_level = MINOR_INTERVAL
 
         label_font = pg.font.Font(self.game.assets.fonts.monospaced, 18)
-
-        def world_to_map(world_x, world_z) -> tuple[float, float]:
-            screen_x = (world_x - ctx.view_topleft.x) * (1/self.viewport_zoom)
-            screen_y = (world_z - ctx.view_topleft.y) * (1/self.viewport_zoom)
-            return screen_x, screen_y
 
         # Grid overlay bounds
         start_grid_x = int(ctx.view_topleft.x // MINOR_INTERVAL) * MINOR_INTERVAL
@@ -538,34 +594,20 @@ class MapMenu(PopupMenu):
             (C.WN_W//2 - C.MAP_OVERLAY_SIZE//2 - 200, ctx.map_centre[1] - 180)
         )
 
-    def _draw_navigation_info(self, ctx: _MapRenderContext, scale_bar_length_world: float) -> None:
+    def _draw_navigation_info(self, scale_bar_length_world: float) -> None:
         assert self.game.env is not None
 
-        # North indicator - draw an arrow pointing upwards
-        north_indicator_size = 20
-        north_indicator_offset_x = 12
-        north_indicator_offset_y = 42
-        ni_center_x = north_indicator_offset_x + north_indicator_size // 2
-        ni_center_y = north_indicator_offset_y + north_indicator_size // 2
-
-        # Calculate arrow vertices
-        arrow_points = [
-            (ni_center_x, north_indicator_offset_y),  # Top point
-            (ni_center_x - north_indicator_size // 4, ni_center_y + north_indicator_size // 2),  # Bottom-left
-            (ni_center_x, ni_center_y + north_indicator_size // 4),  # Bottom-middle (for dart shape)
-            (ni_center_x + north_indicator_size // 4, ni_center_y + north_indicator_size // 2),  # Bottom-right
-        ]
-        pg.draw.polygon(self.surface, cols.WHITE, arrow_points)
-        draw_text(self.surface, (ni_center_x, ni_center_y - north_indicator_offset_y), 'centre', 'top', "N", cols.WHITE, 25, self.game.assets.fonts.monospaced)
+        # North indicator (using cached surface)
+        ni_rect = self._surface_cache.ni_cache.get_rect(center=(22, 42))
+        self.surface.blit(self._surface_cache.ni_cache, ni_rect)
 
         # Draw scale bar
         scale_bar_offset = (12, 80)
-
         scale_bar_length_pix = scale_bar_length_world / self.viewport_zoom
         scale_bar_rect = pg.Rect(scale_bar_offset[0], scale_bar_offset[1], scale_bar_length_pix, 5)
 
         pg.draw.rect(self.surface, cols.WHITE, scale_bar_rect)
-        draw_text(self.surface, (scale_bar_offset[0], scale_bar_offset[1] + 20), 'left', 'centre', f"{scale_bar_length_world:,} m", cols.WHITE, 20, self.game.assets.fonts.monospaced)
+        self.surface.blit(self._surface_cache.scale_bar_label_cache[scale_bar_length_world], (scale_bar_offset[0], scale_bar_offset[1] + 10))
 
         # Calculate ground speed
         ground_speed_vec = pg.Vector3(self.plane.vel.x, 0, self.plane.vel.z)
@@ -590,13 +632,12 @@ class MapMenu(PopupMenu):
             eta_seconds = 0
         else:
             direction = to_dest.normalize()
-            ground_speed_towards_dest = vel_flat.dot(direction)
+            ground_speed_to_dest = vel_flat.dot(direction)
 
-            eta_seconds: float | None
-            if ground_speed_towards_dest <= C.MATH_EPSILON:
+            if ground_speed_to_dest <= C.MATH_EPSILON:
                 eta_seconds = None
             else:
-                eta_seconds = distance / ground_speed_towards_dest
+                eta_seconds = distance / ground_speed_to_dest
 
         if eta_seconds is None:
             eta_text = "--:--"
@@ -669,8 +710,7 @@ class MapMenu(PopupMenu):
         ctx = _MapRenderContext(surface, self.viewport_zoom, pg.Vector2(view_topleft_x, view_topleft_z), viewport_half_size_m, map_centre)
 
         # Define scale bar size here as the world length is also used in grid rendering
-        MAX_SCALE_BAR_SIZE = 80  # pixels  # TODO: move to constants
-        target_size = self.viewport_zoom * MAX_SCALE_BAR_SIZE
+        target_size = self.viewport_zoom * C.MAP_MAX_SCALE_BAR_SIZE
         scale_bar_length_world = max([l for l in C.SCALE_BAR_LENGTHS if l <= target_size], default=C.SCALE_BAR_LENGTHS[0])
 
         # Draw elements
@@ -680,7 +720,7 @@ class MapMenu(PopupMenu):
         self._draw_runways(ctx)
         self._draw_prohibited_zones(ctx, show_advanced_info)
         self._draw_plane_icon()
-        self._draw_navigation_info(ctx, scale_bar_length_world)
+        self._draw_navigation_info(scale_bar_length_world)
 
         # Show advanced info
         if show_advanced_info:
