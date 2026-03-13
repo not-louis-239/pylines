@@ -104,8 +104,8 @@ class _MapSurfaceCache:
             info_surf = pg.Surface((INFO_SURF_SIZE, INFO_SURF_SIZE), flags=pg.SRCALPHA)
 
             info_text = f"{runway.heading:03d}°, {units.convert_units(runway.pos.y, units.METRES, units.FEET):,.0f} ft"
-            draw_text(info_surf, (INFO_SURF_SIZE / 2, INFO_SURF_SIZE / 2 - 50), 'centre', 'centre', runway.name, cols.WHITE, 20, self.game.assets.fonts.monospaced)
-            draw_text(info_surf, (INFO_SURF_SIZE / 2, INFO_SURF_SIZE / 2 - 30), 'centre', 'centre', info_text, cols.WHITE, 15, self.game.assets.fonts.monospaced)
+            draw_text(info_surf, (INFO_SURF_SIZE // 2, INFO_SURF_SIZE // 2 - 50), 'centre', 'centre', runway.name, cols.WHITE, 20, self.game.assets.fonts.monospaced)
+            draw_text(info_surf, (INFO_SURF_SIZE // 2, INFO_SURF_SIZE // 2 - 30), 'centre', 'centre', info_text, cols.WHITE, 15, self.game.assets.fonts.monospaced)
             self.runway_info_cache[i] = info_surf
 
 class MapMenu(PopupMenu):
@@ -132,8 +132,6 @@ class MapMenu(PopupMenu):
         self.grid_labels_x: dict[int, Surface] = {}  # value, surface
         self.grid_labels_y: dict[int, Surface] = {}  # value, surface
         self.grid_detail_level: int | None = None
-
-        self.render_dirty: bool = True  # Start as True to force an initial draw
 
         self.build()
 
@@ -182,7 +180,7 @@ class MapMenu(PopupMenu):
         surf.blit(self.height_key, (105, 55))
 
         for h in range(-12_000, 18_001, 2_000):
-            text_y = 55 + (self.HEIGHT_KEY_H * (1 - ((h + 12_000) / 30_000)))
+            text_y = int(55 + (self.HEIGHT_KEY_H * (1 - ((h + 12_000) / 30_000))))
             draw_text(surf, (100, text_y), 'right', 'centre', f"{h:,.0f}", cols.WHITE, 15, self.game.assets.fonts.monospaced)
 
         return surf
@@ -451,7 +449,7 @@ class MapMenu(PopupMenu):
             # Runway information
             info_surf = self._surface_cache.runway_info_cache[i]
             info_rect = info_surf.get_rect(center=(runway_cx, runway_cy))
-            draw_text(self.surface, (runway_cx, runway_cy - 50), 'centre', 'centre', runway.name, cols.WHITE, 20, self.game.assets.fonts.monospaced)
+            draw_text(self.surface, (int(runway_cx), int(runway_cy) - 50), 'centre', 'centre', runway.name, cols.WHITE, 20, self.game.assets.fonts.monospaced)
             self.surface.blit(info_surf, info_rect)
 
     def _draw_building_icons(self, ctx: _MapRenderContext) -> None:
@@ -493,7 +491,7 @@ class MapMenu(PopupMenu):
             pg.draw.rect(self.zone_overlay, cols.MAP_PROHIBITED_BORDER_COLOR, zone_rect, width=2)  # width=2 controls border width
 
             if show_advanced_info:
-                text_centre = (screen_pos_x + screen_w / 2, screen_pos_z + screen_h / 2)
+                text_centre = (int(screen_pos_x + screen_w / 2), int(screen_pos_z + screen_h / 2))
                 draw_text(self.zone_overlay, text_centre, 'centre', 'centre', zone.code, cols.MAP_PROHIBITED_TEXT_COLOUR, 20, self.game.assets.fonts.monospaced)
 
         self.surface.blit(self.zone_overlay, (0, 0))
@@ -511,7 +509,7 @@ class MapMenu(PopupMenu):
         icon_rect = icon_surf.get_rect(center=(icon_x, icon_z))
         self.surface.blit(icon_surf, icon_rect)
 
-    def _redraw_grid(self, ctx: _MapRenderContext, minor_interval: int) -> None:
+    def _draw_grid(self, ctx: _MapRenderContext, minor_interval: int) -> None:
         def world_to_map(world_x, world_z) -> tuple[float, float]:
             screen_x = (world_x - ctx.view_topleft.x) * (1/self.viewport_zoom)
             screen_y = (world_z - ctx.view_topleft.y) * (1/self.viewport_zoom)
@@ -690,7 +688,6 @@ class MapMenu(PopupMenu):
 
         if self.viewport_auto_panning:
             # Auto-update to the plane's position if auto-panning
-            self.render_dirty = True
             self.viewport_pos = self.plane.pos.copy()
 
         # Build context
@@ -712,13 +709,11 @@ class MapMenu(PopupMenu):
         pg.draw.rect(ctx.display_surf, cols.MAP_BORDER_COLOUR, outer_map_rect)
 
         # Draw elements
-        if self.render_dirty:
-            self._draw_base(ctx)
-            self._draw_tiles(ctx)
-            self._draw_building_icons(ctx)
-            self._draw_runways(ctx)
-            self._draw_prohibited_zones(ctx, show_advanced_info)
-
+        self._draw_base(ctx)
+        self._draw_tiles(ctx)
+        self._draw_building_icons(ctx)
+        self._draw_runways(ctx)
+        self._draw_prohibited_zones(ctx, show_advanced_info)
         self._draw_plane_icon()
         self._draw_navigation_info(scale_bar_length_world)
 
@@ -726,9 +721,7 @@ class MapMenu(PopupMenu):
         if show_advanced_info:
             self._draw_legends(ctx)
 
-            if self.render_dirty:
-                self._redraw_grid(ctx, scale_bar_length_world)
-                # Blit grid surface onto map surface
+            self._draw_grid(ctx, scale_bar_length_world)
             self.surface.blit(self.grid_surface, (0, 0))
 
         # Show tooltip
@@ -736,6 +729,3 @@ class MapMenu(PopupMenu):
 
         # Blit the completed map to the main HUD surface
         surface.blit(self.surface, map_rect)
-
-        if self.render_dirty:
-            self.render_dirty = False
