@@ -54,18 +54,35 @@ def main():
         fixed_dt_ms = 1000 / TPS
         time_accum: float = 0  # stores time since last batch of updates
 
+        def update_gl_viewport(size: tuple[int, int]) -> None:
+            width, height = size
+            gl.glViewport(0, 0, width, height)
+            gl.glMatrixMode(gl.GL_PROJECTION)
+            gl.glLoadIdentity()
+            glu.gluPerspective(FOV, width / height, INNER_RENDER_LIMIT, OUTER_RENDER_LIMIT)
+            gl.glMatrixMode(gl.GL_MODELVIEW)
+            gl.glLoadIdentity()
+
+        supports_auto_resize = pg.version.vernum >= (2, 0, 0)
+
+        def apply_windowed_resize(size: tuple[int, int]) -> None:
+            nonlocal wn
+            if not supports_auto_resize:
+                wn = pg.display.set_mode(size, windowed_flags)
+            update_gl_viewport(size)
+
         # Initialise window and mixer
-        wn = pg.display.set_mode((WN_W, WN_H), pg.DOUBLEBUF | pg.OPENGL)
+        windowed_size = (WN_W, WN_H)
+        windowed_flags = pg.DOUBLEBUF | pg.OPENGL | pg.RESIZABLE
+        fullscreen_flags = pg.DOUBLEBUF | pg.OPENGL | pg.FULLSCREEN
+        is_fullscreen = False
+
+        wn = pg.display.set_mode(windowed_size, windowed_flags)
         pg.display.set_caption("Pylines")
         pg.mixer.set_num_channels(32)
 
         # Initialize OpenGL
-        gl.glViewport(0, 0, WN_W, WN_H)
-        gl.glMatrixMode(gl.GL_PROJECTION)
-        gl.glLoadIdentity()
-        glu.gluPerspective(FOV, WN_W/WN_H, INNER_RENDER_LIMIT, OUTER_RENDER_LIMIT)  # Field of view, aspect ratio, near, far clipping plane
-        gl.glMatrixMode(gl.GL_MODELVIEW)
-        gl.glLoadIdentity()
+        update_gl_viewport(windowed_size)
         gl.glEnable(gl.GL_DEPTH_TEST)  # Enable depth testing for 3D objects
 
         # Create Game instance
@@ -83,6 +100,39 @@ def main():
                 if event.type == pg.QUIT:
                     game.quit()
                     running = False
+                    continue
+
+                if event.type == pg.KEYDOWN:
+                    mod = event.mod
+                    cmd_mod = pg.KMOD_META | pg.KMOD_GUI
+                    if event.key == pg.K_F11 or (
+                        event.key == pg.K_f and (mod & pg.KMOD_CTRL) and (mod & cmd_mod)
+                    ):
+                        if is_fullscreen:
+                            wn = pg.display.set_mode(windowed_size, windowed_flags)
+                            is_fullscreen = False
+                            update_gl_viewport(pg.display.get_window_size())
+                        else:
+                            windowed_size = pg.display.get_window_size()
+                            desktop_sizes = pg.display.get_desktop_sizes()
+                            fullscreen_size = desktop_sizes[0] if desktop_sizes else windowed_size
+                            wn = pg.display.set_mode(fullscreen_size, fullscreen_flags)
+                            is_fullscreen = True
+                            update_gl_viewport(fullscreen_size)
+
+                if not is_fullscreen:
+                    if event.type == pg.VIDEORESIZE:
+                        windowed_size = event.size
+                        apply_windowed_resize(windowed_size)
+                    else:
+                        window_resized = []
+                        if hasattr(pg, "WINDOWRESIZED"):
+                            window_resized.append(pg.WINDOWRESIZED)
+                        if hasattr(pg, "WINDOWSIZECHANGED"):
+                            window_resized.append(pg.WINDOWSIZECHANGED)
+                        if window_resized and event.type in window_resized:
+                            windowed_size = pg.display.get_window_size()
+                            apply_windowed_resize(windowed_size)
 
             keys = pg.key.get_pressed()
 
