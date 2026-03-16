@@ -25,6 +25,7 @@ AColour: TypeAlias = tuple[int, int, int, int]
 RealNumber: TypeAlias = int | float
 Coord2: TypeAlias = tuple[RealNumber, RealNumber]
 Coord3: TypeAlias = tuple[RealNumber, RealNumber, RealNumber]
+DiscreteCoord2: TypeAlias = tuple[int, int]
 
 # Event types
 ScancodeWrapper: TypeAlias = pg.key.ScancodeWrapper

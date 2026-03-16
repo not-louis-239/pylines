@@ -276,19 +276,19 @@ class GameScreen(State):
             button.draw(self.hud_surface)
 
         draw_text(
-            self.hud_surface, (C.WN_W//2, C.WN_H*0.35), 'centre', 'centre',
+            self.hud_surface, (C.WN_W // 2, int(C.WN_H * 0.35)), 'centre', 'centre',
             'Game Paused', (255, 255, 255), 50, self.fonts.monospaced
         )
 
     def draw_confirmation_menu(self) -> None:
         if self.in_menu_confirmation or self.in_restart_confirmation:
             draw_transparent_rect(
-                self.hud_surface, (C.WN_W//2 - 400, C.WN_H//2 - 175), (800, C.WN_H*0.3),
+                self.hud_surface, (C.WN_W // 2 - 400, C.WN_H // 2 - 175), (800, C.WN_H * 0.3),
                 border_thickness=3
             )
 
             draw_text(
-                self.hud_surface, (C.WN_W//2, C.WN_H*0.4), 'centre', 'centre',
+                self.hud_surface, (C.WN_W // 2, int(C.WN_H*0.4)), 'centre', 'centre',
                 'Are you sure?', (255, 255, 255), 50, self.fonts.monospaced
             )
 
@@ -306,32 +306,32 @@ class GameScreen(State):
         )
 
         draw_text(
-            self.hud_surface, (C.WN_W//2, C.WN_H*0.16), 'centre', 'centre',
+            self.hud_surface, (C.WN_W // 2, int(C.WN_H * 0.16)), 'centre', 'centre',
             'Controls', (255, 255, 255), 50, self.fonts.monospaced
         )
 
-        draw_text(self.hud_surface, (C.WN_W//2 - 480, C.WN_H*0.3), 'left', 'centre', ControlsSectionID.MAIN, (0, 192, 255), 40, self.fonts.monospaced)
+        draw_text(self.hud_surface, (C.WN_W // 2 - 480, int(C.WN_H * 0.3)), 'left', 'centre', ControlsSectionID.MAIN, (0, 192, 255), 40, self.fonts.monospaced)
         for i, (key, action) in enumerate(controls_sections[ControlsSectionID.MAIN].keys.items()):
-            draw_text(self.hud_surface, (C.WN_W//2 - 480, C.WN_H * (0.38 + 0.04*i)), 'left', 'centre', key, (150, 230, 255), 27, self.fonts.monospaced)
-            draw_text(self.hud_surface, (C.WN_W//2 - 360, C.WN_H * (0.38 + 0.04*i)), 'left', 'centre', action, cols.WHITE, 27, self.fonts.monospaced)
+            draw_text(self.hud_surface, (C.WN_W // 2 - 480, int(C.WN_H * (0.38 + 0.04 * i))), 'left', 'centre', key, (150, 230, 255), 27, self.fonts.monospaced)
+            draw_text(self.hud_surface, (C.WN_W // 2 - 360, int(C.WN_H * (0.38 + 0.04 * i))), 'left', 'centre', action, cols.WHITE, 27, self.fonts.monospaced)
 
-        draw_text(self.hud_surface, (C.WN_W//2 + 20, C.WN_H*0.26), 'left', 'centre', ControlsSectionID.DISPLAYS, (0, 192, 255), 25, self.fonts.monospaced)
+        draw_text(self.hud_surface, (C.WN_W//2 + 20, int(C.WN_H*0.26)), 'left', 'centre', ControlsSectionID.DISPLAYS, (0, 192, 255), 25, self.fonts.monospaced)
         for i, (key, action) in enumerate(controls_sections[ControlsSectionID.DISPLAYS].keys.items()):
-            draw_text(self.hud_surface, (C.WN_W//2 + 20, C.WN_H * (0.31 + 0.03*i)), 'left', 'centre', key, (150, 230, 255), 21, self.fonts.monospaced)
-            draw_text(self.hud_surface, (C.WN_W//2 + 140, C.WN_H * (0.31 + 0.03*i)), 'left', 'centre', action, cols.WHITE, 21, self.fonts.monospaced)
+            draw_text(self.hud_surface, (C.WN_W//2 + 20, int(C.WN_H * (0.31 + 0.03*i))), 'left', 'centre', key, (150, 230, 255), 21, self.fonts.monospaced)
+            draw_text(self.hud_surface, (C.WN_W//2 + 140, int(C.WN_H * (0.31 + 0.03*i))), 'left', 'centre', action, cols.WHITE, 21, self.fonts.monospaced)
 
-        draw_text(self.hud_surface, (C.WN_W//2 + 20, C.WN_H*0.4), 'left', 'centre', ControlsSectionID.MAP, (0, 192, 255), 25, self.fonts.monospaced)
+        draw_text(self.hud_surface, (C.WN_W//2 + 20, int(C.WN_H * 0.4)), 'left', 'centre', ControlsSectionID.MAP, (0, 192, 255), 25, self.fonts.monospaced)
         for i, (key, action) in enumerate(controls_sections[ControlsSectionID.MAP].keys.items()):
-            draw_text(self.hud_surface, (C.WN_W//2 + 20, C.WN_H * (0.45 + 0.03*i)), 'left', 'centre', key, (150, 230, 255), 21, self.fonts.monospaced)
-            draw_text(self.hud_surface, (C.WN_W//2 + 140, C.WN_H * (0.45 + 0.03*i)), 'left', 'centre', action, cols.WHITE, 21, self.fonts.monospaced)
+            draw_text(self.hud_surface, (C.WN_W//2 + 20, int(C.WN_H * (0.45 + 0.03 * i))), 'left', 'centre', key, (150, 230, 255), 21, self.fonts.monospaced)
+            draw_text(self.hud_surface, (C.WN_W//2 + 140, int(C.WN_H * (0.45 + 0.03 * i))), 'left', 'centre', action, cols.WHITE, 21, self.fonts.monospaced)
         note = controls_sections[ControlsSectionID.MAP].note
         assert note is not None
-        draw_text(self.hud_surface, (C.WN_W//2 + 20, C.WN_H * (0.45 + 0.03 * (len(controls_sections[ControlsSectionID.MAP].keys) + 0.5))), 'left', 'centre', note, (255, 255, 255), 21, self.fonts.monospaced)
+        draw_text(self.hud_surface, (C.WN_W//2 + 20, int(C.WN_H * (0.45 + 0.03 * (len(controls_sections[ControlsSectionID.MAP].keys) + 0.5)))), 'left', 'centre', note, (255, 255, 255), 21, self.fonts.monospaced)
 
-        draw_text(self.hud_surface, (C.WN_W//2 + 20, C.WN_H*0.64), 'left', 'centre', ControlsSectionID.UTILITIES, (0, 192, 255), 25, self.fonts.monospaced)
+        draw_text(self.hud_surface, (C.WN_W//2 + 20, int(C.WN_H * 0.64)), 'left', 'centre', ControlsSectionID.UTILITIES, (0, 192, 255), 25, self.fonts.monospaced)
         for i, (key, action) in enumerate(controls_sections[ControlsSectionID.UTILITIES].keys.items()):
-            draw_text(self.hud_surface, (C.WN_W//2 + 20, C.WN_H * (0.69 + 0.03*i)), 'left', 'centre', key, (150, 230, 255), 21, self.fonts.monospaced)
-            draw_text(self.hud_surface, (C.WN_W//2 + 140, C.WN_H * (0.69 + 0.03*i)), 'left', 'centre', action, cols.WHITE, 21, self.fonts.monospaced)
+            draw_text(self.hud_surface, (C.WN_W//2 + 20, int(C.WN_H * (0.69 + 0.03 * i))), 'left', 'centre', key, (150, 230, 255), 21, self.fonts.monospaced)
+            draw_text(self.hud_surface, (C.WN_W//2 + 140, int(C.WN_H * (0.69 + 0.03 * i))), 'left', 'centre', action, cols.WHITE, 21, self.fonts.monospaced)
 
     def draw_hud(self):
 
@@ -375,10 +375,10 @@ class GameScreen(State):
             buffer = text_size * 0.7
 
             draw_transparent_rect(
-                self.hud_surface, (C.WN_W//2 - text_length_pix/2 - buffer, C.WN_H*0.2 - text_size*1.2), (text_length_pix + 2*buffer, text_size*2.4), (0, 0, 0, 180), 2
+                self.hud_surface, (C.WN_W // 2 - text_length_pix / 2 - buffer, C.WN_H * 0.2 - text_size * 1.2), (text_length_pix + 2*buffer, text_size*2.4), (0, 0, 0, 180), 2
             )
             draw_text(
-                self.hud_surface, (C.WN_W//2, C.WN_H*0.2), 'centre', 'centre',
+                self.hud_surface, (C.WN_W // 2, int(C.WN_H * 0.2)), 'centre', 'centre',
                 self.dialog_box.msg, self.dialog_box.colour, text_size, self.fonts.monospaced
             )
 
@@ -396,8 +396,8 @@ class GameScreen(State):
                 self.hud_surface, (C.WN_W*0.28, C.WN_H*0.3), (C.WN_W*0.44, C.WN_H*0.3),
                 (0, 0, 0, 180), 2
             )
-            draw_text(self.hud_surface, (C.WN_W//2, C.WN_H*0.37), 'centre', 'centre', 'CRASH', (255, 0, 0), 50, self.fonts.monospaced)
-            draw_text(self.hud_surface, (C.WN_W//2, C.WN_H*0.45), 'centre', 'centre', ui_text, cols.WHITE, 30, self.fonts.monospaced)
+            draw_text(self.hud_surface, (C.WN_W // 2, int(C.WN_H * 0.37)), 'centre', 'centre', 'CRASH', (255, 0, 0), 50, self.fonts.monospaced)
+            draw_text(self.hud_surface, (C.WN_W // 2, int(C.WN_H * 0.45)), 'centre', 'centre', ui_text, cols.WHITE, 30, self.fonts.monospaced)
 
         # Show crash reason on screen
         if self.plane.crash_reason is not None:

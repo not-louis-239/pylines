@@ -22,12 +22,10 @@ import time
 import pygame as pg
 
 import pylines.core.constants as C
-from pylines.core.utils import draw_text, draw_transparent_rect, display_sf
+from pylines.core.utils import draw_text, draw_transparent_rect, display_sf, clamp_surf_to_non_empty
 from pylines.game.managers.pop_up_menus import PopupMenu
 from pylines.debug.debug_display import DebugLog
 from pylines.debug.memory_usage_fetcher import MemoryUsageFetcher
-
-from pylines.debug.timer import timer
 
 if TYPE_CHECKING:
     from pylines.game.game import Game
@@ -97,6 +95,10 @@ class Timespans:
     def get_ms_durations(self) -> list[float]:
         return [t.duration_ms() for t in self.intervals]
 
+class _DiagnosticsTextCache:
+    def __init__(self) -> None:
+        pass
+
 class DiagnosticsManager(PopupMenu):
     DISPLAY_RECT_W: int = 600
     DISPLAY_RECT_H: int = 250
@@ -119,6 +121,7 @@ class DiagnosticsManager(PopupMenu):
     def __init__(self, game: Game) -> None:
         super().__init__(game)
 
+        self._text_cache: _DiagnosticsTextCache = _DiagnosticsTextCache()
         self.static_bg_surface: pg.Surface = pg.Surface((C.WN_W, C.WN_H), pg.SRCALPHA)
         self.static_fg_surface: pg.Surface = pg.Surface((C.WN_W, C.WN_H), pg.SRCALPHA)
         self.populate_static_surfaces()  # Must be called *after* creating the surfaces
@@ -178,7 +181,7 @@ class DiagnosticsManager(PopupMenu):
             "30 FPS", label_colour, label_size, label_font_family
         )
         draw_text(
-            self.static_fg_surface, (align_offset, C.WN_H - self.DISPLAY_RECT_H / 2), 'left', 'top',
+            self.static_fg_surface, (align_offset, int(C.WN_H - self.DISPLAY_RECT_H / 2)), 'left', 'top',
             "60 FPS", label_colour, label_size, label_font_family
         )
 
@@ -187,6 +190,10 @@ class DiagnosticsManager(PopupMenu):
             self.static_fg_surface, (C.WN_W - self.DISPLAY_RECT_W + align_offset, C.WN_H - self.DISPLAY_RECT_H), 'left', 'top',
             "60 TPS", label_colour, label_size, label_font_family
         )
+
+        # Clamp surfaces to only the non-empty parts.
+        self.static_bg_surface = clamp_surf_to_non_empty(self.static_bg_surface)
+        self.static_fg_surface = clamp_surf_to_non_empty(self.static_fg_surface)
 
     def _plot_bars(self, surface: pg.Surface, plot_area: pg.Rect, values: list[float], max_ok: float, max_ok_h: float | None = None) -> None:
         """
@@ -282,7 +289,6 @@ class DiagnosticsManager(PopupMenu):
     def record_tick(self, interval: TimeInterval) -> None:
         self.tick_durs.add_interval(interval)
 
-    @timer
     def draw(self, surface: pg.Surface) -> None:
         # NOTE: animation_open is unused for draw() here as this is a diagnostic
         # that should instantly appear/disappear
@@ -291,7 +297,7 @@ class DiagnosticsManager(PopupMenu):
             return
 
         # Blit cached background surface
-        surface.blit(self.static_bg_surface, (0, 0))
+        surface.blit(self.static_bg_surface, (0, C.WN_H - self.static_bg_surface.get_height()))
         self.prune()
 
         MAX_OK_DUR_FRAME = 1000 / C.FPS * 2  # 30 FPS = top of graph
@@ -309,7 +315,7 @@ class DiagnosticsManager(PopupMenu):
         self._plot_bars(surface, self.tick_graph_plot_rect, tick_durs_floats, MAX_OK_DUR_TICK)
 
         # Blit cached foreground surface
-        surface.blit(self.static_fg_surface, (0, 0))
+        surface.blit(self.static_fg_surface, (0, C.WN_H - self.static_fg_surface.get_height()))
 
         # Compute min, avg, max
         text_colour = (255, 255, 255, 255)
