@@ -191,7 +191,7 @@ class CockpitRenderer:
         pg.draw.rect(surface, cols.BLACK, inner_glide_rect)
 
         # Throttle rail + label
-        draw_text(surface, (C.WN_W*0.86, C.WN_H*0.97), 'centre', 'centre', "Throttle", (25, 20, 18), 30, self.game.assets.fonts.monospaced)
+        draw_text(surface, (int(C.WN_W * 0.86), int(C.WN_H * 0.97)), 'centre', 'centre', "Throttle", (25, 20, 18), 30, self.game.assets.fonts.monospaced)
         pg.draw.line(surface, (51, 43, 37), (C.WN_W*0.86, C.WN_H*0.94), (C.WN_W*0.86, C.WN_H*0.75), 3)
 
         # Flaps rail
@@ -203,11 +203,11 @@ class CockpitRenderer:
 
         # Cockpit warning light labels + sockets
         warning_x = C.WN_W//2-180
-        draw_text(surface, (warning_x + 20, C.WN_H*0.93), 'left', 'centre', "STALL", (25, 20, 18), 20, self.game.assets.fonts.monospaced)
+        draw_text(surface, (warning_x + 20, int(C.WN_H*0.93)), 'left', 'centre', "STALL", (25, 20, 18), 20, self.game.assets.fonts.monospaced)
         pg.draw.circle(surface, (51, 43, 37), (warning_x, C.WN_H*0.93), 10)
 
         warning_x = C.WN_W//2-190
-        draw_text(surface, (warning_x + 20, C.WN_H*0.965), 'left', 'centre', "OVERSPEED", (25, 20, 18), 20, self.game.assets.fonts.monospaced)
+        draw_text(surface, (warning_x + 20, int(C.WN_H*0.965)), 'left', 'centre', "OVERSPEED", (25, 20, 18), 20, self.game.assets.fonts.monospaced)
         pg.draw.circle(surface, (51, 43, 37), (warning_x, C.WN_H*0.965), 10)
 
         return surface
@@ -245,12 +245,12 @@ class CockpitRenderer:
         # Stall warning
         warning_x = C.WN_W//2-145
         if warn_stall:
-            draw_text(surface, (C.WN_W//2, C.WN_H*0.62), 'centre', 'centre', "STALL", (210, 0, 0), 50, self.game.assets.fonts.monospaced)
+            draw_text(surface, (C.WN_W//2, int(C.WN_H*0.62)), 'centre', 'centre', "STALL", (210, 0, 0), 50, self.game.assets.fonts.monospaced)
 
         # Overspeed warning
         warning_x = C.WN_W//2+145
         if warn_overspeed:
-            draw_text(surface, (C.WN_W//2, C.WN_H*0.57), 'centre', 'centre', "OVERSPEED", (210, 0, 0), 50, self.game.assets.fonts.monospaced)
+            draw_text(surface, (C.WN_W//2, int(C.WN_H*0.57)), 'centre', 'centre', "OVERSPEED", (210, 0, 0), 50, self.game.assets.fonts.monospaced)
 
         # Damage overlay
         if self.plane.damage_level > 0:
@@ -298,7 +298,7 @@ class CockpitRenderer:
         speed_knots = self.plane.vel.length() * 1.94384  # Convert to knots
         angle = 90 - min(336, 270 * speed_knots/160)
         draw_text(
-            surface, (C.WN_W//2+300, C.WN_H*0.85 + 30), 'centre', 'centre',
+            surface, (C.WN_W//2+300, int(C.WN_H*0.85 + 30)), 'centre', 'centre',
             f"{int(self.plane.vel.length() * 1.94384):03d}", (192, 192, 192), 35, self.game.assets.fonts.monospaced
         )
         draw_needle(surface, centre, angle, 100)

@@ -120,16 +120,16 @@ class SettingsScreen(State):
         self.display_surface.blit(self.darken_overlay_surface, (0, 0))
 
         # Draw text
-        draw_text(self.display_surface, (C.WN_W//2, C.WN_H*0.1), 'centre', 'centre', "Settings", (0, 192, 255), 40, self.fonts.monospaced)
-        draw_text(self.display_surface, (C.WN_W//2, C.WN_H*0.85), 'centre', 'centre', "Up/Down to select, Space to change", WHITE, 35, self.fonts.monospaced)
+        draw_text(self.display_surface, (C.WN_W // 2, int(C.WN_H * 0.1)), 'centre', 'centre', "Settings", (0, 192, 255), 40, self.fonts.monospaced)
+        draw_text(self.display_surface, (C.WN_W // 2, int(C.WN_H * 0.85)), 'centre', 'centre', "Up/Down to select, Space to change", WHITE, 35, self.fonts.monospaced)
         self.back_button.draw(self.display_surface)
 
         for i, (ui_str, option) in enumerate((opt.label, opt.display()) for opt in self.toggle_ops):
             TEXT_COLOUR = (192, 230, 255) if i == self.toggle_idx else (255, 255, 255)
             VAL_COLOUR = (170, 210, 255) if i == self.toggle_idx else (220, 220, 220)
 
-            draw_text(self.display_surface, (C.WN_W*0.35, C.WN_H * (0.35+0.05*i)), 'left', 'centre', ui_str, TEXT_COLOUR, 30, self.fonts.monospaced)
-            draw_text(self.display_surface, (C.WN_W*0.65, C.WN_H * (0.35+0.05*i)), 'right', 'centre', str(option), VAL_COLOUR, 30, self.fonts.monospaced)
+            draw_text(self.display_surface, (int(C.WN_W * 0.35), int(C.WN_H * (0.35 + 0.05 * i))), 'left', 'centre', ui_str, TEXT_COLOUR, 30, self.fonts.monospaced)
+            draw_text(self.display_surface, (int(C.WN_W * 0.65), int(C.WN_H * (0.35 + 0.05 * i))), 'right', 'centre', str(option), VAL_COLOUR, 30, self.fonts.monospaced)
 
         # Convert the Pygame surface to an OpenGL texture
         texture_data = pg.image.tostring(self.display_surface, 'RGBA', True)
