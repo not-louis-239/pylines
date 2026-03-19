@@ -60,8 +60,8 @@ class Runway(LargeSceneryObject):
         if self.heading >= 180:
             raise ValueError(f"Base heading must be <180°, e.g. {self.heading-180}°, not {self.heading}°.")  # keep things consistent
 
-        draw_text(texture_surface, (int(self.w * 4) / 2, 150), 'centre', 'centre', str(round(self.heading/10)), (255, 255, 255, 255), 150, fonts.monospaced, rotation=180)
-        draw_text(texture_surface, (int(self.w * 4) / 2, int(self.l * 4) - 150), 'centre', 'centre', str((round(self.heading/10) + 18) % 36), (255, 255, 255, 255), 150, fonts.monospaced)
+        draw_text(texture_surface, (int(self.w * 2), 150), 'centre', 'centre', str(round(self.heading/10)), (255, 255, 255, 255), 150, fonts.monospaced, rotation=180)
+        draw_text(texture_surface, (int(self.w * 2), int(self.l * 4) - 150), 'centre', 'centre', str((round(self.heading/10) + 18) % 36), (255, 255, 255, 255), 150, fonts.monospaced)
 
         # Flip the surface vertically for OpenGL
         image_surface = pg.transform.flip(texture_surface, False, True)

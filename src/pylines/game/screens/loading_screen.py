@@ -89,12 +89,12 @@ class LoadingScreen(State):
     def draw(self, wn) -> None:
         self.display_surface.fill((0, 0, 0))
         draw_text(
-            self.display_surface, (C.WN_W/2, C.WN_H/2 - 100), 'centre', 'centre',
+            self.display_surface, (int(C.WN_W / 2), int(C.WN_H / 2 - 100)), 'centre', 'centre',
             "Loading...", (255, 255, 255), 50, self.fonts.monospaced
         )
 
         draw_text(
-            self.display_surface, (C.WN_W/2, C.WN_H/2 + 45), 'centre', 'centre',
+            self.display_surface, (int(C.WN_W / 2), int(C.WN_H / 2 + 45)), 'centre', 'centre',
             self.current_msg, (255, 255, 255), 30, self.fonts.monospaced
         )
 

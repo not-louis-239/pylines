@@ -94,33 +94,33 @@ class TitleScreen(State):
         )
 
         text = "Press Space for briefing" if self.game.save_data.show_briefing else "Press Space to fly"
-        draw_text(self.display_surface, (C.WN_W//2, C.WN_H*0.85), 'centre', 'centre', text, (255, 255, 255), 30, self.fonts.monospaced)
+        draw_text(self.display_surface, (C.WN_W//2, int(C.WN_H*0.85)), 'centre', 'centre', text, (255, 255, 255), 30, self.fonts.monospaced)
 
-        draw_text(self.display_surface, (C.WN_W//2, 0.97*C.WN_H), 'centre', 'centre', "Copyright (C) 2025-2026 Louis Masarei-Boulton.", (127, 127, 127), 15, self.fonts.monospaced)
+        draw_text(self.display_surface, (C.WN_W//2, int(0.97*C.WN_H)), 'centre', 'centre', "Copyright (C) 2025-2026 Louis Masarei-Boulton.", (127, 127, 127), 15, self.fonts.monospaced)
 
         controls_sections: dict[ControlsSectionID, ControlsSection] = self.game.assets.texts.controls_sections  # Local alias
-        draw_text(self.display_surface, (C.WN_W//2 - 480, C.WN_H*0.3), 'left', 'centre', "Read Before Flight", (0, 192, 255), 40, self.fonts.monospaced)
+        draw_text(self.display_surface, (C.WN_W // 2 - 480, int(C.WN_H * 0.3)), 'left', 'centre', "Read Before Flight", (0, 192, 255), 40, self.fonts.monospaced)
         for i, (key, action) in enumerate(controls_sections[ControlsSectionID.MAIN].keys.items()):
-            draw_text(self.display_surface, (C.WN_W//2 - 480, C.WN_H * (0.38 + 0.04*i)), 'left', 'centre', key, (150, 230, 255), 27, self.fonts.monospaced)
-            draw_text(self.display_surface, (C.WN_W//2 - 360, C.WN_H * (0.38 + 0.04*i)), 'left', 'centre', action, cols.WHITE, 27, self.fonts.monospaced)
+            draw_text(self.display_surface, (C.WN_W // 2 - 480, int(C.WN_H * (0.38 + 0.04*i))), 'left', 'centre', key, (150, 230, 255), 27, self.fonts.monospaced)
+            draw_text(self.display_surface, (C.WN_W // 2 - 360, int(C.WN_H * (0.38 + 0.04*i))), 'left', 'centre', action, cols.WHITE, 27, self.fonts.monospaced)
 
-        draw_text(self.display_surface, (C.WN_W//2 + 20, C.WN_H*0.26), 'left', 'centre', ControlsSectionID.DISPLAYS, (0, 192, 255), 25, self.fonts.monospaced)
+        draw_text(self.display_surface, (C.WN_W//2 + 20, int(C.WN_H*0.26)), 'left', 'centre', ControlsSectionID.DISPLAYS, (0, 192, 255), 25, self.fonts.monospaced)
         for i, (key, action) in enumerate(controls_sections[ControlsSectionID.DISPLAYS].keys.items()):
-            draw_text(self.display_surface, (C.WN_W//2 + 20, C.WN_H * (0.31 + 0.03*i)), 'left', 'centre', key, (150, 230, 255), 21, self.fonts.monospaced)
-            draw_text(self.display_surface, (C.WN_W//2 + 140, C.WN_H * (0.31 + 0.03*i)), 'left', 'centre', action, cols.WHITE, 21, self.fonts.monospaced)
+            draw_text(self.display_surface, (C.WN_W//2 + 20, int(C.WN_H * (0.31 + 0.03*i))), 'left', 'centre', key, (150, 230, 255), 21, self.fonts.monospaced)
+            draw_text(self.display_surface, (C.WN_W//2 + 140, int(C.WN_H * (0.31 + 0.03*i))), 'left', 'centre', action, cols.WHITE, 21, self.fonts.monospaced)
 
-        draw_text(self.display_surface, (C.WN_W//2 + 20, C.WN_H*0.4), 'left', 'centre', ControlsSectionID.MAP, (0, 192, 255), 25, self.fonts.monospaced)
+        draw_text(self.display_surface, (C.WN_W//2 + 20, int(C.WN_H * 0.4)), 'left', 'centre', ControlsSectionID.MAP, (0, 192, 255), 25, self.fonts.monospaced)
         for i, (key, action) in enumerate(controls_sections[ControlsSectionID.MAP].keys.items()):
-            draw_text(self.display_surface, (C.WN_W//2 + 20, C.WN_H * (0.45 + 0.03*i)), 'left', 'centre', key, (150, 230, 255), 21, self.fonts.monospaced)
-            draw_text(self.display_surface, (C.WN_W//2 + 140, C.WN_H * (0.45 + 0.03*i)), 'left', 'centre', action, cols.WHITE, 21, self.fonts.monospaced)
+            draw_text(self.display_surface, (C.WN_W//2 + 20, int(C.WN_H * (0.45 + 0.03*i))), 'left', 'centre', key, (150, 230, 255), 21, self.fonts.monospaced)
+            draw_text(self.display_surface, (C.WN_W//2 + 140, int(C.WN_H * (0.45 + 0.03*i))), 'left', 'centre', action, cols.WHITE, 21, self.fonts.monospaced)
         note = controls_sections[ControlsSectionID.MAP].note
         assert note is not None
-        draw_text(self.display_surface, (C.WN_W//2 + 20, C.WN_H * (0.45 + 0.03 * (len(controls_sections[ControlsSectionID.MAP].keys) + 0.5))), 'left', 'centre', note, (255, 255, 255), 21, self.fonts.monospaced)
+        draw_text(self.display_surface, (C.WN_W // 2 + 20, int(C.WN_H * (0.45 + 0.03 * (len(controls_sections[ControlsSectionID.MAP].keys) + 0.5)))), 'left', 'centre', note, (255, 255, 255), 21, self.fonts.monospaced)
 
-        draw_text(self.display_surface, (C.WN_W//2 + 20, C.WN_H*0.64), 'left', 'centre', ControlsSectionID.UTILITIES, (0, 192, 255), 25, self.fonts.monospaced)
+        draw_text(self.display_surface, (C.WN_W // 2 + 20, int(C.WN_H * 0.64)), 'left', 'centre', ControlsSectionID.UTILITIES, (0, 192, 255), 25, self.fonts.monospaced)
         for i, (key, action) in enumerate(controls_sections[ControlsSectionID.UTILITIES].keys.items()):
-            draw_text(self.display_surface, (C.WN_W//2 + 20, C.WN_H * (0.69 + 0.03*i)), 'left', 'centre', key, (150, 230, 255), 21, self.fonts.monospaced)
-            draw_text(self.display_surface, (C.WN_W//2 + 140, C.WN_H * (0.69 + 0.03*i)), 'left', 'centre', action, cols.WHITE, 21, self.fonts.monospaced)
+            draw_text(self.display_surface, (C.WN_W // 2 + 20, int(C.WN_H * (0.69 + 0.03 * i))), 'left', 'centre', key, (150, 230, 255), 21, self.fonts.monospaced)
+            draw_text(self.display_surface, (C.WN_W // 2 + 140, int(C.WN_H * (0.69 + 0.03 * i))), 'left', 'centre', action, cols.WHITE, 21, self.fonts.monospaced)
 
         self.settings_button.draw(self.display_surface)
         self.credits_button.draw(self.display_surface)

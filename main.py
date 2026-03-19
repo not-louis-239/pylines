@@ -36,6 +36,7 @@ try:
         WN_W,
         FOV
     )
+    from pylines.core.resolution_manager import ViewportManager
     from pylines.game.game import Game
     from pylines.game.managers.diagnostics import TimeInterval
 except KeyboardInterrupt:
@@ -55,17 +56,27 @@ def main():
         time_accum: float = 0  # stores time since last batch of updates
 
         # Initialise window and mixer
-        wn = pg.display.set_mode((WN_W, WN_H), pg.DOUBLEBUF | pg.OPENGL)
+        windowed_size = (WN_W, WN_H)
+        windowed_flags = pg.DOUBLEBUF | pg.OPENGL | pg.RESIZABLE
+        fullscreen_flags = pg.DOUBLEBUF | pg.OPENGL | pg.FULLSCREEN
+        supports_auto_resize = pg.version.vernum >= (2, 0, 0)
+
+        viewport_manager = ViewportManager(
+            initial_windowed_size=windowed_size,
+            windowed_flags=windowed_flags,
+            fullscreen_flags=fullscreen_flags,
+            supports_auto_resize=supports_auto_resize,
+            fov=FOV,
+            inner_render_limit=INNER_RENDER_LIMIT,
+            outer_render_limit=OUTER_RENDER_LIMIT,
+        )
+
+        wn = viewport_manager.create_window()
         pg.display.set_caption("Pylines")
         pg.mixer.set_num_channels(32)
 
         # Initialize OpenGL
-        gl.glViewport(0, 0, WN_W, WN_H)
-        gl.glMatrixMode(gl.GL_PROJECTION)
-        gl.glLoadIdentity()
-        glu.gluPerspective(FOV, WN_W/WN_H, INNER_RENDER_LIMIT, OUTER_RENDER_LIMIT)  # Field of view, aspect ratio, near, far clipping plane
-        gl.glMatrixMode(gl.GL_MODELVIEW)
-        gl.glLoadIdentity()
+        viewport_manager.update_gl_viewport(windowed_size)
         gl.glEnable(gl.GL_DEPTH_TEST)  # Enable depth testing for 3D objects
 
         # Create Game instance
@@ -83,6 +94,25 @@ def main():
                 if event.type == pg.QUIT:
                     game.quit()
                     running = False
+                    continue
+
+                if event.type == pg.KEYDOWN:
+                    mod = event.mod
+                    cmd_mod = pg.KMOD_META | pg.KMOD_GUI
+                    if event.key == pg.K_F11 or (
+                        event.key == pg.K_f and (mod & pg.KMOD_CTRL) and (mod & cmd_mod)
+                    ):
+                        wn = viewport_manager.toggle_fullscreen(wn)
+
+                window_resized = []
+                if hasattr(pg, "WINDOWRESIZED"):
+                    window_resized.append(pg.WINDOWRESIZED)
+                if hasattr(pg, "WINDOWSIZECHANGED"):
+                    window_resized.append(pg.WINDOWSIZECHANGED)
+                wn = viewport_manager.handle_window_resize_event(
+                    wn,
+                    event, window_resized,
+                )
 
             keys = pg.key.get_pressed()
 
