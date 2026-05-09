@@ -16,7 +16,7 @@
 
 from dataclasses import dataclass
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 @dataclass
 class PlaneModel:
