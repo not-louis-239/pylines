@@ -18,7 +18,7 @@ from pathlib import Path
 
 ROOT_DIR: Path = Path(__file__).resolve().parents[3]  # project root
 
-class DirsContainer:
+class _DirsContainer:
     def __init__(self, root: Path) -> None:
         self.root = root
 
@@ -30,7 +30,7 @@ class DirsContainer:
         when combined with strings."""
         return self.root / other
 
-class AssetDirs(DirsContainer):
+class AssetDirs(_DirsContainer):
     def __init__(self, root: Path):
         super().__init__(root)
         self.fonts = root / "fonts"
@@ -40,27 +40,27 @@ class AssetDirs(DirsContainer):
         self.presets = root / "presets"
         self.text = root / "text"
 
-class ImageDirs(DirsContainer):
+class ImageDirs(_DirsContainer):
     def __init__(self, root: Path) -> None:
         super().__init__(root)
         self.menu_images = root / "menu_images"
 
-class SoundDirs(DirsContainer):
+class SoundDirs(_DirsContainer):
     def __init__(self, root: Path) -> None:
         super().__init__(root)
         self.jukebox_tracks = root / "jukebox_tracks"
 
-class DataDirs(DirsContainer):
+class DataDirs(_DirsContainer):
     def __init__(self, root: Path):
         super().__init__(root)
         self.screenshots = root / "screenshots"
 
-class SrcDirs(DirsContainer):
+class SrcDirs(_DirsContainer):
     def __init__(self, root: Path) -> None:
         super().__init__(root)
         self.shaders = root / "shaders"
 
-class Dirs(DirsContainer):
+class Dirs(_DirsContainer):
     def __init__(self, root: Path):
         super().__init__(root)
         self.assets = AssetDirs(root / "assets")

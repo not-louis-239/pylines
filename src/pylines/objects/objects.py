@@ -1,3 +1,4 @@
+
 # Copyright 2025-2026 Louis Masarei-Boulton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -183,6 +184,8 @@ class Plane(Entity):
         self.rot_rate = pg.Vector3(0, 0, 0)  # pitch, yaw, roll rates in degrees per second, applied relative to local axes
         self.aoa = 0  # degrees
         self.on_ground = True
+        self.airborne_time = 0.0
+        self.max_airborne_clearance = 0.0
 
         # Reset crash/damage metrics
         self.crash_reason: CrashReason | None = None
@@ -329,6 +332,19 @@ class Plane(Entity):
             self.hard_landing(suppress_dialog=(not self.over_runway()))
         else:
             self.crash(damage_taken=impact_severity-MAX_OK_IMPACT, reason=crash_reason)
+
+    def should_process_landing(self) -> bool:
+        """Reject brief near-ground jitters during takeoff as landings."""
+        MIN_LANDING_AIRBORNE_TIME = 0.75  # seconds
+        MIN_LANDING_CLEARANCE = 1.5  # metres
+        MIN_LANDING_DESCENT_RATE = 0.5  # m/s
+
+        meaningful_airborne_state = (
+            self.airborne_time >= MIN_LANDING_AIRBORNE_TIME or
+            self.max_airborne_clearance >= MIN_LANDING_CLEARANCE
+        )
+
+        return meaningful_airborne_state and self.vel.y <= -MIN_LANDING_DESCENT_RATE
 
     def process_input(self, dt: int):
         dt_seconds = dt / 1000
@@ -612,9 +628,18 @@ class Plane(Entity):
 
         # Collision detection with ground
         ground_height = self.env.get_ground_height(self.pos.x, self.pos.z)
+        clearance = max(0.0, self.pos.y - ground_height)
+
+        if self.on_ground:
+            self.airborne_time = 0.0
+            self.max_airborne_clearance = 0.0
+        else:
+            self.airborne_time += dt_seconds
+            self.max_airborne_clearance = max(self.max_airborne_clearance, clearance)
+
         if self.pos.y <= ground_height:
             # Only process landing if just touched down
-            if not self.on_ground:
+            if not self.on_ground and self.should_process_landing():
                 self.process_landing()
 
             self.on_ground = True
